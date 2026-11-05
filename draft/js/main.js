@@ -19,9 +19,13 @@ const $ = (id) => document.getElementById(id);
 const canvas = $('gl'), enterBtn = $('enter'), portfolio = $('portfolio'), replay = $('replay'), fallback = $('fallback');
 replay.addEventListener('click', () => { location.href = location.pathname + (params.get('font') ? `?font=${params.get('font')}` : ''); });
 
+let onHero = null;
 const showPortfolio = () => {
   portfolio.hidden = false;
   document.body.classList.remove('is-intro'); document.body.classList.add('is-portfolio');
+  document.documentElement.classList.add('can-scroll');
+  const work = $('work'); work.hidden = false;
+  import('./projects/work.js').then((m) => m.mountWork(work, { fade: [portfolio, canvas], onHero: (h) => onHero?.(h) }));
   gsap.fromTo(portfolio.children, { y: 22, opacity: 0 }, { y: 0, opacity: 1, duration: 1.1, ease: 'expo.out', stagger: 0.09 });
 };
 
@@ -169,6 +173,13 @@ function start(data) {
     name.st.nudgeAt = S.time + 2.2;
   };
   const runIntro = () => {
+    // Jumps past the intro to review the portfolio directly.
+    if (params.has('to')) {
+      name.root.visible = false; name.st.phase = 'burst'; post.uniforms.uDissolve.value = 1;
+      S.phase = 'portfolio'; skyU.uGlow.value = 1; trace?.destroy();
+      showPortfolio();
+      return;
+    }
     if (skipIntro) { gsap.fromTo(post.uniforms.uBlack, { value: 1 }, { value: 0, duration: REDUCED ? 0.01 : 0.6 }); skyU.uGlow.value = 1; ready(); if (REDUCED) name.setActive(0); return; }
     S.phase = 'trace';
     trace.set(0);
@@ -197,9 +208,13 @@ function start(data) {
   /* Frame */
   const clock = new THREE.Clock();
   let frames = 0, fpsT = 0;
+  // Past the first screen, the intro scene stops drawing to leave the GPU to the projects.
+  let introVisible = true;
+  onHero = (h) => { introVisible = h > 0.001; };
   const frame = () => {
     requestAnimationFrame(frame);
     const dt = Math.min(0.05, clock.getDelta());
+    if (!introVisible) return;
     S.time += dt;
     const t = S.time;
     frames++; fpsT += dt; if (fpsT > 1) { window.__fps = frames / fpsT; frames = 0; fpsT = 0; }

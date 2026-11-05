@@ -18,3 +18,12 @@ Lucas's own site, in progress. So far it holds only the opening sequence and a p
 ## Changing the name or fonts
 
 Run `node draft/tools/build-name.mjs` from the repo root. It needs the local `toolkit` folder, which is not published.
+
+## Project sections
+
+Each project scrolls through four beats: exploded CAD comes together, the camera turns to the footage's angle, a light line wipes from CAD to video, then the video plays with the scroll. Code is in `js/projects/`, and the words and camera angles are in the `PROJECTS` list in `work.js`.
+
+- Add `?to=work` to the address to skip the intro and reach the projects.
+- `node draft/tools/build-frames.mjs` re-extracts the video frames, with clip times at the top of the file.
+- `node draft/tools/build-cad.mjs` rebuilds the CAD files from the STL exports.
+Both tools need the local `toolkit` folder, plus the source files in Downloads.
