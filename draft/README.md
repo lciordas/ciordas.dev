@@ -11,7 +11,7 @@ Lucas's own site, in progress. So far it holds only the opening sequence and a p
 
 ## Trying things
 
-- Add `?font=shoulders`, `?font=archivo`, or `?font=inter` to the address to compare fonts. Anton is the default.
+- Add `?font=shoulders`, `?font=teko`, `?font=inter`, or `?font=anton` to the address to compare fonts. Barlow Condensed is the default.
 - Add `?skip=1` to jump straight to the floating name.
 
 ## Changing the name or fonts

@@ -4,14 +4,15 @@ import { mountFilmPost } from './film-post.js';
 import { mountRenderWindows } from './render-windows.js';
 import { mountTrace } from './trace.js';
 import { mountName, DEPTH } from './name.js';
+import { bakeSurface } from './bake.js';
 
 const gsap = window.gsap;
 const params = new URLSearchParams(location.search);
-const FONT_KEYS = ['anton', 'shoulders', 'archivo', 'inter'];
-const fontKey = FONT_KEYS.includes(params.get('font')) ? params.get('font') : 'anton';
+const FONT_KEYS = ['barlow', 'shoulders', 'teko', 'inter', 'anton'];
+const fontKey = FONT_KEYS.includes(params.get('font')) ? params.get('font') : 'barlow';
 const skipIntro = params.has('skip') || REDUCED;
 
-const PALETTE = { top: '#0c0403', mid: '#2a110c', haze: '#6d4b31', low: '#4a3220', pale: '#ffdfca', stone: '#d9694a', deep: '#8a1b10', shard: '#d3af8f' };
+const PALETTE = { top: '#0b0502', mid: '#291305', haze: '#744515', low: '#4a2f12', pale: '#ffdfae', stone: '#e8772a', deep: '#832604', shard: '#d9a067' };
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('gl'), enterBtn = $('enter'), portfolio = $('portfolio'), replay = $('replay'), fallback = $('fallback');
@@ -58,8 +59,9 @@ function start(data) {
   }));
   sky.frustumCulled = false; sky.renderOrder = -10; scene.add(sky);
 
-  const name = mountName(scene, data, palU);
-  const post = mountFilmPost(renderer, { bloom: 0.22, threshold: 0.98 });
+  const baked = bakeSurface(renderer, data);
+  const name = mountName(scene, data, palU, baked);
+  const post = mountFilmPost(renderer, { bloom: 0.16, threshold: 1.02 });
 
   const windows = mountRenderWindows(renderer, {
     drawMode(mode) {
@@ -82,7 +84,7 @@ function start(data) {
     const aspect = S.w / S.h;
     camera.aspect = aspect;
     // Fit the block of the name: limited by height on wide screens and by width on narrow ones.
-    const fitH = data.height / 0.64, fitW = data.width / (aspect < 0.9 ? 0.86 : 0.7);
+    const fitH = data.height / 0.62, fitW = data.width / (aspect < 0.9 ? 0.88 : 0.72);
     S.visH = Math.max(fitH, fitW / aspect); S.visW = S.visH * aspect;
     S.camZ = DEPTH / 2 + S.visH / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
     camera.position.set(0, 0, S.camZ); camera.lookAt(0, 0, 0); camera.updateProjectionMatrix();
@@ -90,6 +92,7 @@ function start(data) {
     post.resize(S.w, S.h, S.dpr);
     windows.layout(S.w, S.h, S.dpr);
     name.setView(S.visW, S.visH);
+    name.uniforms.uRes.value.set(S.dpr, S.dpr);
     trace?.layout(S.w, S.h, S.dpr, toPx);
     const [l, t] = toPx(-data.width / 2, data.height / 2), [r, b] = toPx(data.width / 2, -data.height / 2);
     const pad = 10;
@@ -135,6 +138,7 @@ function start(data) {
     tl.to(S, { shake: 0.022, duration: 0.6, ease: 'power3.in' }, 0);
     tl.add(() => {
       name.burst();
+      name.halo.visible = false;
       heat.value = 0;
       name.uniforms.uHotSize.value = 0.42;
     }, 0.62);
@@ -143,8 +147,8 @@ function start(data) {
     tl.to(S, { shake: 0, duration: 0.8, ease: 'power2.out' }, 0.62);
     tl.fromTo(skyU.uLift, { value: 0 }, { value: 1.25, duration: 0.14, ease: 'power2.out' }, 0.62);
     tl.to(skyU.uLift, { value: 0.2, duration: 1.7, ease: 'power2.out' }, 0.76);
-    tl.fromTo(post.uniforms.uBloom, { value: 0.22 }, { value: 1.5, duration: 0.1 }, 0.62);
-    tl.to(post.uniforms.uBloom, { value: 0.22, duration: 1, ease: 'power2.out' }, 0.72);
+    tl.fromTo(post.uniforms.uBloom, { value: 0.16 }, { value: 1.5, duration: 0.1 }, 0.62);
+    tl.to(post.uniforms.uBloom, { value: 0.16, duration: 1, ease: 'power2.out' }, 0.72);
     tl.to(name.uniforms.uMatte, { value: 0.42, duration: 1.2, ease: 'power2.out' }, 0.62);
     tl.add(() => { showPortfolio(); S.phase = 'portfolio'; }, 1.5);
   };

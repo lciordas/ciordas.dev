@@ -16,10 +16,11 @@ const { Delaunay } = require('d3-delaunay');
 
 const S = path.join(toolkit, 'node_modules/@fontsource/');
 const FONTS = {
-  anton: { file: S + 'anton/files/anton-latin-400-normal.woff', gap: 0.1 },
-  shoulders: { file: S + 'big-shoulders-display/files/big-shoulders-display-latin-900-normal.woff', gap: 0.09 },
-  archivo: { file: S + 'archivo-black/files/archivo-black-latin-400-normal.woff', gap: 0.13 },
-  inter: { file: S + 'inter-tight/files/inter-tight-latin-900-normal.woff', gap: 0.12 },
+  barlow: { file: S + 'barlow-condensed/files/barlow-condensed-latin-900-normal.woff', gap: 0.07 },
+  shoulders: { file: S + 'big-shoulders-display/files/big-shoulders-display-latin-900-normal.woff', gap: 0.07 },
+  teko: { file: S + 'teko/files/teko-latin-700-normal.woff', gap: 0.08 },
+  inter: { file: S + 'inter-tight/files/inter-tight-latin-900-normal.woff', gap: 0.08 },
+  anton: { file: S + 'anton/files/anton-latin-400-normal.woff', gap: 0.07 },
 };
 const LINES = ['LUCAS', 'CIORDAS'];
 const WIDTH = 4; // world units
@@ -57,7 +58,7 @@ const warp = (p) => {
 function build(key, cfg) {
   const font = fontkit.openSync(cfg.file);
   const cap = font.capHeight || 700;
-  // Each line is scaled to the same width, so the two lines lock into one block.
+  // Both lines share one type size and are centred. The longest line sets the overall width.
   const laid = LINES.map((text) => {
     const run = font.layout(text);
     const glyphs = []; let x = 0;
@@ -65,8 +66,10 @@ function build(key, cfg) {
     const flat = glyphs.flatMap((g) => flatten(g.path, 1, 1, g.x, 0));
     const xs = flat.flat().map((p) => p[0]);
     const min = Math.min(...xs), max = Math.max(...xs);
-    return { glyphs, min, max, scale: WIDTH / (max - min), text };
+    return { glyphs, min, max, text };
   });
+  const scale = WIDTH / Math.max(...laid.map((l) => l.max - l.min));
+  laid.forEach((l) => { l.scale = scale; });
   const gap = WIDTH * cfg.gap;
   const heights = laid.map((l) => cap * l.scale);
   const total = heights[0] + gap + heights[1];
@@ -74,7 +77,7 @@ function build(key, cfg) {
   laid.forEach((l, li) => {
     const base = li === 0 ? total / 2 - heights[0] : -total / 2;
     l.glyphs.forEach((g) => {
-      const contours = flatten(g.path, l.scale, l.scale, (g.x - l.min) * l.scale - WIDTH / 2, base);
+      const contours = flatten(g.path, l.scale, l.scale, (g.x - (l.min + l.max) / 2) * l.scale, base);
       letters.push({ char: g.char, line: li, contours });
     });
   });

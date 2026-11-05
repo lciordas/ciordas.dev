@@ -24,17 +24,17 @@ function chromeTexture(w, h, label) {
 
 export const DEFAULT_SLOTS = [
   { label: 'wireframe', mode: 'wireframe', bg: '#050404', x: 430, y: 235, w: 500, h: 378, t: 0.0 },
-  { label: 'transmission', mode: 'transmission', bg: '#8e12a0', x: 300, y: 118, w: 322, h: 261, t: 0.3 },
-  { label: 'uv', mode: 'uv', bg: '#141211', x: 856, y: 96, w: 300, h: 300, t: 0.42 },
-  { label: 'normals', mode: 'normals', bg: '#050404', x: 603, y: 470, w: 420, h: 200, t: 0.54 },
-  { label: 'clay', mode: 'clay', bg: '#050404', x: 262, y: 560, w: 430, h: 230, t: 0.66 },
-  { label: 'wireframe', mode: 'wireframe', bg: '#050404', x: 1040, y: 420, w: 330, h: 300, t: 0.76 },
-  { label: 'uv', mode: 'uv', bg: '#141211', x: 80, y: 250, w: 280, h: 330, t: 0.86 },
-  { label: 'beauty', mode: 'beauty', bg: '#000', x: 590, y: 170, w: 330, h: 240, t: 0.97 },
-  { label: 'transmission', mode: 'transmission', bg: '#8e12a0', x: 740, y: 610, w: 360, h: 220, t: 1.08 },
-  { label: 'beauty', mode: 'beauty', bg: '#000', x: 985, y: 150, w: 400, h: 470, t: 1.2 },
-  { label: 'normals', mode: 'normals', bg: '#050404', x: 400, y: 330, w: 300, h: 220, t: 1.32 },
-  { label: 'beauty', mode: 'beauty', bg: '#000', x: 500, y: 300, w: 470, h: 330, t: 1.46 },
+  { label: 'uv', mode: 'uv', bg: '#141211', x: 856, y: 96, w: 300, h: 300, t: 0.28 },
+  { label: 'clay', mode: 'clay', bg: '#060505', x: 262, y: 560, w: 430, h: 230, t: 0.42 },
+  { label: 'transmission', mode: 'transmission', bg: '#8e12a0', x: 300, y: 118, w: 322, h: 261, t: 0.54 },
+  { label: 'normals', mode: 'normals', bg: '#10131c', x: 603, y: 470, w: 420, h: 200, t: 0.65 },
+  { label: 'contours', mode: 'contours', bg: '#02090b', x: 1040, y: 420, w: 330, h: 300, t: 0.75 },
+  { label: 'depth', mode: 'depth', bg: '#000000', x: 80, y: 250, w: 280, h: 330, t: 0.84 },
+  { label: 'beauty', mode: 'beauty', bg: '#000', x: 590, y: 170, w: 300, h: 210, t: 0.93 },
+  { label: 'halftone', mode: 'halftone', bg: '#f5c02e', x: 740, y: 610, w: 360, h: 220, t: 1.03 },
+  { label: 'distance', mode: 'rings', bg: '#0b0310', x: 400, y: 330, w: 300, h: 230, t: 1.14 },
+  { label: 'thermal', mode: 'thermal', bg: '#06021c', x: 950, y: 130, w: 430, h: 480, t: 1.26 },
+  { label: 'negative', mode: 'negative', bg: '#ebe6dd', x: 480, y: 290, w: 500, h: 350, t: 1.44 },
 ];
 
 // options.drawMode(mode) renders the scene for one panel. options.drawBeauty(texture) is optional.
@@ -76,6 +76,9 @@ export function mountRenderWindows(renderer, options = {}) {
       }
       items.forEach((it) => {
         if (elapsed < it.t) return;
+        // Each panel stutters for a few frames as it opens.
+        const age = elapsed - it.t;
+        if (age < 0.1 && Math.floor(age * 60) % 3 === 1) return;
         const y = vh - it.Y - it.H;
         renderer.setScissorTest(true);
         renderer.setScissor(it.X, y, it.W, it.H);

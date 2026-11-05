@@ -1,4 +1,4 @@
-@font-face { font-family: "Anton"; src: url("../fonts/anton-latin-400-normal.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; font-weight: 900; src: url("../fonts/barlow-condensed-latin-900-normal.woff2") format("woff2"); font-display: swap; }
 @font-face { font-family: "Hanken Grotesk"; font-weight: 400; src: url("../fonts/hanken-grotesk-latin-400-normal.woff2") format("woff2"); font-display: swap; }
 @font-face { font-family: "Hanken Grotesk"; font-weight: 500; src: url("../fonts/hanken-grotesk-latin-500-normal.woff2") format("woff2"); font-display: swap; }
 
@@ -18,9 +18,7 @@ html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); 
 #enter:focus { outline: none; }
 #enter:focus-visible { outline: 1px solid rgba(255, 214, 176, .75); outline-offset: 12px; }
 
-#fallback { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; font-family: "Anton", Impact, sans-serif; line-height: 1.05; letter-spacing: .005em; }
-#fallback span:first-child { font-size: min(24vw, 34vh); }
-#fallback span:last-child { font-size: min(17vw, 24vh); }
+#fallback { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; line-height: .98; font-size: min(21vw, 30vh); text-align: center; }
 #fallback[hidden] { display: none; }
 
 #portfolio {
@@ -30,7 +28,7 @@ html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); 
 #portfolio[hidden] { display: none; }
 #portfolio > * { opacity: 0; margin: 0; }
 #portfolio .eyebrow { font-size: 13px; letter-spacing: .24em; text-transform: uppercase; color: var(--muted); }
-#portfolio h2 { font-family: "Anton", Impact, sans-serif; font-weight: 400; font-size: clamp(64px, 13vw, 190px); line-height: 1.08; letter-spacing: .005em; text-transform: uppercase; margin: 10px 0 12px; }
+#portfolio h2 { font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: clamp(64px, 13vw, 190px); line-height: 1.02; letter-spacing: .005em; text-transform: uppercase; margin: 10px 0 12px; }
 #portfolio .note { font-size: 15px; color: var(--muted); }
 #replay {
   pointer-events: auto; appearance: none; margin-top: 26px; padding: 11px 18px; background: transparent; color: var(--ink);
