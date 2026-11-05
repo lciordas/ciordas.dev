@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monolith Elements</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="css/site.css">
+<script type="importmap">{"imports":{"three":"../_vendor/three/three.module.js","three/addons/":"../_vendor/three/jsm/"}}</script>
+<style>
+  body { overflow: auto; height: auto; background: #0b0908; color: var(--ink); padding: 56px 30px 90px; }
+  h1 { font: 400 13px var(--font); letter-spacing: .02em; color: var(--ink-2); margin-bottom: 40px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 430px), 1fr)); gap: 42px 26px; }
+  figure { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .demo { position: relative; aspect-ratio: 16 / 11; background: #120c0a; overflow: hidden; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.07); }
+  .demo canvas { cursor: grab; }
+  figcaption b { display: block; font-weight: 500; font-size: 13px; margin-bottom: 3px; }
+  figcaption { font-size: 12px; line-height: 1.5; color: var(--ink-2); }
+  figcaption code { display: block; margin-top: 5px; color: var(--ink-3); font: 11px ui-monospace, Menlo, monospace; word-break: break-word; }
+  .demo .hint { position: absolute; left: 10px; bottom: 8px; font-size: 11px; color: var(--ink-3); pointer-events: none; }
+  .demo .loader-outline { position: absolute !important; }
+  #demo-sound { position: static; }
+  .demo .btn { font-size: 12px; border-bottom: 1px solid rgba(244,242,238,.35); padding-bottom: 2px; color: var(--ink); }
+  .reveal-copy { max-width: 340px; font-size: 17px; line-height: 1.5; }
+</style>
+  <meta name="robots" content="noindex,nofollow">
+</head>
+<body>
+<h1>Monolith template: every effect, working on its own. Each lives in elements/ and needs only its import.</h1>
+<div class="grid" id="grid"></div>
+<script src="../_vendor/gsap.min.js"></script>
+<script src="../_vendor/SplitText.min.js"></script>
+<script type="module">
+import * as THREE from 'three';
+import { mountStone, stoneSurface } from './elements/stone.js';
+import { mountDuskLandscape } from './elements/dusk-landscape.js';
+import { mountTitleRing } from './elements/title-ring.js';
+import { mountCarouselInput } from './elements/carousel-input.js';
+import { mountMediaPlane } from './elements/media-plane.js';
+import { mountBlockDissolve } from './elements/block-dissolve.js';
+import { mountFilmPost } from './elements/film-post.js';
+import { mountRenderWindows } from './elements/render-windows.js';
+import { mountLoaderOutline } from './elements/loader-outline.js';
+import { mountCrackedWord, mountRollLink, mountDrawArrow } from './elements/ui-links.js';
+import { mountLineReveal } from './elements/line-reveal.js';
+import { mountFlipBrand } from './elements/flip-brand.js';
+import { mountSound } from './elements/sound.js';
+
+const grid = document.getElementById('grid');
+const add = (name, note, code) => {
+  const f = document.createElement('figure');
+  f.innerHTML = `<div class="demo"></div><figcaption><b>${name}</b>${note}<code>${code}</code></figcaption>`;
+  grid.appendChild(f);
+  return f.firstChild;
+};
+// Fonts first, so canvas text measures correctly.
+await Promise.all([document.fonts.load('400 100px "Archivo Black"'), document.fonts.load('400 14px "Hanken Grotesk"')]);
+
+// Stone
+{
+  const box = add('Stone', 'A veined monolith made of fracture cells. Hover to open a slab, click to shatter or reform.', "mountStone(container, { palette, seed })");
+  const stone = mountStone(box, {});
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  let over = false, shatter = 0, goal = 0;
+  box.addEventListener('pointermove', (e) => {
+    const r = box.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, stone.stage.camera);
+    over = stone.pointerRay(ray.ray.origin, ray.ray.direction);
+    if (!over) stone.clearPointer();
+    stone.setHot(over ? 0.8 : 0, 0.34);
+  });
+  box.addEventListener('pointerleave', () => { over = false; stone.clearPointer(); stone.setHot(0); });
+  box.addEventListener('click', () => {
+    goal = goal ? 0 : 1;
+    if (goal) stone.throwChips(60, 3);
+    gsap.to(stone.uniforms.uMatte, { value: goal, duration: 0.4 });
+    gsap.to(stone.uniforms.uCrackAll, { value: 0, duration: 0.1 });
+  });
+  stone.ring.rx = 2.6; stone.ring.ry = 2; stone.ring.center.set(0, 2.9, 0); stone.assignSlots();
+  stone.start((dt, t) => {
+    shatter += (goal - shatter) * (1 - Math.exp(-dt * 3));
+    stone.state.shatter = shatter;
+    stone.pivot.rotation.y = t * 0.12;
+  });
+}
+// Landscape
+{
+  const box = add('Dusk landscape', 'Sky, hills, plants, birds and tidal pools with a real mirror pass. One palette colours all of it.', "mountDuskLandscape(container, { palette, plants, birds })");
+  const land = mountDuskLandscape(box, {});
+  land.start();
+}
+// Title ring
+{
+  const box = add('Title ring', 'Solid text in the centre window, outline outside it, cut per pixel. Drag or scroll.', "mountTitleRing(container, { titles: [['WORD','WORD']] })");
+  const ring = mountTitleRing(box, { titles: [['PROJECT', 'ONE'], ['PROJECT', 'TWO'], ['PROJECT', 'THREE'], ['PROJECT', 'FOUR']] });
+  const input = mountCarouselInput(ring.stage.renderer.domElement, { count: 4 });
+  ring.setAlpha(1, 0.62);
+  ring.start((dt, t) => ring.update(dt, t, input.update(dt), input.state.vel));
+}
+// Carousel input
+{
+  const box = add('Carousel input', 'Wheel and drag become one springy position. A nudge returns, a full step commits.', "mountCarouselInput(element, { count, onStep, onTap })");
+  box.innerHTML = '<div style="font:400 44px var(--font);color:#fff" id="ci">1</div><span class="hint">Scroll or drag here</span>';
+  box.style.touchAction = 'none';
+  const el = box.querySelector('#ci');
+  const input = mountCarouselInput(box, { count: 6 });
+  const loop = () => { const p = input.update(1 / 60); el.style.transform = `translateX(${(p - Math.round(p)) * -180}px)`; el.textContent = String(((Math.round(p) % 6) + 6) % 6 + 1); requestAnimationFrame(loop); };
+  loop();
+}
+// Media plane
+{
+  const box = add('Media plane', 'A soft-edged floating screen that opens from a column and cross-cuts. Uses a placeholder until given media.', "mountMediaPlane(container, { width, height }).setProject(0, [{ src: 'clip.mp4' }])");
+  const plane = mountMediaPlane(box, { position: [0, 3.2, 0], width: 8, height: 4.6 });
+  plane.setProject(0, []);
+  plane.start();
+  const replay = () => { gsap.fromTo(plane.uniforms.uOpen, { value: 0 }, { value: 1, duration: 1, ease: 'expo.out' }); gsap.fromTo(plane.uniforms.uFade, { value: 0 }, { value: 1, duration: 0.3 }); };
+  replay();
+  box.addEventListener('click', replay);
+  box.insertAdjacentHTML('beforeend', '<span class="hint">Click to replay</span>');
+}
+// Block dissolve
+{
+  const box = add('Block dissolve', 'A grid wipe outward from the centre, with rounded survivors and registration marks.', "mountBlockDissolve(container, { cell: 48, from, to })");
+  mountBlockDissolve(box, { cell: 26, from: '#050404', to: '#b6573a', duration: 1.8 });
+}
+// Render windows
+{
+  const box = add('Render windows', 'Panels that each draw the same scene in another render mode. Wireframe, uv, normals, clay, transmission.', "mountRenderWindows(renderer, { slots, drawMode(mode) {} })");
+  const stone = mountStone(box, { background: 0x030303 });
+  const r = stone.stage.renderer;
+  const slots = [
+    { label: 'wireframe', mode: 'wireframe', bg: '#050404', x: 10, y: 20, w: 200, h: 190, t: 0 },
+    { label: 'uv', mode: 'uv', bg: '#141211', x: 120, y: 60, w: 170, h: 150, t: 0.4 },
+    { label: 'transmission', mode: 'transmission', bg: '#8e12a0', x: 230, y: 12, w: 170, h: 140, t: 0.8 },
+    { label: 'normals', mode: 'normals', bg: '#050404', x: 150, y: 170, w: 190, h: 100, t: 1.2 },
+    { label: 'clay', mode: 'clay', bg: '#050404', x: 28, y: 190, w: 180, h: 90, t: 1.6 },
+  ];
+  const win = mountRenderWindows(r, { slots, baseWidth: 430, baseHeight: 296, drawMode(mode) { stone.setMode(mode); r.render(stone.stage.scene, stone.stage.camera); stone.setMode('beauty'); } });
+  const size = new THREE.Vector2();
+  let last = 0, t0 = performance.now();
+  stone.start(() => {
+    r.getSize(size);
+    if (size.x !== last) { win.layout(size.x, size.y, r.getPixelRatio()); last = size.x; }
+  });
+  // Draw the panels straight after the stage's own render.
+  const loop = () => {
+    const el = (performance.now() - t0) / 1000;
+    win.render(el % 5, null, null);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+// Loader
+{
+  const box = add('Loader outline', 'Load progress drawn up both sides of your object’s silhouette.', "mountLoaderOutline(parent, { points: () => ({ left, right }) })");
+  box.style.background = '#050404';
+  const points = () => {
+    const W = box.clientWidth, H = box.clientHeight, k = H * 0.82 / 5.75;
+    const side = (dir) => { const out = []; for (let i = 0; i <= 90; i++) { const uy = -0.999 + 1.998 * (i / 90); const p = stoneSurface(dir * Math.sqrt(1 - uy * uy), uy, 0); out.push([W / 2 + p[0] * k, H * 0.91 - p[1] * k]); } return out; };
+    return { left: side(-1), right: side(1) };
+  };
+  const l = mountLoaderOutline(box, { points });
+  const o = { p: 0 };
+  gsap.to(o, { p: 1, duration: 3.2, repeat: -1, repeatDelay: 0.8, ease: 'power1.inOut', onUpdate: () => l.set(o.p) });
+}
+// Cracked word
+{
+  const box = add('Cracked word', 'Two halves of a word, split on a jagged line, shift apart with a springy hover.', "mountCrackedWord(linkEl, 'About')");
+  box.innerHTML = '<a href="#" style="font-size:44px;position:relative"></a>';
+  mountCrackedWord(box.firstChild, 'About');
+}
+// Roll link
+{
+  const box = add('Roll link', 'Letters roll in sequence, the rule sweeps across, the arrow exits and comes back.', "mountRollLink(aEl, { label, href })");
+  box.innerHTML = '<a style="font-size:20px"></a>';
+  mountRollLink(box.firstChild, { label: 'Visit website', href: '#' });
+}
+// Draw arrow
+{
+  const box = add('Draw arrow', 'A long arrow erases forward on hover and redraws from its tail.', "mountDrawArrow(aEl, { flipped })");
+  box.innerHTML = '<div style="display:flex;gap:30px"><a href="#" style="display:grid;place-items:center;width:60px;height:60px;color:#fff"></a><a href="#" style="display:grid;place-items:center;width:60px;height:60px;color:#fff"></a></div>';
+  const [a, b] = box.querySelectorAll('a');
+  mountDrawArrow(a, { flipped: true }); mountDrawArrow(b);
+}
+// Line reveal
+{
+  const box = add('Line reveal', 'Text splits into masked lines that slide up in sequence. Click to replay.', "mountLineReveal(elements, { duration, stagger }).in()");
+  box.innerHTML = '<p class="reveal-copy">Each line sits in its own mask and rises into place, one after another, without any layout shift.</p>';
+  const r = mountLineReveal(box.firstChild);
+  r.in(); box.addEventListener('click', () => { r.reset(); r.in(); });
+}
+// Flip brand
+{
+  const box = add('Flip brand', 'A name flies from one place into a line of text and back. Click to toggle.', "mountFlipBrand(el).to(targetEl) / .home()");
+  box.innerHTML = '<a style="position:absolute;left:14px;top:12px;font-weight:600;font-size:14px;line-height:1.2;display:inline-block" id="fb">Lucas Ciordas</a><p style="font-size:20px;line-height:1.3"><span id="fbt" style="visibility:hidden;font-weight:600;display:inline-block;line-height:1.2">Lucas Ciordas</span>, designs and builds.</p>';
+  const f = mountFlipBrand(box.querySelector('#fb'));
+  let on = false; box.addEventListener('click', () => { on = !on; if (on) f.to(box.querySelector('#fbt')); else f.home(); });
+}
+// Sound
+{
+  const box = add('Sound', 'An icon whose waves and cross draw themselves, plus a generated ambience. Silent until the first click.', "mountSound(buttonEl).tick() / .crack() / .shatter()");
+  box.innerHTML = '<button id="sound-toggle" style="position:static" type="button"></button>';
+  const s = mountSound(box.firstChild);
+}
+// Film post
+{
+  const box = add('Film post', 'Bloom, vignette and woven grain as the final pass over any scene.', "const post = mountFilmPost(renderer); post.resize(w, h, dpr); post.bloomPass(); post.present(t)");
+  const c = document.createElement('canvas'); Object.assign(c.style, { width: '100%', height: '100%' }); box.appendChild(c);
+  const r = new THREE.WebGLRenderer({ canvas: c }); r.outputColorSpace = THREE.LinearSRGBColorSpace;
+  const post = mountFilmPost(r, { bloom: 0.7, threshold: 0.7 });
+  const sc = new THREE.Scene(); sc.background = new THREE.Color('#2a0f0a');
+  const cam = new THREE.PerspectiveCamera(35, 1, 0.1, 50); cam.position.z = 5;
+  const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.9, 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.0, 0.56, 0.38), wireframe: false }));
+  sc.add(m);
+  const size = () => { const w = box.clientWidth, h = box.clientHeight; r.setPixelRatio(Math.min(devicePixelRatio, 2)); r.setSize(w, h, false); post.resize(w, h, Math.min(devicePixelRatio, 2)); cam.aspect = w / h; cam.updateProjectionMatrix(); };
+  new ResizeObserver(size).observe(box); size();
+  const tick = (t) => { m.rotation.y = t / 1600; m.rotation.x = t / 2600; r.setRenderTarget(post.main); r.clear(); r.render(sc, cam); post.bloomPass(); post.present(t / 1000); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+</script>
+<script src="/templates/switcher.js" defer></script>
+</body>
+</html>
