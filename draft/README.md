@@ -30,9 +30,13 @@ Run `node draft/tools/build-name.mjs` from the repo root. It needs the local `to
 
 ## Project sections
 
-Each project sits in a rounded window in the middle of the screen, with room around it for text. As you scroll, CAD parts scattered across the whole screen fly in and assemble inside the window, the camera turns to the footage's angle, a light line wipes from CAD to video, then the video plays with the scroll. The window's size is set by `--rw` in `css/site.css`. The dog clip is cut with `tools/build-frames.mjs`, whose `lock` option follows the background and cancels the camera's movement. Code is in `js/projects/`, and the words and camera angles are in the `PROJECTS` list in `work.js`.
+After the name shatters, the overview page is underneath it: projects in two columns, then distinctions and experience. Arrow keys and Enter work as well as the mouse. Scrolling down from it walks through every project. Choosing one opens that project alone, right below the overview, so scrolling back up returns to the overview; Esc and the Overview button also go back. Project addresses look like `/draft/#robot-dog` and skip the intro.
 
-- Add `?to=work` to the address to skip the intro and reach the projects.
+The words and the overview's look live in `data/content.json`. Edit them in the Editor tab (`/draft/edit/`): type on the preview, changes save in that browser, and Publish commits the file through GitHub using your own token.
+
+Animated projects sit in a rounded window with room around it for text. CAD parts float at random across the whole screen, then assemble in the window as you scroll. A light line wipes from CAD to footage, which either moves with the scroll or plays as a video. Their timing and camera angles are in `ANIMATED` in `js/projects/work.js`, the window's size is `--rw` in `css/site.css`. Models bake from the STEP files with `tools/build-cad.mjs`, including the assembled seesaw and the dog's standing pose. Scroll footage comes from `tools/build-frames.mjs`, videos from `tools/build-video.mjs`.
+
+- Add `?to=overview` to the address to skip the intro.
 - `node draft/tools/build-frames.mjs` re-extracts the video frames, with clip times at the top of the file.
 - `node draft/tools/build-cad.mjs` rebuilds the CAD files from the STL exports.
 Both tools need the local `toolkit` folder, plus the source files in Downloads.

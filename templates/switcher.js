@@ -7,11 +7,12 @@
     { key: '2', label: 'Expedition', href: '/templates/02-expedition/' },
     { key: '3', label: 'Circuit', href: '/templates/03-circuit/' },
     { key: '4', label: 'Draft', href: '/draft/' },
+    { key: '5', label: 'Editor', href: '/draft/edit/' },
   ];
   if (window.self !== window.top || document.getElementById('site-tabs')) return;
 
   const path = location.pathname;
-  const isActive = (t) => (t.href === '/' ? path === '/' || path === '/index.html' : path.startsWith(t.href));
+  const isActive = (t) => (t.href === '/' ? path === '/' || path === '/index.html' : path.startsWith(t.href) && !TABS.some((o) => o.href.length > t.href.length && o.href.startsWith(t.href) && path.startsWith(o.href)));
 
   const host = document.createElement('div');
   host.id = 'site-tabs';

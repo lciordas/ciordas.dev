@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Site Editor</title>
+  <link rel="stylesheet" href="edit.css">
+</head>
+<body>
+  <aside id="panel">
+    <header>
+      <h1>Site editor</h1>
+      <p id="status" role="status">Loading</p>
+    </header>
+    <div id="tabs" role="tablist"></div>
+    <div id="body"></div>
+    <footer>
+      <button id="publish" class="primary" type="button">Publish to site</button>
+      <button id="download" type="button">Download</button>
+      <button id="reset" type="button">Discard changes</button>
+    </footer>
+  </aside>
+  <main id="view">
+    <div id="bar">
+      <label>Preview
+        <select id="page"></select>
+      </label>
+      <div id="sizes" role="group" aria-label="Preview size">
+        <button type="button" data-w="100%" class="on">Desktop</button>
+        <button type="button" data-w="390px">Phone</button>
+      </div>
+      <p id="tip">Click any text in the preview and type.</p>
+    </div>
+    <div id="frame"><iframe id="preview" title="Page preview"></iframe></div>
+  </main>
+  <dialog id="dlg">
+    <form method="dialog">
+      <h2>Publish to ciordas.dev</h2>
+      <p>This saves your changes to the site's GitHub repo, and they go live about a minute later. Pages can then take up to 10 minutes to refresh in browsers.</p>
+      <p>GitHub needs a key that only you hold. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a fine-grained token</a>, limit it to the <b>ciordas.dev</b> repository, and give it <b>Contents: Read and write</b>.</p>
+      <label>Token <input id="token" type="password" autocomplete="off" spellcheck="false"></label>
+      <label class="check"><input id="remember" type="checkbox"> Remember on this browser</label>
+      <p id="dlgmsg" role="status"></p>
+      <menu>
+        <button value="cancel">Cancel</button>
+        <button id="go" class="primary" value="default" type="button">Publish</button>
+      </menu>
+    </form>
+  </dialog>
+  <script type="module" src="edit.js"></script>
+  <script src="/templates/switcher.js" defer></script>
+</body>
+</html>

@@ -16,20 +16,38 @@ const skipIntro = params.has('skip') || REDUCED || !!STYLE;
 
 
 const $ = (id) => document.getElementById(id);
-const canvas = $('gl'), enterBtn = $('enter'), portfolio = $('portfolio'), replay = $('replay'), fallback = $('fallback');
-replay.addEventListener('click', () => { location.href = location.pathname + (params.get('font') ? `?font=${params.get('font')}` : ''); });
+const canvas = $('gl'), enterBtn = $('enter'), portfolio = $('portfolio'), fallback = $('fallback');
 
 let onHero = null;
-const showPortfolio = () => {
+let content = null;
+const loadContent = async () => {
+  // The editor's preview shows unpublished work saved in this browser.
+  if (params.has('draft')) { try { content = JSON.parse(localStorage.getItem('lc-content-draft')); } catch { content = null; } }
+  content = content || await (await fetch('data/content.json')).json();
+  return content;
+};
+const showPortfolio = async (direct) => {
+  await (content || loadContent());
   portfolio.hidden = false;
   document.body.classList.remove('is-intro'); document.body.classList.add('is-portfolio');
   document.documentElement.classList.add('can-scroll');
   const work = $('work'); work.hidden = false;
-  import('./projects/work.js').then((m) => m.mountWork(work, { fade: [portfolio, canvas], onHero: (h) => onHero?.(h) }));
-  gsap.fromTo(portfolio.children, { y: 22, opacity: 0 }, { y: 0, opacity: 1, duration: 1.1, ease: 'expo.out', stagger: 0.09 });
+  const [{ mountWork }, { mountSite }] = await Promise.all([import('./projects/work.js'), import('./site.js')]);
+  const api = mountWork(work, { content, fade: direct ? [] : [canvas], onHero: (h) => onHero?.(h) });
+  mountSite({ root: portfolio, work: api, content, onReplay: () => { location.href = location.pathname + location.search.replace(/[?&]to=[^&]*/, ''); } });
+  gsap.fromTo(portfolio.querySelectorAll('.ov-reveal'), { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 1.05, ease: 'expo.out', stagger: 0.08 });
 };
 
-if (!hasWebGL()) {
+// The editor shows the overview alone. A project link or ?to= skips the intro.
+const editMode = params.has('edit');
+const direct = params.has('to') || location.hash.length > 1;
+if (editMode) {
+  canvas.style.display = 'none';
+  import('./site-edit.js').then((m) => m.mountEditable(portfolio));
+} else if (direct) {
+  canvas.style.display = 'none';
+  showPortfolio(true);
+} else if (!hasWebGL()) {
   // Without 3D the name is plain text, and clicking it fades straight to the portfolio.
   canvas.style.display = 'none'; fallback.hidden = false;
   gsap.from(fallback.children, { opacity: 0, y: 18, duration: 1, stagger: 0.12, ease: 'power3.out' });

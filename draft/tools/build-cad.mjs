@@ -1,4 +1,5 @@
-// Turns an STL export into a compact binary: separate parts, simplified meshes, crisp normals, and CAD edge lines.
+// Turns a STEP assembly into a compact binary: one part per solid, posed into place, simplified meshes,
+// crisp normals, and CAD edge lines. All poses are baked into the vertices, so the page needs no pose code.
 // Run from the repo root: node draft/tools/build-cad.mjs
 import { createRequire } from 'node:module';
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
@@ -6,43 +7,187 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../../toolkit/x.js'));
 const { MeshoptSimplifier } = require('meshoptimizer');
+const occtImport = require('occt-import-js');
 await MeshoptSimplifier.ready;
 const HOME = os.homedir();
-const MODELS = {
-  seesaw: { file: `${HOME}/Downloads/pid seesaw w ball reference.stl`, ratio: 1, error: 0 },
-  dog: { file: `${HOME}/Downloads/robot dog reference.stl`, ratio: 0.3, error: 0.004 },
-};
 const CREASE = Math.cos((32 * Math.PI) / 180);
+const DEG = Math.PI / 180;
 
-function readStl(file) {
-  const b = fs.readFileSync(file), n = b.readUInt32LE(80), P = new Float32Array(n * 9);
-  let o = 84;
-  for (let i = 0; i < n; i++) { o += 12; for (let k = 0; k < 9; k++) { P[i * 9 + k] = b.readFloatLE(o); o += 4; } o += 2; }
-  return { n, P };
+// --- Rigid transforms: 3x4 matrices, as [r00,r01,r02,tx, r10,r11,r12,ty, r20,r21,r22,tz].
+const ID = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0];
+const then = (b, a) => { // a first, then b
+  const o = new Array(12);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) o[r * 4 + c] = b[r * 4] * a[c] + b[r * 4 + 1] * a[4 + c] + b[r * 4 + 2] * a[8 + c];
+    o[r * 4 + 3] = b[r * 4] * a[3] + b[r * 4 + 1] * a[7] + b[r * 4 + 2] * a[11] + b[r * 4 + 3];
+  }
+  return o;
+};
+const move = (x, y, z) => [1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z];
+const chain = (...m) => m.reduceRight((acc, x) => then(x, acc), ID); // chain(c, b, a) applies a, then b, then c
+const aroundY = (deg, px = 0, pz = 0) => { const c = Math.cos(deg * DEG), s = Math.sin(deg * DEG); return chain(move(px, 0, pz), [c, 0, s, 0, 0, 1, 0, 0, -s, 0, c, 0], move(-px, 0, -pz)); };
+const aroundZ = (deg, px = 0, py = 0) => { const c = Math.cos(deg * DEG), s = Math.sin(deg * DEG); return chain(move(px, py, 0), [c, -s, 0, 0, s, c, 0, 0, 0, 0, 1, 0], move(-px, -py, 0)); };
+const apply = (m, p) => [m[0] * p[0] + m[1] * p[1] + m[2] * p[2] + m[3], m[4] * p[0] + m[5] * p[1] + m[6] * p[2] + m[7], m[8] * p[0] + m[9] * p[1] + m[10] * p[2] + m[11]];
+// The two solutions where a pair of pinned links with lengths r1 (from a) and r2 (from b) meet, in a 2D plane.
+function meet(a, r1, b, r2) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy), t = (r1 * r1 - r2 * r2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, r1 * r1 - t * t));
+  const mx = a[0] + (t * dx) / d, my = a[1] + (t * dy) / d;
+  return [[mx + (h * dy) / d, my - (h * dx) / d], [mx - (h * dy) / d, my + (h * dx) / d]];
 }
-function weld({ n, P }) {
-  const map = new Map(), idx = new Uint32Array(n * 3), pos = [];
-  for (let i = 0; i < n * 3; i++) {
+
+// --- Seesaw. STEP axes: X along the beam (the sensor end is -X), Y across it, Z up, pivot at the origin.
+// The STEP gives the beam at 7.5 degrees with the sensor end down, and the other groups just laid out nearby.
+// Left out on purpose: mesh 24, the plate under the servo mount, which isn't visible in the footage (the mount's
+// feet stand on the cardboard, so it would be underneath, and here it would float), and meshes 25-26, a spare servo
+// and horn from the robot dog file that isn't on the real machine.
+function seesawPose() {
+  const TILT = 4.94; // sensor end up, in degrees, measured off the first video frame
+  const BALL_ALONG = 47.6; // ball centre along the beam from the pivot, towards +X, measured off the same frame
+  const BEAM = 7.5 + TILT;
+  const beam = aroundY(BEAM);
+  // Ball: slides along the groove (it is seated in it in the STEP at 80.06 mm), then tilts with the beam.
+  const along = BALL_ALONG - 80.06, c0 = Math.cos(7.5 * DEG), s0 = Math.sin(7.5 * DEG);
+  const ball = then(beam, move(along * c0, 0, along * s0));
+  // Servo mount: its feet (z -50) go down onto the A-frame's foot plane (z -61.25). X and Y are read off the
+  // footage, Y so that the shaft tip seats on the horn.
+  const MOUNT = [-52.5, -4.85, -11.25];
+  const mount = move(...MOUNT);
+  // Linkage, a four-bar: beam pin, link, horn, servo shaft. The link's back face sits on the beam's flank.
+  const LINK_Y = -11.63;
+  const beamPin = apply(beam, [-140.47, 0, -5.63]);
+  const P = [beamPin[0], beamPin[2]], S = [-55 + MOUNT[0], MOUNT[2]];
+  const LA = [-124, 7.48], LB = [-145, -28.9], HA = [-145, -28.9], HB = [-111.77, -49.32]; // pin centres in the STEP
+  const E = meet(P, Math.hypot(LA[0] - LB[0], LA[1] - LB[1]), S, Math.hypot(HA[0] - HB[0], HA[1] - HB[1])).sort((a, b) => a[0] - b[0])[0]; // the elbow on the far side from the pivot
+  const pinned = (a0, b0, a1, b1) => { // takes the pin pair a0,b0 onto a1,b1 by turning about Y, with the link's Y shift
+    const deg = (Math.atan2(b0[1] - a0[1], b0[0] - a0[0]) - Math.atan2(b1[1] - a1[1], b1[0] - a1[0])) / DEG;
+    return chain(move(a1[0], LINK_Y, a1[1]), aroundY(deg), move(-a0[0], 0, -a0[1]));
+  };
+  const link = pinned(LA, LB, P, E), horn = pinned(HA, HB, E, S);
+  console.log('seesaw: beam pin', P.map((v) => +v.toFixed(2)), 'elbow', E.map((v) => +v.toFixed(2)), 'shaft', S);
+  return [
+    { name: 'beam', meshes: [[6, beam]] },
+    { name: 'ball', meshes: [[0, ball]], keep: true },
+    { name: 'ir sensor', meshes: [[1, beam], [4, beam], [5, beam]] },
+    { name: 'sensor lens a', meshes: [[2, beam]] },
+    { name: 'sensor lens b', meshes: [[3, beam]] },
+    { name: 'link', meshes: [[7, link]] },
+    { name: 'link boss', meshes: [[8, link]] },
+    { name: 'horn', meshes: [[9, horn]] },
+    { name: 'horn boss', meshes: [[10, horn]] },
+    { name: 'servo shaft', meshes: [[11, mount]] },
+    { name: 'servo case', meshes: [[12, mount]] },
+    ...[13, 14, 15, 16].map((i, k) => ({ name: `servo screw ${k + 1}`, meshes: [[i, mount]] })),
+    { name: 'servo connector', meshes: [[18, mount]] },
+    { name: 'servo', meshes: [[19, mount], [17, mount]] },
+    ...[20, 21, 22].map((i, k) => ({ name: `servo wire ${k + 1}`, meshes: [[i, mount]] })),
+    { name: 'servo mount', meshes: [[23, mount]] },
+    { name: 'a-frame', meshes: [[27, ID]] },
+    { name: 'pivot pin', meshes: [[28, ID]] },
+    { name: 'pivot cap', meshes: [[29, ID]] },
+  ];
+}
+
+// --- Robot dog. STEP axes: X up, Y along the body, Z across it. Each leg lies in an XY plane, and is a parallelogram:
+// the thigh carries the knee servo, whose arm drives the shank through a rod that stays parallel to the thigh.
+// Turning the thigh about the hip and the shank and arm by the same angle keeps every pin connected.
+// In the footage the hip servo is coaxial with the knee servo: the hip servo sits in its housing with the shaft up
+// (the STEP has it down, 20 mm lower), and the thigh's (4, 0) hole is on the hip shaft, not its (-20, 0) one.
+// So here the hip servo is turned end for end, its horn is turned round on the thigh, and the thigh pivots at (4, 0).
+// The angles are measured off the first video frame, with all four feet at the same height (x = -140.5).
+const STANDING = {
+  // Degrees. thigh: about the hip shaft, counterclockwise looking along -Z. knee: shank and arm, relative to the thigh.
+  // side: the side servo tips the whole hip housing and leg about Y; positive lifts the +Z side.
+  aNear: { thigh: -41.1, knee: 45.1, side: 8.6 },
+  aFar: { thigh: -72.9, knee: 53.9, side: 4.5 },
+  bNear: { thigh: -51.8, knee: 59.9, side: -11.6 },
+  bFar: { thigh: -55.4, knee: 41.9, side: -13.5 },
+};
+function dogPose() {
+  const REAR = -180; // the second pair of hips sits this far along Y
+  // The STEP leaves out the near rear hip servo and horn, and has the near front pair twice, so that spare goes there.
+  const spare = move(0, REAR, 0);
+  const flipServo = (y) => aroundZ(180, -10, y); // about the middle of the servo, which is the middle of its housing
+  const legs = [
+    { key: 'aFar', base: 22, y: 0, axisZ: -116.3, kneeServo: 65, kneeHorn: 64, hipHorn: [3, ID], hipServo: [7, ID], housing: 11 },
+    { key: 'bFar', base: 31, y: REAR, axisZ: -116.3, kneeServo: 63, kneeHorn: 62, hipHorn: [17, ID], hipServo: [18, ID], housing: 21, sideHorn: 19 },
+    { key: 'aNear', base: 40, y: 0, axisZ: -29.3, kneeServo: 61, kneeHorn: 60, hipHorn: [2, ID], hipServo: [6, ID], housing: 10 },
+    { key: 'bNear', base: 49, y: REAR, axisZ: -29.3, kneeServo: 14, kneeHorn: 13, hipHorn: [4, spare], hipServo: [8, spare], housing: 12, sideHorn: 15 },
+  ];
+  const parts = [
+    { name: 'body', meshes: [[58, ID]], keep: true },
+    { name: 'body bracket', meshes: [[59, ID]] },
+    ...[66, 67, 68, 69].map((i, k) => ({ name: `servo bracket ${k + 1}`, meshes: [[i, ID]] })),
+    ...[0, 1, 16, 20].map((i, k) => ({ name: `side servo ${k + 1}`, meshes: [[i, ID]] })),
+  ];
+  for (const { key, base, y, axisZ, kneeServo, kneeHorn, hipHorn, hipServo, housing, sideHorn } of legs) {
+    const { thigh: t, knee: k, side } = STANDING[key];
+    const tip = aroundY(side, -20.65, axisZ); // about the side servo's shaft
+    const kneePin = [-81, y], armCentre = [4, y], armPin = [32.28, y + 28.28];
+    const thigh = chain(tip, move(-4, 0, 0), aroundZ(t, ...armCentre)); // the (4, y) hole lands on the hip shaft at (0, y)
+    const shank = then(thigh, aroundZ(k, ...kneePin));
+    const arm = then(thigh, aroundZ(k, ...armCentre));
+    const pinNow = apply(aroundZ(k, ...armCentre), [...armPin, 0]);
+    const rod = then(thigh, move(pinNow[0] - armPin[0], pinNow[1] - armPin[1], 0));
+    const horn = chain(thigh, aroundZ(180, -8, y), hipHorn[1]);
+    if (sideHorn !== undefined) parts.push({ name: `${key} side servo horn`, meshes: [[sideHorn, tip]] });
+    parts.push(
+      { name: `${key} hip housing`, meshes: [[housing, tip]] },
+      { name: `${key} hip servo`, meshes: [[hipServo[0], chain(tip, flipServo(y), hipServo[1])]] },
+      { name: `${key} thigh`, meshes: [[base, thigh]], keep: true },
+      { name: `${key} knee servo`, meshes: [[kneeServo, thigh]] },
+      { name: `${key} knee servo horn`, meshes: [[kneeHorn, arm]] },
+      { name: `${key} hip horn`, meshes: [[hipHorn[0], horn]] },
+      { name: `${key} arm`, meshes: [[base + 1, arm]] },
+      { name: `${key} rod`, meshes: [[base + 2, rod]] },
+      { name: `${key} shank`, meshes: [[base + 3, shank]], keep: true },
+      { name: `${key} knee pin`, meshes: [[base + 4, thigh]] },
+      { name: `${key} knee cap`, meshes: [[base + 5, thigh]] },
+      { name: `${key} rod pin`, meshes: [[base + 6, shank]] },
+      { name: `${key} rod cap`, meshes: [[base + 7, shank]] },
+      { name: `${key} arm cap`, meshes: [[base + 8, arm]] },
+    );
+  }
+  return parts;
+}
+
+const MODELS = {
+  seesaw: { file: `${HOME}/Downloads/full pid seesaw ref.step`, parts: seesawPose, angular: 0.25, ratio: 0.7, keepRatio: 1, error: 0.002 },
+  dog: { file: `${HOME}/Downloads/robot dog reference.step`, parts: dogPose, angular: 0.35, ratio: 0.34, keepRatio: 0.7, error: 0.006 },
+};
+
+const occt = await occtImport();
+function readStep(file, angular) {
+  const r = occt.ReadStepFile(new Uint8Array(fs.readFileSync(file)), { linearUnit: 'millimeter', linearDeflectionType: 'bounding_box_ratio', linearDeflection: 0.002, angularDeflection: angular });
+  if (!r.success) throw new Error(`could not read ${file}`);
+  return r.meshes;
+}
+function weld(mesh) {
+  const P = mesh.attributes.position.array, I = mesh.index.array, map = new Map(), pos = [], remap = new Int32Array(P.length / 3);
+  for (let i = 0; i < remap.length; i++) {
     const k = `${Math.round(P[i * 3] * 500)},${Math.round(P[i * 3 + 1] * 500)},${Math.round(P[i * 3 + 2] * 500)}`;
     let v = map.get(k);
     if (v === undefined) { v = pos.length / 3; map.set(k, v); pos.push(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]); }
-    idx[i] = v;
+    remap[i] = v;
   }
-  return { idx, pos: Float32Array.from(pos) };
+  const idx = [];
+  for (let t = 0; t < I.length; t += 3) {
+    const a = remap[I[t]], b = remap[I[t + 1]], c = remap[I[t + 2]];
+    if (a !== b && b !== c && a !== c) idx.push(a, b, c);
+  }
+  return { idx, pos };
 }
-function components(idx, vc) {
-  const par = new Int32Array(vc).map((_, i) => i);
-  const find = (x) => { while (par[x] !== x) { par[x] = par[par[x]]; x = par[x]; } return x; };
-  for (let t = 0; t < idx.length; t += 3) { const a = find(idx[t]); par[find(idx[t + 1])] = a; par[find(idx[t + 2])] = a; }
-  const groups = new Map();
-  for (let t = 0; t < idx.length; t += 3) { const r = find(idx[t]); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(idx[t], idx[t + 1], idx[t + 2]); }
-  return [...groups.values()];
+// Welds and poses a list of [mesh index, transform] into one vertex table.
+function gather(meshes, list) {
+  const idx = [], pos = [];
+  for (const [i, xf] of list) {
+    const w = weld(meshes[i]), base = pos.length / 3;
+    for (let v = 0; v < w.pos.length; v += 3) pos.push(...apply(xf, [w.pos[v], w.pos[v + 1], w.pos[v + 2]]));
+    for (const v of w.idx) idx.push(v + base);
+  }
+  return { idx, pos };
 }
 function buildPart(tris, pos, cfg) {
-  // Local vertex table.
-  const remap = new Map(); const lp = [];
-  const local = tris.map((v) => { let l = remap.get(v); if (l === undefined) { l = lp.length / 3; remap.set(v, l); lp.push(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]); } return l; });
-  let indices = Uint32Array.from(local); const lpos = Float32Array.from(lp);
+  let indices = Uint32Array.from(tris); const lpos = Float32Array.from(pos);
   if (cfg.ratio < 1 && indices.length > 900) {
     const target = Math.max(300, Math.floor((indices.length * cfg.ratio) / 3) * 3);
     const [out] = MeshoptSimplifier.simplify(indices, lpos, 3, target, cfg.error, ['LockBorder']);
@@ -89,12 +234,15 @@ function buildPart(tris, pos, cfg) {
   return { P: outP, N: outN, I: outI, L: lines };
 }
 for (const [name, cfg] of Object.entries(MODELS)) {
-  const stl = readStl(cfg.file), { idx, pos } = weld(stl);
+  const meshes = readStep(cfg.file, cfg.angular);
+  const parts = cfg.parts().map((def) => {
+    const { idx, pos } = gather(meshes, def.meshes);
+    return { name: def.name, srcTris: idx.length / 3, ...buildPart(idx, pos, { ratio: def.keep ? cfg.keepRatio : cfg.ratio, error: cfg.error }) };
+  }).sort((a, b) => b.I.length - a.I.length);
   const min = [1e9, 1e9, 1e9], max = [-1e9, -1e9, -1e9];
-  for (let i = 0; i < pos.length; i += 3) for (let a = 0; a < 3; a++) { min[a] = Math.min(min[a], pos[i + a]); max[a] = Math.max(max[a], pos[i + a]); }
+  for (const p of parts) for (let i = 0; i < p.P.length; i += 3) for (let a = 0; a < 3; a++) { min[a] = Math.min(min[a], p.P[i + a]); max[a] = Math.max(max[a], p.P[i + a]); }
   const span = Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]);
   const q = (v, a) => Math.round(((v - min[a]) / span) * 65535) - 32768;
-  const parts = components(idx, pos.length / 3).map((t) => buildPart(t, pos, cfg)).sort((a, b) => b.I.length - a.I.length);
   const chunks = []; let off = 0; const meta = [];
   const put = (buf) => { const pad = (4 - (off % 4)) % 4; if (pad) { chunks.push(Buffer.alloc(pad)); off += pad; } const at = off; chunks.push(buf); off += buf.length; return at; };
   for (const p of parts) {
@@ -104,11 +252,11 @@ for (const [name, cfg] of Object.entries(MODELS)) {
     for (let i = 0; i < p.L.length; i++) ls[i] = q(p.L[i], i % 3);
     const wide = vc > 65535, ix = wide ? Uint32Array.from(p.I) : Uint16Array.from(p.I);
     let cx = 0, cy = 0, cz = 0; for (let i = 0; i < p.P.length; i += 3) { cx += p.P[i]; cy += p.P[i + 1]; cz += p.P[i + 2]; }
-    meta.push({ vc, ic: p.I.length, lc: p.L.length, wide, pos: put(Buffer.from(ps.buffer)), nor: put(Buffer.from(ns.buffer)), idx: put(Buffer.from(ix.buffer)), lin: put(Buffer.from(ls.buffer)), center: [cx / vc, cy / vc, cz / vc] });
+    meta.push({ name: p.name, vc, ic: p.I.length, lc: p.L.length, wide, pos: put(Buffer.from(ps.buffer)), nor: put(Buffer.from(ns.buffer)), idx: put(Buffer.from(ix.buffer)), lin: put(Buffer.from(ls.buffer)), center: [cx / vc, cy / vc, cz / vc] });
   }
   const dir = path.join(here, '../data/cad'); fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, `${name}.bin`), Buffer.concat(chunks));
   fs.writeFileSync(path.join(dir, `${name}.json`), JSON.stringify({ min, max, span, parts: meta }));
-  const tri = meta.reduce((n, m) => n + m.ic / 3, 0), ln = meta.reduce((n, m) => n + m.lc / 6, 0);
-  console.log(name, 'parts', meta.length, 'tris', stl.n, '->', tri, 'edges', ln, 'MB', (off / 1e6).toFixed(2), 'part centers', meta.slice(0, 5).map((m) => m.center.map((v) => +v.toFixed(0))).join(' | '));
+  const src = parts.reduce((n, p) => n + p.srcTris, 0), tri = meta.reduce((n, m) => n + m.ic / 3, 0), ln = meta.reduce((n, m) => n + m.lc / 6, 0);
+  console.log(name, 'parts', meta.length, 'tris', src, '->', tri, 'edges', ln, 'MB', (off / 1e6).toFixed(2), 'bbox', min.map((v) => +v.toFixed(1)), max.map((v) => +v.toFixed(1)));
 }

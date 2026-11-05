@@ -30,6 +30,7 @@ uniform highp sampler3D tVol;
 uniform vec3 p_pale, p_stone, p_deep, p_shard, p_low;
 ${GLSL_NOISE}
 const float SPAN=${SPAN.toFixed(1)};
+const float FLOWRATE=.32;
 const float VD=${VOL_DEPTH.toFixed(2)};
 
 // How strongly the rock and each pigment absorb red, green, and blue per unit of depth.
@@ -48,6 +49,13 @@ vec3 pillow(vec2 uv){
   return normalize(vec3(-g*1.6,1.));
 }
 vec2 toUv(vec2 p){ return p/SPAN+.5; }
+// Slow currents inside the stone. Each depth moves on its own, so the clouds churn as well as slide.
+const float FLOW=.11;
+vec2 current(vec2 p, float z){
+  float t=uTime*FLOWRATE;
+  vec2 a=vec2(sin(p.y*1.5+t*.92+z*2.4)+.55*sin(p.y*3.4-t*1.26+p.x*1.2+z*1.1),cos(p.x*1.3-t*.78+z*3.)+.55*cos(p.x*3.1+t*1.08+p.y*1.4-z*1.7));
+  return a*FLOW+vec2(t*.05,t*.012)*(.5+z);
+}
 // A lamp hung far behind the name. Being so deep, it slides against the letters as they turn.
 float lamp(vec2 p){
   vec2 a=vec2(sin(uTime*.13)*1.5,cos(uTime*.17)*.55-.1), b=vec2(cos(uTime*.09+1.)*2.1,sin(uTime*.11+2.)*.8);
@@ -62,11 +70,11 @@ vec3 volume(vec3 p, vec3 d, float len, float clear, float dens){
   float jit=dither(gl_FragCoord.xy);
   float sandSum=0.;
   // Fine tearing roughens the pigment clouds, which on their own are too soft at this size.
-  float tear=mix(.62,1.38,smoothstep(.3,.7,texture2D(tField,toUv(p.xy+d.xy*VD*.2)).a));
+  float tear=mix(.62,1.38,smoothstep(.3,.7,texture2D(tField,toUv(p.xy+d.xy*VD*.2+current(p.xy,.2))).a));
   for(int i=0;i<LAYERS;i++){
     float t=(float(i)+jit)*dt, depth=t/VD;
     vec3 q=p+d*t;
-    vec2 w=toUv(q.xy);
+    vec2 w=toUv(q.xy+current(q.xy,depth));
     float inside=smoothstep(.3,.7,texture2D(tMask,toUv(p.xy+d.xy*t*.55)).r);
     // Light scatters on its way out, so the deeper a cloud hangs the softer it looks.
     vec4 v=textureLod(tVol,vec3(w,q.z/VD+.5),depth*1.7);
@@ -77,7 +85,7 @@ vec3 volume(vec3 p, vec3 d, float len, float clear, float dens){
     sandSum+=v.g*dt*inside;
     // Filaments hang at a few depths: crisp near the face, hazy further in.
     if(i==1||i==3||i==6){
-      vec2 fw=toUv(p.xy+d.xy*(float(i)+.5)*dt);
+      vec2 fw=toUv(p.xy+d.xy*(float(i)+.5)*dt+current(p.xy,depth)*1.15);
       glow+=here*inside*p_pale*textureLod(tField,fw,float(i)*.12).g*.27;
     }
     tau+=sig*dt;
@@ -97,7 +105,7 @@ vec3 beauty(vec2 uv, vec3 d, vec3 N, float edge, float thick, float clear){
   vec3 c=volume(start,dir,len,clear,mix(.55,1.,thick));
   // Most of the light has been knocked about on its way through, so a share of it comes out as a
   // soft blur of the same clouds. That gives the dark bands a red bloom instead of a hard edge.
-  vec2 mid=toUv(vP.xy+dir.xy*VD*.5);
+  vec2 mid=toUv(vP.xy+dir.xy*VD*.5+current(vP.xy,.5));
   vec4 s=textureLod(tVol,vec3(mid,.5),3.);
   vec3 soft=p_pale*lamp(vP.xy+dir.xy*(len+2.2))*exp(-(ROCK*.6+s.r*MAROON*1.8+s.g*SAND*.65+s.b*ORANGE*.85)*mix(.55,1.,thick)*(1.-clear));
   c=mix(c,soft,.28);

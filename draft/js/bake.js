@@ -81,6 +81,7 @@ export function bakeSurface(renderer, data, size = 1024) {
   const field = rt(size);
   // Mipmaps let the material look up a blurrier copy for anything seen deep inside.
   field.texture.generateMipmaps = true; field.texture.minFilter = THREE.LinearMipmapLinearFilter;
+  field.texture.wrapS = field.texture.wrapT = THREE.MirroredRepeatWrapping; // the currents can carry a lookup past the edge
   quad.material = new THREE.ShaderMaterial({ vertexShader: VS, fragmentShader: FIELD_FS, depthTest: false, depthWrite: false });
   renderer.setRenderTarget(field); renderer.render(scene, cam);
   quad.material.dispose();
