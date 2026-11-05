@@ -5,6 +5,7 @@ import { mountRenderWindows } from './render-windows.js';
 import { mountTrace } from './trace.js';
 import { mountName, DEPTH } from './name.js';
 import { bakeSurface } from './bake.js';
+import { PALETTE, FILM } from './palette.js';
 
 const gsap = window.gsap;
 const params = new URLSearchParams(location.search);
@@ -13,7 +14,6 @@ const fontKey = FONT_KEYS.includes(params.get('font')) ? params.get('font') : 'b
 const STYLE = params.get('style');
 const skipIntro = params.has('skip') || REDUCED || !!STYLE;
 
-const PALETTE = { top: '#090706', mid: '#181310', haze: '#32271e', low: '#7a4a24', pale: '#f4e6cd', stone: '#b2663a', deep: '#5a0f06', shard: '#cdb596' };
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('gl'), enterBtn = $('enter'), portfolio = $('portfolio'), replay = $('replay'), fallback = $('fallback');
@@ -62,7 +62,7 @@ function start(data) {
 
   const baked = bakeSurface(renderer, data);
   const name = mountName(scene, data, palU, baked);
-  const post = mountFilmPost(renderer, { bloom: 0.2, threshold: 1 });
+  const post = mountFilmPost(renderer, FILM);
 
   const windows = mountRenderWindows(renderer, {
     drawMode(mode) {
