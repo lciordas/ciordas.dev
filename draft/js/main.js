@@ -13,7 +13,7 @@ const fontKey = FONT_KEYS.includes(params.get('font')) ? params.get('font') : 'b
 const STYLE = params.get('style');
 const skipIntro = params.has('skip') || REDUCED || !!STYLE;
 
-const PALETTE = { top: '#0c0402', mid: '#2a1105', haze: '#70400f', low: '#b9531a', pale: '#fcd0a4', stone: '#e0802f', deep: '#7c1f05', shard: '#c98f58' };
+const PALETTE = { top: '#090706', mid: '#181310', haze: '#32271e', low: '#7a4a24', pale: '#f4e6cd', stone: '#b2663a', deep: '#5a0f06', shard: '#cdb596' };
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('gl'), enterBtn = $('enter'), portfolio = $('portfolio'), replay = $('replay'), fallback = $('fallback');
@@ -62,7 +62,7 @@ function start(data) {
 
   const baked = bakeSurface(renderer, data);
   const name = mountName(scene, data, palU, baked);
-  const post = mountFilmPost(renderer, { bloom: 0.16, threshold: 1.02 });
+  const post = mountFilmPost(renderer, { bloom: 0.2, threshold: 1 });
 
   const windows = mountRenderWindows(renderer, {
     drawMode(mode) {
@@ -148,8 +148,8 @@ function start(data) {
     tl.to(S, { shake: 0, duration: 0.8, ease: 'power2.out' }, 0.62);
     tl.fromTo(skyU.uLift, { value: 0 }, { value: 1.25, duration: 0.14, ease: 'power2.out' }, 0.62);
     tl.to(skyU.uLift, { value: 0.2, duration: 1.7, ease: 'power2.out' }, 0.76);
-    tl.fromTo(post.uniforms.uBloom, { value: 0.16 }, { value: 1.5, duration: 0.1 }, 0.62);
-    tl.to(post.uniforms.uBloom, { value: 0.16, duration: 1, ease: 'power2.out' }, 0.72);
+    tl.fromTo(post.uniforms.uBloom, { value: 0.2 }, { value: 1.5, duration: 0.1 }, 0.62);
+    tl.to(post.uniforms.uBloom, { value: 0.2, duration: 1, ease: 'power2.out' }, 0.72);
     tl.to(name.uniforms.uMatte, { value: 0.42, duration: 1.2, ease: 'power2.out' }, 0.62);
     tl.add(() => { showPortfolio(); S.phase = 'portfolio'; }, 1.5);
   };
@@ -182,9 +182,13 @@ function start(data) {
       trace.hide();
       S.phase = 'windows'; S.windowsAt = S.time;
       post.uniforms.uDissolve.value = 0;
+      // The letters are already swaying when the first window opens onto them.
+      name.settleIn();
+      name.st.nudgeAt = Infinity;
+      name.setActive(1);
     });
     tl.to({}, { duration: 2.15 });
-    tl.add(() => { S.phase = 'dissolve'; name.settleIn(); });
+    tl.add(() => { S.phase = 'dissolve'; });
     tl.fromTo(post.uniforms.uDissolve, { value: 0 }, { value: 1, duration: 1.05, ease: 'none' });
     tl.to(skyU.uGlow, { value: 1, duration: 1.4, ease: 'power2.out' }, '-=1.05');
     tl.add(() => { S.backdrop?.dispose(); S.backdrop = null; ready(); });
@@ -236,7 +240,7 @@ function start(data) {
     if (S.phase === 'windows' || S.phase === 'dissolve') windows.render(t - S.windowsAt, post.stage, post.main.texture, S.backdrop);
     post.present(t);
   };
-  window.__draft = { S, name, post, trace, fps: () => window.__fps };
+  window.__draft = { S, name, post, trace, windows, fps: () => window.__fps };
 
   document.fonts.load('10px "Hanken Grotesk"').catch(() => {}).finally(() => {
     resize();

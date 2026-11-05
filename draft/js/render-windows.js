@@ -2,39 +2,64 @@
 // each drawing it a different way, like peeking at the renderer at work.
 import * as THREE from 'three';
 
-function chromeTexture(w, h, label) {
-  const dpr = 2;
+// The label is the only part of the frame kept as an image, so resizing never stretches anything.
+function labelTexture(label) {
+  const dpr = 2, w = 180, h = 20;
   const c = document.createElement('canvas'); c.width = w * dpr; c.height = h * dpr;
   const x = c.getContext('2d'); x.scale(dpr, dpr);
-  x.clearRect(0, 0, w, h);
-  // Bar
-  const r = 6;
-  x.beginPath(); x.roundRect(0.5, 0.5, w - 1, h - 1, r); x.save(); x.clip();
-  x.fillStyle = '#1b1817'; x.fillRect(0, 0, w, 20);
-  [10, 21, 32].forEach((cx) => { x.fillStyle = 'rgba(255,214,176,.32)'; x.beginPath(); x.arc(cx, 9.5, 3, 0, 7); x.fill(); });
-  x.fillStyle = 'rgba(244,242,238,.55)'; x.font = '10px "Hanken Grotesk", system-ui, sans-serif'; x.textBaseline = 'middle';
-  x.letterSpacing = '0.6px'; x.fillText(label, 46, 10.5);
-  x.restore();
-  // Thin border.
-  x.strokeStyle = 'rgba(255,224,196,.42)'; x.lineWidth = 1;
-  x.beginPath(); x.roundRect(0.5, 0.5, w - 1, h - 1, r); x.stroke();
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.NoColorSpace; t.minFilter = THREE.LinearFilter;
+  x.fillStyle = 'rgba(244,242,238,.62)'; x.font = '10px "Hanken Grotesk", system-ui, sans-serif'; x.textBaseline = 'middle';
+  x.letterSpacing = '0.6px'; x.fillText(label, 0, 10.5);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.NoColorSpace; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false;
   return t;
 }
 
+// Window frame drawn in pixels: title bar, three dots, label, and a thin rounded border.
+const CHROME_FS = /* glsl */`
+precision highp float; varying vec2 vUv; uniform vec2 uSize; uniform sampler2D tLabel;
+void main(){
+  vec2 px=vec2(vUv.x*uSize.x,(1.-vUv.y)*uSize.y);
+  const float R=6.;
+  vec2 q=abs(px-uSize*.5)-uSize*.5+R;
+  float d=length(max(q,0.))+min(max(q.x,q.y),0.)-R;
+  float inside=smoothstep(.5,-.5,d);
+  float bar=inside*step(px.y,20.);
+  vec3 c=vec3(.106,.094,.09);
+  float a=bar;
+  float dots=0.;
+  for(int i=0;i<3;i++) dots=max(dots,smoothstep(3.4,2.6,distance(px,vec2(10.+float(i)*11.,9.5))));
+  c=mix(c,vec3(.48,.42,.36),dots*bar);
+  if(bar>.0&&px.x>46.&&px.x<226.){
+    vec4 l=texture2D(tLabel,vec2((px.x-46.)/180.,1.-px.y/20.));
+    c=mix(c,l.rgb/max(l.a,.001),l.a*bar);
+  }
+  float line=smoothstep(1.2,.3,abs(d+.5));
+  c=mix(c,vec3(1.,.878,.769),line*.42);
+  a=max(a,line*.42);
+  gl_FragColor=vec4(c,a);
+}`;
+
+// How a window opens, measured from the reference across its windows:
+// it overshoots by about 13.5% at 190ms and settles at exactly full size by 350ms.
+const OPEN = [0, 0.6, 0.95, 1.11, 1.135, 1.09, 1.025, 1];
+const OPEN_STEP = 0.05;
+export function openCurve(age) {
+  if (age <= 0) return 0;
+  const f = age / OPEN_STEP, i = Math.floor(f);
+  if (i >= OPEN.length - 1) return 1;
+  // Smooth interpolation through the measured points.
+  const p0 = OPEN[Math.max(0, i - 1)], p1 = OPEN[i], p2 = OPEN[i + 1], p3 = OPEN[Math.min(OPEN.length - 1, i + 2)], t = f - i;
+  return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t);
+}
+
 export const DEFAULT_SLOTS = [
-  { label: 'wireframe', mode: 'wireframe', bg: '#050404', x: 430, y: 235, w: 500, h: 378, t: 0.0 },
-  { label: 'uv', mode: 'uv', bg: '#141211', x: 856, y: 96, w: 300, h: 300, t: 0.28 },
-  { label: 'clay', mode: 'clay', bg: '#060505', x: 262, y: 560, w: 430, h: 230, t: 0.42 },
-  { label: 'transmission', mode: 'transmission', bg: '#8e12a0', x: 300, y: 118, w: 322, h: 261, t: 0.54 },
-  { label: 'normals', mode: 'normals', bg: '#10131c', x: 603, y: 470, w: 420, h: 200, t: 0.65 },
-  { label: 'contours', mode: 'contours', bg: '#02090b', x: 1040, y: 420, w: 330, h: 300, t: 0.75 },
-  { label: 'depth', mode: 'depth', bg: '#000000', x: 80, y: 250, w: 280, h: 330, t: 0.84 },
-  { label: 'beauty', mode: 'beauty', bg: '#000', x: 590, y: 170, w: 300, h: 210, t: 0.93 },
-  { label: 'halftone', mode: 'halftone', bg: '#f5c02e', x: 740, y: 610, w: 360, h: 220, t: 1.03 },
-  { label: 'distance', mode: 'rings', bg: '#0b0310', x: 400, y: 330, w: 300, h: 230, t: 1.14 },
-  { label: 'thermal', mode: 'thermal', bg: '#06021c', x: 950, y: 130, w: 430, h: 480, t: 1.26 },
-  { label: 'negative', mode: 'negative', bg: '#ebe6dd', x: 480, y: 290, w: 500, h: 350, t: 1.44 },
+  { label: 'wireframe', mode: 'wireframe', bg: '#050404', x: 300, y: 196, w: 620, h: 420, t: 0.0 },
+  { label: 'uv', mode: 'uv', bg: '#141211', x: 812, y: 108, w: 372, h: 304, t: 0.17 },
+  { label: 'transmission', mode: 'transmission', bg: '#8e12a0', x: 168, y: 120, w: 410, h: 308, t: 0.34 },
+  { label: 'depth', mode: 'depth', bg: '#000000', x: 176, y: 436, w: 430, h: 296, t: 0.5 },
+  { label: 'distance', mode: 'rings', bg: '#0b0310', x: 776, y: 424, w: 430, h: 304, t: 0.67 },
+  { label: 'beauty', mode: 'beauty', bg: '#000', x: 560, y: 140, w: 300, h: 236, t: 0.83 },
+  { label: 'halftone', mode: 'halftone', bg: '#f5c02e', x: 456, y: 452, w: 420, h: 286, t: 1.0 },
+  { label: 'thermal', mode: 'thermal', bg: '#06021c', x: 640, y: 196, w: 560, h: 380, t: 1.17 },
 ];
 
 // options.drawMode(mode) renders the scene for one panel. options.drawBeauty(texture) is optional.
@@ -43,8 +68,16 @@ export function mountRenderWindows(renderer, options = {}) {
   const orthoS = new THREE.Scene(), ortho = new THREE.OrthographicCamera(0, 1, 1, 0, 0, 1);
   const quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).translate(0.5, 0.5, 0), new THREE.MeshBasicMaterial({ transparent: true, depthTest: false, toneMapped: false }));
   quad.frustumCulled = false; orthoS.add(quad);
+  const chromeU = { uSize: { value: new THREE.Vector2(1, 1) }, tLabel: { value: null } };
+  const chrome = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).translate(0.5, 0.5, 0), new THREE.ShaderMaterial({
+    uniforms: chromeU, transparent: true, depthTest: false, depthWrite: false,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+    fragmentShader: CHROME_FS,
+  }));
+  chrome.frustumCulled = false;
+  const chromeS = new THREE.Scene(); chromeS.add(chrome);
   const bgC = new THREE.Color();
-  const items = slots.map((s) => ({ ...s, tex: null, op: 0 }));
+  const items = slots.map((s) => ({ ...s, tex: labelTexture(s.label), open: 0 }));
   let vw = 1, vh = 1, dpr = 1;
   const layout = (w, h, d) => {
     vw = w; vh = h; dpr = d;
@@ -55,9 +88,7 @@ export function mountRenderWindows(renderer, options = {}) {
       if (small) { sx = w / 720; sy = h / 900; }
       const cx = (it.x + it.w / 2 - baseWidth / 2) * sx + w / 2, cy = (it.y + it.h / 2 - baseHeight / 2) * sy + h / 2;
       it.W = Math.round(it.w * sx); it.H = Math.round(it.h * sy);
-      it.X = Math.round(cx - it.W / 2); it.Y = Math.round(cy - it.H / 2);
-      it.tex?.dispose();
-      it.tex = chromeTexture(it.W, it.H, it.label);
+      it.CX = cx; it.CY = cy;
     });
   };
   return {
@@ -75,13 +106,14 @@ export function mountRenderWindows(renderer, options = {}) {
         renderer.render(orthoS, ortho);
       }
       items.forEach((it) => {
-        if (elapsed < it.t) return;
-        // Each panel stutters for a few frames as it opens.
-        const age = elapsed - it.t;
-        if (age < 0.1 && Math.floor(age * 60) % 3 === 1) return;
-        const y = vh - it.Y - it.H;
+        // Each window expands from its centre along the measured curve.
+        it.open = openCurve(elapsed - it.t);
+        const W = it.W * it.open, H = it.H * it.open;
+        if (W < 2 || H < 2) return;
+        const X = it.CX - W / 2, Y = it.CY - H / 2;
+        const y = vh - Y - H;
         renderer.setScissorTest(true);
-        renderer.setScissor(it.X, y, it.W, it.H);
+        renderer.setScissor(X, y, W, H);
         bgC.set(it.bg); renderer.setClearColor(bgC, 1);
         renderer.clear();
         if (it.mode === 'beauty' && beautyTexture) {
@@ -90,13 +122,12 @@ export function mountRenderWindows(renderer, options = {}) {
           quad.scale.set(1, 1, 1); quad.position.set(0, 0, 0);
           renderer.render(orthoS, ortho);
         } else drawMode?.(it.mode, it);
-        // Panel chrome on top.
+        // Window frame on top, drawn at this frame's exact size.
         renderer.setScissorTest(false);
-        quad.material.map = it.tex; quad.material.transparent = true; quad.material.needsUpdate = true;
-        quad.position.set(it.X / vw, 1 - (it.Y + it.H) / vh, 0);
-        quad.scale.set(it.W / vw, it.H / vh, 1);
-        renderer.render(orthoS, ortho);
-        quad.position.set(0, 0, 0); quad.scale.set(1, 1, 1);
+        chromeU.uSize.value.set(W, H); chromeU.tLabel.value = it.tex;
+        chrome.position.set(X / vw, 1 - (Y + H) / vh, 0);
+        chrome.scale.set(W / vw, H / vh, 1);
+        renderer.render(chromeS, ortho);
       });
       renderer.autoClear = ac;
       renderer.setScissorTest(false);

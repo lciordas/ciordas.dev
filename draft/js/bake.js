@@ -1,5 +1,5 @@
 // bake: prepares two textures once at startup, so the live material only has to look them up.
-// field holds the rock inside the letters: bands, filaments, clouds, and grain.
+// field holds the rock inside the letters: pigment density, filaments, pigment colour, and tearing.
 // mask holds the letter shapes blurred at two widths, which give glowing edges and a rounded look.
 import * as THREE from 'three';
 import { GLSL_NOISE } from './_util.js';
@@ -12,24 +12,25 @@ precision highp float; varying vec2 vUv;
 ${GLSL_NOISE}
 void main(){
   vec2 w=(vUv-.5)*${SPAN.toFixed(1)};
-  vec3 q=vec3(w.x*.5,w.y*.5,0.);
-  // Sediment: horizontal layers with cloudy, torn edges.
-  float tear=fbm(vec3(q.x*1.2,q.y*1.5,1.3)+3.1);
-  float h=q.y*5.2+(tear-.5)*1.15+1.9;
-  float layer=fbm(vec3(h*1.25,.4,2.7));
-  float blot=fbm(vec3(q.x*1.9,h*2.6,4.2)+9.);
-  float blot2=fbm(vec3(q.x*3.8,h*6.2,7.)+tear*1.5);
-  float m=layer*.74+blot*.21+blot2*.05;
-  m=clamp((m-.47)*2.3+.5,0.,1.);
-  // Filaments: thin bright webs, like cracks full of light.
-  float warp=tear*2.6;
-  float a=fbm(vec3(q.x*3.1,q.y*5.2,.7)+warp);
-  float b=fbm(vec3(q.x*6.4,q.y*9.6,3.1)-warp+7.);
-  float c=fbm(vec3(q.x*13.,q.y*17.,5.9)+warp*.6+2.);
-  float web=pow(1.-abs(2.*a-1.),14.)+.8*pow(1.-abs(2.*b-1.),16.)+.45*pow(1.-abs(2.*c-1.),14.);
-  float cloud=fbm(vec3(q.x*1.5,q.y*2.1,9.)+tear);
-  float grain=vnoise(vec3(w*46.,1.));
-  gl_FragColor=vec4(m,clamp(web,0.,1.),cloud,grain);
+  // Warp the rock so its layers tear and bend instead of running in straight lines.
+  vec2 warp=vec2(fbm(vec3(w*.62,1.3)),fbm(vec3(w*.62+5.,2.1)))-.5;
+  vec2 p=w+warp*vec2(.9,.62);
+  // Pigment: wide strata with softer clouds and fine torn edges on top.
+  float s1=fbm(vec3(p.x*.4,p.y*1.75,3.));
+  float s2=fbm(vec3(p.x*.95,p.y*3.5,7.));
+  float s3=fbm(vec3(p.x*2.6,p.y*6.8,11.));
+  float m=clamp((s1*.52+s2*.31+s3*.17-.5)*2.7+.55,0.,1.);
+  // Filaments: thin bright webs running through the pigment.
+  float t=fbm(vec3(w*.9,6.))*2.6;
+  float a=fbm(vec3(w.x*1.5,w.y*2.6,.7)+t);
+  float b=fbm(vec3(w.x*3.2,w.y*4.8,3.1)-t+7.);
+  float c=fbm(vec3(w.x*6.5,w.y*8.5,5.9)+t*.6+2.);
+  float web=pow(1.-abs(2.*a-1.),18.)+.85*pow(1.-abs(2.*b-1.),20.)+.5*pow(1.-abs(2.*c-1.),16.);
+  web*=smoothstep(.34,.62,fbm(vec3(w*.8+9.,8.)));
+  // Which pigment sits here: low values are red, high values are olive.
+  float tint=clamp((fbm(vec3(p.x*.62,p.y*1.45,19.))-.5)*3.+.5,0.,1.);
+  float tear=fbm(vec3(w*vec2(5.,8.5),13.));
+  gl_FragColor=vec4(m,clamp(web,0.,1.),tint,tear);
 }`;
 const BLUR_FS = /* glsl */`
 precision highp float; varying vec2 vUv; uniform sampler2D t; uniform vec2 d; uniform vec4 keep;

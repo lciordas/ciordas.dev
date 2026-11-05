@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { GLSL_NOISE, rng, clamp, smooth } from './_util.js';
 import { SPAN } from './bake.js';
 
-export const DEPTH = 0.24;
+export const DEPTH = 0.2;
 const LAYERS = matchMedia('(pointer: coarse)').matches ? 4 : 7;
 
 const VERT = /* glsl */`
@@ -30,62 +30,43 @@ uniform vec3 p_pale, p_stone, p_deep, p_shard, p_low;
 ${GLSL_NOISE}
 const float SPAN=${SPAN.toFixed(1)};
 
-// Colour of the rock: pale gold in the light, deep ember in the dense bands.
-vec3 ramp(float m){
-  vec3 c=mix(p_pale,p_stone,smoothstep(.04,.34,m));
-  c=mix(c,p_low,smoothstep(.34,.56,m));
-  c=mix(c,p_deep,smoothstep(.54,.76,m));
-  return mix(c,vec3(.1,.026,.008),smoothstep(.84,1.,m)*.8);
-}
-// Rounded look taken from the blurred letter shape.
+// How strongly each pigment absorbs red, green, and blue light as it passes through.
+// Thin pigment tints the light, and thick pigment takes nearly all of it away.
+const vec3 RED=vec3(.98,3.5,5.1);
+const vec3 OLIVE=vec3(.86,1.14,1.95);
+const vec3 BLACK=vec3(2.3,2.5,2.6);
+// Slight rounding from the blurred letter shape. It only bends the view into the rock.
 vec3 pillow(vec2 uv){
   const float E=.004;
   vec2 g=vec2(texture2D(tMask,uv+vec2(E,0.)).r-texture2D(tMask,uv-vec2(E,0.)).r,
               texture2D(tMask,uv+vec2(0.,E)).r-texture2D(tMask,uv-vec2(0.,E)).r);
-  vec2 g2=vec2(texture2D(tMask,uv+vec2(E*3.,0.)).g-texture2D(tMask,uv-vec2(E*3.,0.)).g,
-               texture2D(tMask,uv+vec2(0.,E*3.)).g-texture2D(tMask,uv-vec2(0.,E*3.)).g);
-  return normalize(vec3(-(g*3.0+g2*1.2),1.));
+  return normalize(vec3(-g*3.,1.));
 }
-// Looking through the letter: slices of rock stacked in depth, each shifted along the view ray.
-vec3 inside(vec2 uv, vec2 ray, float edge){
-  vec3 sum=vec3(0.); float through=1.;
+// Light from behind passes through stacked layers of pigment, each shifted along the view ray.
+// thin is 0 where the stone is thin and bright, and 1 where it has its full thickness.
+vec3 through(vec2 uv, vec2 ray, float thin, float clear){
+  vec3 optical=vec3(0.); float web=0.;
   for(int i=0;i<LAYERS;i++){
     float d=(float(i)+.5)/float(LAYERS);
-    vec4 f=texture2D(tField,uv+ray*d*.5/SPAN);
-    float a=mix(.14,.7,smoothstep(.34,.76,f.r));
-    sum+=through*a*ramp(f.r);
-    through*=1.-a;
-    // Filaments glow from within, strongest in the dark bands.
-    sum+=through*p_pale*f.g*(.5+.75*smoothstep(.35,.8,f.r))*(1.-d*.62)*.3;
+    vec4 f=texture2D(tField,uv+ray*(d-.25)*.42/SPAN);
+    float m=f.r+(f.a-.5)*.16;
+    float den=smoothstep(.04,.86,m);
+    vec3 sigma=mix(RED,OLIVE,smoothstep(.42,.62,f.b));
+    optical+=(OLIVE*.02+sigma*den*den*1.5+sigma*den*.2+BLACK*smoothstep(.78,.99,m)*.8)/float(LAYERS);
+    web+=f.g*(1.-d*.55)/float(LAYERS);
   }
-  // Light behind everything, brighter where the rock is thin near the edges.
-  vec4 far=texture2D(tField,uv+ray*.6/SPAN);
-  vec3 light=mix(p_stone*.92,p_pale*1.02,far.b*.6+(1.-edge)*.3);
-  return sum+through*light;
-}
-vec3 beauty(vec2 uv, vec2 ray, vec3 N, vec3 V, float edge){
-  vec2 bent=ray+N.xy*.34;
-  vec3 c=inside(uv,bent,edge);
-  // Dense bands sink toward black, and the colour stays rich instead of milky.
-  float band=texture2D(tField,uv+bent*.1/SPAN).r;
-  c*=mix(1.06,.34,smoothstep(.62,.98,band));
-  c=mix(vec3(dot(c,vec3(.3,.6,.1))),c,1.26);
-  // Wax-like glow along the edges, where light scatters out of the stone.
-  vec3 L=normalize(vec3(-.3,.62,.72));
-  float lit=clamp(dot(N,L),0.,1.);
-  c*=mix(.8,1.06,smoothstep(.45,1.,lit));
-  float wax=pow(1.-edge,1.7);
-  c=mix(c,p_pale*.96,wax*mix(.22,.56,smoothstep(.55,.95,lit)));
-  // A soft sheen from the rounded surface.
-  float spec=pow(max(dot(reflect(-L,N),V),0.),26.);
-  c+=p_pale*spec*.13;
-  c+=(texture2D(tField,uv).a-.5)*.028;
-  // Exposure with a soft shoulder, so the brightest areas stay warm and never clip to yellow.
-  c*=.84;
-  float top=max(c.r,max(c.g,c.b));
-  vec3 soft=mix(c/max(top,.001),p_pale,.5*smoothstep(.75,1.25,top))*(1.-exp(-top*2.7));
-  c=mix(c,soft,smoothstep(.6,.9,top));
+  optical*=mix(.52,1.,thin)*(1.-clear);
+  // Where almost no pigment remains, the light behind the stone glows through.
+  float open=exp(-optical.g*2.2);
+  vec3 c=p_pale*(.84+.13*open)*exp(-optical);
+  // Filaments catch the light: cream over thin pigment, warm red inside the dark.
+  float dark=1.-exp(-optical.g*.6);
+  c+=mix(p_pale*.5,vec3(.9,.46,.3),dark)*web*(.2+.24*dark);
   return c;
+}
+vec3 beauty(vec2 uv, vec2 ray, vec3 N, float edge, float clear){
+  vec3 c=through(uv,ray+N.xy*.16,smoothstep(.0,.8,edge),clear);
+  return c+(texture2D(tField,uv*7.).a-.5)*.012;
 }
 // Screen-space helpers for the printed looks.
 float cell(float size){ vec2 p=mod(gl_FragCoord.xy,size)-size*.5; return length(p)/(size*.5); }
@@ -103,40 +84,23 @@ void main(){
     vec2 u=(vP.xy+NF.xy*.26)*3.3;
     float ch=mod(floor(u.x)+floor(u.y),2.);
     c=mix(vec3(.1,.095,.09),vec3(.97,.93,.86),ch)*(.66+.34*clamp(dot(N,V),0.,1.));
-  } else if(uMode==2){ // normals, in pale ice colours
-    vec3 n=N*.5+.5;
-    c=mix(vec3(.46,.86,1.),vec3(.8,.62,1.),n.x);
-    c=mix(c,vec3(.98,.97,1.),smoothstep(.62,1.,n.y)*.82);
-    c*=.74+.26*edge;
-  } else if(uMode==3){ // clay
-    float l=clamp(dot(N,normalize(vec3(-.28,.56,.78))),0.,1.);
-    c=vec3(.5,.47,.44)*(.14+1.02*l*l)*(.93+.14*f.a);
   } else if(uMode==4){ // transmission: plasma clouds
     vec4 g=texture2D(tField,uv+ray*.34/SPAN+vec2(uTime*.006,0.));
-    c=mix(vec3(.16,.92,.72),vec3(.34,.5,1.),smoothstep(.34,.56,g.b));
-    c=mix(c,vec3(.74,.1,.82),smoothstep(.45,.72,g.r));
-    c+=vec3(.5,.8,.8)*g.g*.5;
-  } else if(uMode==5){ // photographic negative
-    c=vec3(1.)-beauty(uv,ray,N,V,edge);
-    c=mix(c,c.gbr,.22);
+    c=mix(vec3(.16,.92,.72),vec3(.34,.5,1.),smoothstep(.3,.62,g.b));
+    c=mix(c,vec3(.74,.1,.82),smoothstep(.42,.74,g.r));
+    c+=vec3(.5,.8,.8)*g.g*.55;
   } else if(uMode==6){ // depth: a height map in greys
     float h=pow(mk.g,1.5)*.62+edge*.38;
     c=vec3(h)*(vFace>.5?1.:.3);
     c*=.92+.08*step(.5,fract(gl_FragCoord.y*.25));
   } else if(uMode==7){ // false-colour thermal camera
-    float t=clamp(1.-f.r*.72+edge*.05-(1.-edge)*.16+f.g*.2,0.,1.);
+    float t=clamp(1.08-f.r*1.02-(1.-edge)*.12+f.g*.28,0.,1.);
     c=mix(vec3(.03,.01,.26),vec3(.68,.02,.62),smoothstep(.06,.4,t));
     c=mix(c,vec3(1.,.36,.03),smoothstep(.36,.66,t));
     c=mix(c,vec3(1.,.95,.42),smoothstep(.64,.95,t));
-  } else if(uMode==8){ // contour map of the rock
-    float v=(texture2D(tField,uv).r*.8+texture2D(tMask,uv).g*.5)*15.;
-    float ln=1.-smoothstep(.0,1.25,abs(fract(v)-.5)/fwidth(v));
-    c=mix(vec3(.02,.09,.11),vec3(.46,1.,.84),ln);
-    if(vFace<.5) c=vec3(.03,.2,.2);
   } else if(uMode==9){ // halftone print
-    float lum=dot(beauty(uv,ray,N,V,edge),vec3(.3,.6,.1));
-    float r=clamp(1.08-lum,0.,1.);
-    c=mix(vec3(.05,.04,.04),vec3(1.,.8,.2),smoothstep(r*1.05,r*1.05-.14,1.-cell(7.*uRes.x)));
+    float lum=dot(beauty(uv,ray,NF,edge,0.),vec3(.3,.6,.1));
+    float r=clamp(1.02-lum*.92,0.,1.);
     c=mix(vec3(1.,.8,.2),vec3(.05,.04,.04),smoothstep(r-.07,r+.07,1.-cell(7.*uRes.x)));
     if(vFace<.5) c=vec3(.05,.04,.04);
   } else if(uMode==10){ // distance rings
@@ -145,28 +109,26 @@ void main(){
     c=mix(vec3(.03,.01,.05),vec3(1.,.12,.48),ln);
     if(vFace<.5) c=vec3(.24,.02,.12);
   } else if(vFace>.5){
-    c=beauty(uv,ray,N,V,edge);
-    if(uMatte>.001){
-      float l=clamp(dot(NF,normalize(vec3(.25,.6,.75))),0.,1.);
-      c=mix(c,c*.72+p_shard*(.16+.42*l),uMatte);
-    }
-    // A band of light that crosses the name when it asks to be clicked.
-    if(uSweep>-1.5){
-      float s=exp(-pow((vP.x-uSweep*2.8+vP.y*.22)*2.1,2.));
-      c=mix(c,c*1.04+p_stone*.1,s*.5);
-    }
-    // Heat under the pointer.
+    // Heat under the pointer thins the pigment, letting more light through.
+    float clear=0.;
     if(uHotAmt>.002){
       float d=distance(vP.xy,uHot);
       float h=smoothstep(uHotSize,uHotSize*.18,d+(f.b-.5)*uHotSize*.55);
-      c=mix(c,vec3(1.28,1.12,.9),h*h*uHotAmt);
-      c+=p_pale*exp(-d*d/(uHotSize*uHotSize*2.6))*.2*uHotAmt;
+      clear=h*h*uHotAmt;
+    }
+    c=beauty(uv,ray,NF,edge,clear);
+    c*=1.+clear*.14;
+    if(uMatte>.001) c=mix(c,c*.82+p_shard*.1,uMatte);
+    // A band of light that crosses the name when it asks to be clicked.
+    if(uSweep>-1.5){
+      float s=exp(-pow((vP.x-uSweep*2.8+vP.y*.22)*2.1,2.));
+      c*=1.+s*.1;
     }
   } else {
     // Sides and broken faces: the same glowing rock seen at an angle.
-    vec4 g=texture2D(tField,(vP.xy*.8+vP.zz*.5)/SPAN+.5);
+    vec2 su=(vP.xy*.8+vP.zz*.5)/SPAN+.5;
     float l=clamp(dot(N,normalize(vec3(-.3,.6,.7))),0.,1.);
-    c=ramp(g.r*.6+.28)*(.42+.62*l)+p_pale*g.g*.1;
+    c=through(su,vec2(0.),.9,0.)*vec3(.82,.6,.46)*(.3+.42*l);
   }
   gl_FragColor=vec4(c,uFade);
 }`;
@@ -222,7 +184,7 @@ export function mountName(scene, data, palU, baked) {
   const halo = new THREE.Mesh(new THREE.PlaneGeometry(SPAN, SPAN), new THREE.ShaderMaterial({
     uniforms: haloU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
-    fragmentShader: 'precision highp float; varying vec2 vUv; uniform sampler2D tMask; uniform float uAmt; uniform vec3 p_stone,p_pale; void main(){ float g=texture2D(tMask,vUv).g; gl_FragColor=vec4(mix(p_stone,p_pale,g*.25)*g*g*.5*uAmt,1.); }',
+    fragmentShader: 'precision highp float; varying vec2 vUv; uniform sampler2D tMask; uniform float uAmt; uniform vec3 p_stone,p_pale; void main(){ float g=texture2D(tMask,vUv).g; gl_FragColor=vec4(mix(p_stone,p_pale,g*.45)*g*g*.17*uAmt,1.); }',
   }));
   halo.position.z = -DEPTH / 2 - 0.02; halo.renderOrder = -1; root.add(halo);
 
@@ -297,7 +259,7 @@ export function mountName(scene, data, palU, baked) {
   const api = {
     root, letters, shards, uniforms, crackU, st, halo, haloU,
     setMode(mode) {
-      const m = { beauty: 0, uv: 1, normals: 2, clay: 3, transmission: 4, negative: 5, depth: 6, thermal: 7, contours: 8, halftone: 9, rings: 10, wireframe: -1 }[mode] ?? 0;
+      const m = { beauty: 0, uv: 1, transmission: 4, depth: 6, thermal: 7, halftone: 9, rings: 10, wireframe: -1 }[mode] ?? 0;
       uniforms.uMode.value = Math.max(0, m);
       letters.forEach((L) => { L.whole.visible = m !== -1; L.wire.visible = m === -1; });
       halo.visible = m === 0;

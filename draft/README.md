@@ -13,7 +13,7 @@ Lucas's own site, in progress. So far it holds only the opening sequence and a p
 
 - Add `?font=shoulders`, `?font=teko`, `?font=inter`, or `?font=anton` to the address to compare fonts. Barlow Condensed is the default.
 - Add `?skip=1` to jump straight to the floating name.
-- Add `?style=thermal` to see one window style full screen. The other styles are `wireframe`, `uv`, `clay`, `transmission`, `normals`, `contours`, `depth`, `halftone`, `rings`, and `negative`.
+- Add `?style=thermal` to see one window style full screen. The other styles are `wireframe`, `uv`, `transmission`, `depth`, `halftone`, and `rings`.
 
 ## Changing the name or fonts
 
