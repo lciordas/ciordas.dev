@@ -34,16 +34,15 @@ export function mountFilmPost(renderer, options = {}) {
         // Bend a copy of the image with the kept objects removed, then lay the objects back on top.
         // Nothing kept is ever sampled, so its edges stay clean.
         vec2 off=s.xy*uSmear;
-        // A faint glow for a quick flick, building to a strong one under sustained motion.
-        float lens=(smoothstep(.1,.46,s.z)*.03+smoothstep(.5,2.3,s.z)*.33)*uSmear;
+        float lens=s.z*uSmear;
         // A soft frosted blur inside the lens. The grain pattern is fixed on screen so nothing flickers.
         float a=6.2832*fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))));
-        float r=min(.0052,length(off)*.05)+lens*.0012;
+        float r=lens*.0075;
         vec2 asp=vec2(uRes.y/uRes.x,1.);
         vec2 d1=vec2(cos(a),sin(a))*r*asp, d2=vec2(-sin(a),cos(a))*r*.62*asp;
         vec3 b=(texture2D(tBack,vUv+off+d1).rgb+texture2D(tBack,vUv+off-d1).rgb+texture2D(tBack,vUv+off+d2).rgb+texture2D(tBack,vUv+off-d2).rgb)*.25;
-        // The glow lifts the hazy sky more than the dark ground, as if light were pulled up from the horizon.
-        b=mix(b,max(b,uSmearTint*1.5),lens*smoothstep(.07,.17,dot(b,vec3(.3,.6,.1))));
+        // The glass catches light, lifting the hazy sky more than the dark ground.
+        b=mix(b,max(b,uSmearTint*1.45),lens*.25*smoothstep(.06,.16,dot(b,vec3(.3,.6,.1))));
         // Fade in with the very first pixel of bending, so the copy never shows as a seam.
         float w=smoothstep(.0002,.002,length(off))+lens;
         float keep=smoothstep(.02,.25,texture2D(tKeep,vUv).a);
