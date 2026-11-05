@@ -1,28 +1,31 @@
-// cursor-smear: a glassy puff of fluid that follows the pointer and bends the image behind it.
-// The pointer stirs a small incompressible fluid. Momentum keeps the puff travelling after a
-// sudden stop, and circling the pointer leaves swirls. A dome of dye carried by that fluid acts
-// as a soft lens: read .texture in a final image shader, where rg is the image offset in uv
-// units and b is the lens strength. Feed it with move(), and call update() once a frame.
+// cursor-smear: a crisp disc of glass that follows the pointer and bends the image behind it.
+// The pointer stirs a small incompressible fluid and lays two dyes into it: one holds the disc's
+// shape, and the other its strength. Only the strength fades, so the disc keeps its size as it
+// travels. Its middle goes first, which leaves a crescent front running on after a sudden stop,
+// and circling the pointer leaves swirling rings.
+// Read .texture in a final image shader, where rg is the image offset in uv units and b is how
+// far inside the glass a pixel is. Feed it with move(), and call update() once a frame.
 import * as THREE from 'three';
 import { REDUCED, clamp } from './_util.js';
 
 const VS = 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }';
 const HEAD = 'precision highp float; varying vec2 vUv;';
 
-const SPLAT = `${HEAD} uniform sampler2D t; uniform vec2 uA,uB; uniform vec3 uVal; uniform float uR,uAspect,uMix,uGrow,uCap;
+const SPLAT = `${HEAD} uniform sampler2D t; uniform vec2 uA,uB; uniform vec3 uVal; uniform float uR,uAspect,uMix;
   float seg(vec2 p,vec2 a,vec2 b){ vec2 ba=b-a; float k=dot(ba,ba); float h=k>0.?clamp(dot(p-a,ba)/k,0.,1.):0.; return length(p-a-ba*h); }
   void main(){ vec2 s=vec2(uAspect,1.); float d=seg(vUv*s,uA*s,uB*s); float g=exp(-d*d/(uR*uR));
     vec4 c=texture2D(t,vUv);
-    // uMix above zero blends velocity toward the pointer. Otherwise this adds dye, which only ever
-    // rises, and its outer edge keeps building, so sustained motion makes a larger lens.
-    if(uMix>0.) c.xy=mix(c.xy,uVal.xy,g*uMix); else c.x=min(uCap,max(c.x,uVal.x*g)+uVal.x*g*uGrow);
+    // uMix above zero blends velocity toward the pointer. Otherwise this adds both dyes, which only
+    // ever rise. The strength dye spreads wider than the shape, so the whole disc shares one strength.
+    if(uMix>0.) c.xy=mix(c.xy,uVal.xy,g*uMix); else { c.x=max(c.x,uVal.x*g); c.y=max(c.y,uVal.x*pow(g,.4)); }
     gl_FragColor=c; }`;
 // uSoft spreads each value into its neighbours, which keeps the flow broad and free of tiny eddies.
-const ADVECT = `${HEAD} uniform sampler2D t,tVel; uniform vec2 uScale,uT; uniform float uDt,uFade,uSoft,uOver;
-  void main(){ vec2 back=vUv-uDt*texture2D(tVel,vUv).xy*uScale; vec2 o=uT*1.5;
+const ADVECT = `${HEAD} uniform sampler2D t,tVel; uniform vec2 uScale,uT,uFade,uDrift; uniform float uDt,uSoft,uClear;
+  void main(){ vec2 back=vUv-uDt*(texture2D(tVel,vUv).xy+uDrift)*uScale; vec2 o=uT*1.5;
     vec4 c=texture2D(t,back), n=(texture2D(t,back+vec2(o.x,0.))+texture2D(t,back-vec2(o.x,0.))+texture2D(t,back+vec2(0.,o.y))+texture2D(t,back-vec2(0.,o.y)))*.25;
-    // uOver drains built-up dye faster, so a long spin settles as quickly as a short flick.
-    vec4 o2=mix(c,n,uSoft)*uFade; o2.x/=1.+uOver*uDt*max(o2.x-.8,0.);
+    vec4 o2=mix(c,n,uSoft); o2.xy*=uFade;
+    // The shape dye is removed only once its strength has gone.
+    if(uClear>0.) o2.x*=smoothstep(.03,.1,o2.y);
     gl_FragColor=o2; }`;
 const CURL = `${HEAD} uniform sampler2D tVel; uniform vec2 uT;
   void main(){ float l=texture2D(tVel,vUv-vec2(uT.x,0.)).y,r=texture2D(tVel,vUv+vec2(uT.x,0.)).y,b=texture2D(tVel,vUv-vec2(0.,uT.y)).x,t=texture2D(tVel,vUv+vec2(0.,uT.y)).x;
@@ -40,34 +43,41 @@ const PRESSURE = `${HEAD} uniform sampler2D tP,tDiv; uniform vec2 uT;
 const SUBTRACT = `${HEAD} uniform sampler2D tP,tVel; uniform vec2 uT;
   void main(){ float l=texture2D(tP,vUv-vec2(uT.x,0.)).x,r=texture2D(tP,vUv+vec2(uT.x,0.)).x,b=texture2D(tP,vUv-vec2(0.,uT.y)).x,t=texture2D(tP,vUv+vec2(0.,uT.y)).x;
     gl_FragColor=vec4(texture2D(tVel,vUv).xy-.5*vec2(r-l,t-b),0.,1.); }`;
-// Turns the dye dome into a smooth image offset, so the picture stays continuous between texels.
-const LENS = `${HEAD} uniform sampler2D tDye,tVel; uniform vec2 uT,uScale; uniform float uLens,uDrag,uMax;
-  float d(vec2 o){ return min(1.,texture2D(tDye,vUv+o*uT).x); }
+// Cuts the shape dye at a threshold to make the glass. As the strength fades, the middle goes
+// before the rim, leaving a crescent front. The image bends most at that rim.
+const LENS = `${HEAD} uniform sampler2D tDye,tVel; uniform vec2 uT,uScale,uCut,uDir,uHead,uAsp; uniform float uLens,uDrag,uMax,uTail;
+  float d(vec2 o){ return smoothstep(uCut.x,uCut.y,texture2D(tDye,vUv+o*uT).x); }
   void main(){
+    vec2 q=texture2D(tDye,vUv).xy; float a=min(1.,q.y);
     float gx=(d(vec2(2.,0.))-d(vec2(-2.,0.)))*.6+(d(vec2(2.,2.))-d(vec2(-2.,2.))+d(vec2(2.,-2.))-d(vec2(-2.,-2.)))*.2;
     float gy=(d(vec2(0.,2.))-d(vec2(0.,-2.)))*.6+(d(vec2(2.,2.))-d(vec2(2.,-2.))+d(vec2(-2.,2.))-d(vec2(-2.,-2.)))*.2;
     float c=d(vec2(0.));
-    // Steeper where the dye is thin: the lens keeps a defined rim as it fades, like a drop of glass.
-    vec2 off=vec2(gx,gy)/(4.*uT.y)*uLens*(.25+1.75*(1.-min(c,1.)))-texture2D(tVel,vUv).xy*uDrag*smoothstep(.04,.4,c);
+    float rim=c*(1.-smoothstep(.2,.98,q.x));
+    // A coasting disc wears away from behind, measured back from its front.
+    float wear=1.;
+    if(uTail>0.){ float k=length(uDir); vec2 nd=uDir/(k+.0001); wear=mix(1.,smoothstep(-uTail,-uTail*.15,dot(vUv*uAsp-uHead,nd)),k); }
+    // The body stays filled for a while, then empties from the middle and leaves the rim.
+    float body=smoothstep(.22,.7,a);
+    float glass=(c*body+rim*smoothstep(.0,.22,a)*(1.-body)*.8)*wear;
+    vec2 off=(vec2(gx,gy)/(4.*uT.y)*uLens*sqrt(a)-texture2D(tVel,vUv).xy*uDrag*c*a)*wear;
     float m=length(off); if(m>uMax) off*=uMax/m;
-    // b keeps the full dye amount, which climbs above 1 under sustained motion.
-    gl_FragColor=vec4(off*uScale,texture2D(tDye,vUv).x,1.); }`;
+    gl_FragColor=vec4(off*uScale,glass,1.); }`;
 
 export function mountCursorSmear(renderer, options = {}) {
   const {
-    radius = 0.13, // puff size, in screen heights
-    pushRadius = 0.14, // how wide the pointer stirs the fluid
-    widen = 1.25, // how much sustained motion widens the puff
-    drain = 0.4, // how fast built-up dye falls back, per second
-    cap = 2.8, // the most dye sustained motion can build up
-    grow = 6, // how quickly sustained motion enlarges the lens, per second
-    follow = 22, // how tightly the stirring point chases the pointer, per second
-    gain = 1.0, maxVelocity = 1.8, // how much pointer speed the fluid takes on
-    fullSpeed = 0.95, // pointer speed that makes a full-strength puff, in screen heights per second
-    fadeVelocity = 1.0, fadeDye = 1.3, // per second
+    radius = 0.116, // sets the disc size, in screen heights
+    pushRadius = 0.16, // how wide the pointer stirs the fluid
+    follow = 26, // how tightly the stirring point chases the pointer, per second
+    carry = 0.165, maxCarry = 0.36, carryFade = 1.7, drift = 1.95,
+    tailStart = 0.42, tailEnd = 0.09, tailRate = 0.36, // how quickly a coasting disc wears away from behind
+    // how far the front coasts after a stop
+    gain = 0.32, maxVelocity = 0.55, // how much pointer speed the fluid takes on
+    fullSpeed = 0.5, // pointer speed that makes a full-strength disc, in screen heights per second
+    fadeVelocity = 1.1, fadeDye = 0.95, // per second
     swirl = 1.6, iterations = 16,
-    softVelocity = 0.14, softDye = 0.07, // viscosity and dye spreading, per frame
-    lens = 0.0026, drag = 0.024, maxOffset = 0.14, // image bending, in screen heights
+    softVelocity = 0.14, softDye = 0.05, // viscosity and dye spreading, per frame
+    cutLow = 0.16, cutHigh = 0.5, // the dye level at the disc's rim, which sets how crisp it is
+    lens = 0.00055, drag = 0.018, maxOffset = 0.07, // image bending, in screen heights
     enabled = !REDUCED,
   } = options;
   const RT = () => new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
@@ -78,19 +88,21 @@ export function mountCursorSmear(renderer, options = {}) {
   const mat = (fragmentShader, uniforms) => new THREE.ShaderMaterial({ vertexShader: VS, fragmentShader, uniforms, depthTest: false, depthWrite: false });
   const v2 = () => ({ value: new THREE.Vector2() }), tx = () => ({ value: null }), f = (value) => ({ value });
   const M = {
-    splat: mat(SPLAT, { t: tx(), uA: v2(), uB: v2(), uVal: { value: new THREE.Vector3() }, uR: f(radius), uAspect: f(1), uMix: f(0), uGrow: f(0), uCap: f(cap) }),
-    advect: mat(ADVECT, { t: tx(), tVel: tx(), uScale: v2(), uT: v2(), uDt: f(0), uFade: f(1), uSoft: f(0), uOver: f(0) }),
+    splat: mat(SPLAT, { t: tx(), uA: v2(), uB: v2(), uVal: { value: new THREE.Vector3() }, uR: f(radius), uAspect: f(1), uMix: f(0) }),
+    advect: mat(ADVECT, { t: tx(), tVel: tx(), uScale: v2(), uT: v2(), uDrift: v2(), uDt: f(0), uFade: v2(), uSoft: f(0), uClear: f(0) }),
     curl: mat(CURL, { tVel: tx(), uT: v2() }),
     swirl: mat(SWIRL, { tVel: tx(), tCurl: tx(), uT: v2(), uDt: f(0), uAmt: f(swirl) }),
     div: mat(DIV, { tVel: tx(), uT: v2() }),
     press: mat(PRESSURE, { tP: tx(), tDiv: tx(), uT: v2() }),
     sub: mat(SUBTRACT, { tP: tx(), tVel: tx(), uT: v2() }),
-    lens: mat(LENS, { tDye: tx(), tVel: tx(), uT: v2(), uScale: v2(), uLens: f(lens), uDrag: f(drag), uMax: f(maxOffset) }),
+    lens: mat(LENS, { tDye: tx(), tVel: tx(), uT: v2(), uScale: v2(), uCut: { value: new THREE.Vector2(cutLow, cutHigh) }, uDir: v2(), uHead: v2(), uAsp: v2(), uTail: f(0), uLens: f(lens), uDrag: f(drag), uMax: f(maxOffset) }),
   };
   const pass = (m, target) => { quad.material = m; renderer.setRenderTarget(target); renderer.render(scene, cam); };
 
   const target = new THREE.Vector2(), now = new THREE.Vector2(), last = new THREE.Vector2();
-  let seen = false, energy = 0, aspect = 1, sustain = 0;
+  let seen = false, energy = 0, aspect = 1;
+  const dirN = new THREE.Vector2(1, 0), stamp = new THREE.Vector2(), lastStamp = new THREE.Vector2(), push = new THREE.Vector2(), head = new THREE.Vector2();
+  let coast = 0, coastTime = 0;
   const simT = new THREE.Vector2(), dyeT = new THREE.Vector2();
 
   const clearAll = () => {
@@ -106,7 +118,7 @@ export function mountCursorSmear(renderer, options = {}) {
     get energy() { return energy; },
     resize(w, h) {
       aspect = w / Math.max(1, h);
-      const SH = 90, DH = 128;
+      const SH = 90, DH = 160;
       const SW = Math.max(2, Math.round(SH * aspect)), DW = Math.max(2, Math.round(DH * aspect));
       [vel.a, vel.b, press.a, press.b, curl, div].forEach((t) => t.setSize(SW, SH));
       [dye.a, dye.b, out].forEach((t) => t.setSize(DW, DH));
@@ -121,8 +133,10 @@ export function mountCursorSmear(renderer, options = {}) {
     // x and y run from 0 to 1, with y measured from the bottom.
     move(x, y) {
       if (!enabled) return;
+      // A jump this large in one event is the pointer re-entering, not a stroke.
+      if (seen && Math.hypot((x - target.x) * aspect, y - target.y) > 0.3) seen = false;
       target.set(x, y);
-      if (!seen) { seen = true; now.copy(target); last.copy(target); }
+      if (!seen) { seen = true; now.copy(target); last.copy(target); lastStamp.copy(target); push.set(0, 0); coast = 0; }
     },
     // Forget the last position so a re-entering pointer does not draw a line across the screen.
     leave() { seen = false; },
@@ -134,25 +148,47 @@ export function mountCursorSmear(renderer, options = {}) {
       const dx = (now.x - last.x) * aspect, dy = now.y - last.y;
       const moved = seen ? Math.hypot(dx, dy) : 0;
       const speed = moved / Math.max(dt, 1e-3);
-      const strength = clamp(speed / fullSpeed);
-      energy = Math.max(strength, energy * Math.exp(-1.9 * dt));
-      // Rises only with motion that lasts, so a long spin spreads further than a quick flick.
-      sustain += (strength - sustain) * (1 - Math.exp(-(strength > sustain ? 1.7 : 3) * dt));
-      if (energy < 0.003) { energy = 0; if (!seen || moved === 0) { last.copy(now); return; } }
+      last.copy(now);
+      // Momentum rises with faster motion or a change of direction. Once the pointer slows, the
+      // momentum carries the whole disc onward, and the coasting amount says how far along that is.
+      const vx = dx / dt * carry, vy = dy / dt * carry, vm = Math.hypot(vx, vy), pm = push.length();
+      if (vm >= pm * 0.8 || vx * push.x + vy * push.y < 0) {
+        const k = 1 - Math.exp(-24 * dt);
+        push.x += (vx - push.x) * k; push.y += (vy - push.y) * k;
+        const m = push.length(); if (m > maxCarry) push.multiplyScalar(maxCarry / m);
+        coast = Math.max(0, coast - dt * 8);
+        coastTime = 0; head.set(now.x * aspect, now.y);
+      } else {
+        push.multiplyScalar(Math.exp(-carryFade * dt));
+        coast = Math.min(1, coast + dt * 14);
+        coastTime += dt;
+        head.addScaledVector(push, drift * coast * dt);
+      }
+      stamp.copy(now);
+      const sx = (stamp.x - lastStamp.x) * aspect, sy = stamp.y - lastStamp.y;
+      const stampMoved = seen ? Math.hypot(sx, sy) : 0;
+      const stampSpeed = stampMoved / Math.max(dt, 1e-3);
+      const strength = clamp(stampSpeed / 0.09) * (0.62 + 0.38 * clamp(stampSpeed / fullSpeed));
+      energy = Math.max(strength, energy * Math.exp(-1.2 * dt));
+      if (energy < 0.02 && stampMoved < 1e-5 && push.length() < 0.01) {
+        // Fully at rest: wipe the buffers so nothing old can reappear with the next stroke.
+        if (energy > 0) clearAll();
+        energy = 0; lastStamp.copy(stamp); return;
+      }
       renderer.setScissorTest(false);
 
-      // Stir: blend the fluid toward the pointer's velocity along the path it moved this frame.
-      if (moved > 1e-5) {
-        const k = Math.min(gain, maxVelocity / Math.max(speed, 1e-3));
+      // Stir: blend the fluid toward this point's velocity along the path it moved this frame.
+      if (stampMoved > 1e-5) {
+        const k = Math.min(gain, maxVelocity / Math.max(stampSpeed, 1e-3));
         const s = M.splat.uniforms;
-        s.uA.value.copy(last); s.uB.value.copy(now);
-        s.t.value = vel.a.texture; s.uR.value = pushRadius; s.uMix.value = 0.85 * Math.min(1, speed / 0.06);
-        s.uVal.value.set((dx / dt) * k, (dy / dt) * k, 0);
+        s.uA.value.copy(lastStamp); s.uB.value.copy(stamp);
+        s.t.value = vel.a.texture; s.uR.value = pushRadius; s.uMix.value = 0.85 * Math.min(1, stampSpeed / 0.06);
+        s.uVal.value.set((sx / dt) * k, (sy / dt) * k, 0);
         pass(M.splat, vel.b); vel.swap();
-        s.t.value = dye.a.texture; s.uR.value = radius * (1 + widen * sustain); s.uMix.value = 0; s.uGrow.value = grow * dt; s.uVal.value.set(strength, 0, 0);
+        s.t.value = dye.a.texture; s.uR.value = radius; s.uMix.value = 0; s.uVal.value.set(strength, 0, 0);
         pass(M.splat, dye.b); dye.swap();
       }
-      last.copy(now);
+      lastStamp.copy(stamp);
 
       // Keep the swirls alive, then make the velocity field incompressible.
       M.curl.uniforms.tVel.value = vel.a.texture; pass(M.curl, curl);
@@ -167,12 +203,20 @@ export function mountCursorSmear(renderer, options = {}) {
       // Carry the velocity and the dye along the flow.
       const a = M.advect.uniforms;
       a.uDt.value = dt; a.tVel.value = vel.a.texture;
-      a.uT.value.copy(simT); a.uSoft.value = softVelocity; a.uOver.value = 0;
-      a.t.value = vel.a.texture; a.uFade.value = Math.exp(-fadeVelocity * dt); pass(M.advect, vel.b); vel.swap();
+      a.uT.value.copy(simT); a.uSoft.value = softVelocity;
+      const fv = Math.exp(-fadeVelocity * dt);
+      a.uDrift.value.set(0, 0);
+      a.t.value = vel.a.texture; a.uFade.value.set(fv, fv); a.uClear.value = 0; pass(M.advect, vel.b); vel.swap();
       a.tVel.value = vel.a.texture;
-      a.uT.value.copy(dyeT); a.uSoft.value = softDye; a.uOver.value = drain;
-      a.t.value = dye.a.texture; a.uFade.value = Math.exp(-fadeDye * dt); pass(M.advect, dye.b); dye.swap();
+      a.uT.value.copy(dyeT); a.uSoft.value = softDye;
+      a.uDrift.value.copy(push).multiplyScalar(drift * coast);
+      a.t.value = dye.a.texture; a.uFade.value.set(1, Math.exp(-fadeDye * dt)); a.uClear.value = 1; pass(M.advect, dye.b); dye.swap();
 
+      const pl = push.length(), L = M.lens.uniforms;
+      if (pl > 1e-3) dirN.copy(push).divideScalar(pl);
+      L.uDir.value.copy(dirN).multiplyScalar(coast);
+      L.uHead.value.copy(head); L.uAsp.value.set(aspect, 1);
+      L.uTail.value = coast > 0.01 ? Math.max(tailEnd, tailStart - coastTime * tailRate) : 0;
       M.lens.uniforms.tDye.value = dye.a.texture; M.lens.uniforms.tVel.value = vel.a.texture;
       pass(M.lens, out);
       renderer.setRenderTarget(null);

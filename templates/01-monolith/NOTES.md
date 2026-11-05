@@ -35,7 +35,7 @@ Each file in `elements/` exports one mount function. `_util.js` and `_merge.js` 
 | `media-plane.js` | Floating soft-edged screen that opens from a column and cross-cuts |
 | `block-dissolve.js` | Grid wipe with registration marks |
 | `film-post.js` | Bloom, vignette, woven grain, and the distortion read from `cursor-smear` |
-| `cursor-smear.js` | Glassy pointer puff: a small fluid solve whose dye acts as a lens |
+| `cursor-smear.js` | Glass disc on the pointer: a small fluid solve whose dye forms a travelling lens |
 | `render-windows.js` | Panels showing one scene in different render modes |
 | `loader-outline.js` | Progress drawn up the object's silhouette |
 | `ui-links.js` | Cracked word, rolling link, redrawing arrow |
@@ -79,7 +79,7 @@ Compared side by side with the reference at 1440×900 and 390×844, using frame 
 | Stone surface | Approximated | Procedural shader, not a sculpted model with painted textures. Bands and veins read alike, the exact pattern differs |
 | Stone silhouette | Approximated | Profile measured from the reference outline, with a different surface detail |
 | Stone plates opening under the moving pointer | Approximated | Real plates slide apart and tip, wider at higher speed, narrow at rest. Plate shapes come from generated fracture cells |
-| Glassy puff that bends the image behind the pointer, keeps travelling after a sudden stop, and swirls when circled | Approximated | A small fluid solve drives a soft lens over a separate background layer, so the stone and titles stay clean. Tuned against timed video of the reference: head position, strength, and fade after a stop. Hills move somewhat more than the reference during long spins |
+| Glass disc that bends the image behind the pointer, runs on as a fading crescent after a sudden stop, and leaves rings when circled | Approximated | A small fluid solve carries two dyes, one for shape and one for strength. Momentum drifts the whole disc after a stop. Stone and titles sit on top of a separate bent background. Front position and lifetime are tuned against timed video of the reference. Its exact method and rim softness differ |
 | Shard shapes | Approximated | Cut from the stone by fracture cells with generated creases. The reference pieces have more folded detail |
 | Landscape | Approximated | Generated terrain and plants. Same layering and mood, different specific shapes |
 | Water reflection | Approximated | True mirror pass with ripple. The reference pools sit in different places |
