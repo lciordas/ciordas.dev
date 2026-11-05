@@ -51,7 +51,7 @@ export function mountCad(canvas, model, options = {}) {
     group.add(new THREE.Mesh(p.mesh, material)); group.add(new THREE.LineSegments(p.lines, lineMat));
     group.children.forEach((c) => { c.frustumCulled = false; });
     p.mesh.computeBoundingSphere();
-    return { group, center: p.center, size: p.mesh.boundingSphere.radius, scatter: new THREE.Vector3(), axis: new THREE.Vector3(R(i + 6) - 0.5, R(i + 7) - 0.5, R(i + 8) - 0.5).normalize(), spin: 1.3 + R(i + 11) * 1.7 };
+    return { group, center: p.center, size: p.mesh.boundingSphere.radius, scatter: new THREE.Vector3(), axis: new THREE.Vector3(R(i + 6) - 0.5, R(i + 7) - 0.5, R(i + 8) - 0.5).normalize(), spin: 0.15 + R(i + 11) * 0.4 };
   });
   // Biggest parts land first and small ones last. Each part picks a random spot, far from those already taken.
   const placed = [];
@@ -67,7 +67,7 @@ export function mountCad(canvas, model, options = {}) {
     p.place = { u: best.u, v: best.v, w: (R(rank + 41) - 0.5) * 2 };
     placed.push({ u: best.u, v: best.v, size: p.size });
     // Its own slow drift and tumble while it floats.
-    p.float = { ax: 0.05 + R(rank + 51) * 0.1, ay: 0.05 + R(rank + 53) * 0.1, fx: 0.11 + R(rank + 55) * 0.2, fy: 0.1 + R(rank + 57) * 0.2, ph: R(rank + 59) * 6.28, spin: (R(rank + 61) - 0.5) * 0.55, depth: 0.45 + R(rank + 63) * 1.1 };
+    p.float = { ax: 0.05 + R(rank + 51) * 0.1, ay: 0.05 + R(rank + 53) * 0.1, fx: 0.11 + R(rank + 55) * 0.2, fy: 0.1 + R(rank + 57) * 0.2, ph: R(rank + 59) * 6.28, spin: (R(rank + 61) - 0.5) * 0.14, depth: 0.45 + R(rank + 63) * 1.1 };
   });
   const api = {
     renderer, camera, scene, root, parts, material, lineMat, target,

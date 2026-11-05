@@ -1,8 +1,8 @@
 // Follows movement through a video, for steadying footage. Positions come back as fractions of the frame.
 import { execFileSync } from 'node:child_process';
 const W = 480, H = 270;
-const grab = (file, ss, t) => {
-  const raw = execFileSync('ffmpeg', ['-v', 'error', '-ss', String(ss), '-t', String(t), '-i', file, '-vf', `fps=30,scale=${W}:${H},format=gray`, '-f', 'rawvideo', '-'], { maxBuffer: 2 ** 31 });
+const grab = (file, ss, t, pre = '') => {
+  const raw = execFileSync('ffmpeg', ['-v', 'error', '-ss', String(ss), '-t', String(t), '-i', file, '-vf', `${pre ? `${pre},` : ''}fps=30,scale=${W}:${H},format=gray`, '-f', 'rawvideo', '-'], { maxBuffer: 2 ** 31 });
   return { raw, n: Math.floor(raw.length / (W * H)) };
 };
 const median = (v) => { const s = [...v].sort((p, q) => p - q); return s[s.length >> 1]; };
@@ -18,8 +18,8 @@ function match(a, b, x, y, pw, ph, R, ox = 0, oy = 0) {
   return [fx, fy];
 }
 // Camera movement, measured from patches around the edge of the picture.
-export function trackCamera(file, ss, t) {
-  const { raw, n } = grab(file, ss, t), PW = 48, PH = 32, patches = [];
+export function trackCamera(file, ss, t, pre = '') {
+  const { raw, n } = grab(file, ss, t, pre), PW = 48, PH = 32, patches = [];
   for (const x of [6, 70, 150, 282, 362, 426]) patches.push([x, 226]);
   for (const x of [6, 426]) for (const y of [6, 50, 100, 150]) patches.push([x, y]);
   for (const x of [130, 220, 310]) patches.push([x, 6]);

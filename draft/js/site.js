@@ -15,6 +15,7 @@ function applyStyle(root, style = {}) {
   set('--ov-width', `${style.width ?? 1180}px`);
   root.classList.toggle('no-tags', style.showTags === false);
   root.classList.toggle('no-numbers', style.showNumbers === false);
+  root.classList.toggle('no-thumbs', style.showThumbs === false);
 }
 
 export function renderOverview(root, c) {
@@ -24,6 +25,7 @@ export function renderOverview(root, c) {
     if (!p) return '';
     return `<li><a class="row" href="#${id}" data-project="${id}">
       <span class="row__n" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span>
+      ${p.thumb ? `<img class="row__i" src="media/thumbs/${esc(p.thumb)}.webp" alt="" width="96" height="64" loading="eager" decoding="async">` : ''}
       <span class="row__t" data-edit="projects.${id}.title">${esc(p.title)}</span>
       <span class="row__d" data-edit="projects.${id}.tag">${esc(p.tag)}</span></a></li>`;
   };
@@ -32,6 +34,7 @@ export function renderOverview(root, c) {
     if (!l) return '';
     return `<section class="ov-list"><h2 data-edit="lists.${key}.title">${esc(l.title)}</h2><ul>${l.items.map((it, i) => `<li><strong data-edit="lists.${key}.items.${i}.title">${esc(it.title)}</strong><span data-edit="lists.${key}.items.${i}.detail">${esc(it.detail)}</span></li>`).join('')}</ul></section>`;
   };
+  const other = c.other?.items?.length ? `<div class="ov-other"><h3 data-edit="other.title">${esc(c.other.title)}</h3><ul>${c.other.items.map((it, i) => `<li><img src="${esc(it.image)}" alt="${esc(it.title)}" loading="lazy" decoding="async"><strong data-edit="other.items.${i}.title">${esc(it.title)}</strong><span data-edit="other.items.${i}.detail">${esc(it.detail)}</span></li>`).join('')}</ul></div>` : '';
   root.innerHTML = `
     <div class="ov-inner">
       <header class="ov-head ov-reveal">
@@ -39,7 +42,7 @@ export function renderOverview(root, c) {
         <nav class="ov-links" aria-label="Links">${(c.site.links || []).map((l, i) => `<a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener" data-edit="site.links.${i}.label">${esc(l.label)}</a>`).join('')}</nav>
       </header>
       <div class="ov-cols">
-        ${c.columns.map((col, k) => `<section class="ov-col ov-reveal"><h2 data-edit="columns.${k}.title">${esc(col.title)}</h2><ul>${col.items.map(row).join('')}</ul></section>`).join('')}
+        ${c.columns.map((col, k) => `<section class="ov-col ov-reveal"><h2 data-edit="columns.${k}.title">${esc(col.title)}</h2><ul>${col.items.map(row).join('')}</ul>${k === 0 ? other : ''}</section>`).join('')}
       </div>
       <div class="ov-extra ov-reveal">${list('distinctions')}${list('experience')}</div>
       <footer class="ov-foot ov-reveal"><span data-edit="site.hint">${esc(c.site.hint)}</span><button id="replay" type="button">Replay intro</button></footer>

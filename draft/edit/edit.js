@@ -82,6 +82,10 @@ const TABS = {
       tech.addEventListener('input', () => { p.tech = tech.value.split(',').map((s) => s.trim()).filter(Boolean); changed(); });
       out.push(el('label', {}, 'Tools and methods, separated by commas', tech));
     }
+    if (p.media?.length) {
+      out.push(el('h2', { textContent: 'Picture and video captions' }));
+      p.media.forEach((_, i) => out.push(field(`Item ${i + 1}`, `${base}.media.${i}.caption`)));
+    }
     if (p.kind === 'detail') {
       out.push(el('h2', { textContent: 'Links' }));
       p.links = p.links || [];
@@ -108,6 +112,11 @@ const TABS = {
         mini('↑', 'Move up', () => moveIn(l.items, i, -1), i === 0), mini('↓', 'Move down', () => moveIn(l.items, i, 1), i === l.items.length - 1), mini('Remove', 'Remove', () => { l.items.splice(i, 1); changed(true); })))));
       out.push(mini('Add row', `Add a row to ${l.title}`, () => { l.items.push({ title: 'New', detail: '' }); changed(true); }));
     });
+    if (c.other) {
+      out.push(el('h2', { textContent: c.other.title }), field('Section title', 'other.title'));
+      c.other.items.forEach((_, i) => out.push(el('div', { className: 'card' }, field('Title', `other.items.${i}.title`), field('Line below', `other.items.${i}.detail`), el('div', { className: 'row-btns' },
+        mini('\u2191', 'Move up', () => moveIn(c.other.items, i, -1), i === 0), mini('\u2193', 'Move down', () => moveIn(c.other.items, i, 1), i === c.other.items.length - 1), mini('Remove', 'Remove', () => { c.other.items.splice(i, 1); changed(true); })))));
+    }
     return out;
   },
   style() {
@@ -115,7 +124,7 @@ const TABS = {
     color.addEventListener('input', () => { c.style.accent = color.value; changed(); });
     return [el('label', { className: 'check' }, color, 'Highlight color'),
       range('Name size', 'titleSize', 22, 60), range('Project title size', 'rowSize', 14, 34), range('Space between rows', 'rowGap', 3, 20), range('Space between columns', 'columnGap', 20, 140), range('Page width', 'width', 800, 1500),
-      toggle('Show the line under each project', 'showTags'), toggle('Show numbers', 'showNumbers')];
+      toggle('Show the line under each project', 'showTags'), toggle('Show pictures', 'showThumbs'), toggle('Show numbers', 'showNumbers')];
   },
 };
 const LABELS = { overview: 'Overview', projects: 'Projects', lists: 'Lists', style: 'Style' };

@@ -1,0 +1,107 @@
+// Gathers project photos, graphs, short clips and list thumbnails into draft/media/projects and draft/media/thumbs.
+// Run from the repo root: node draft/tools/build-media.mjs
+import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const here = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(path.join(here, '../../toolkit/x.js'));
+const sharp = require('sharp');
+const D = `${os.homedir()}/Downloads`, OLD = `${D}/old_clips`, BROLL = `${D}/maker portfolio b-roll`, MAKER = `${D}/maker_portfolio_v1.mp4`;
+const DECK = `${D}/SRP Micromanipulator Presentation - Lucas Ciordas.pdf`, WM = `${os.homedir()}/Documents/NeurIPS/authored papers/Plan_Shallow_While_You_Learn.pdf`;
+const OUT = path.join(here, '../media/projects'), THUMBS = path.join(here, '../media/thumbs');
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'media-'));
+const run = (...a) => execFileSync(a[0], a.slice(1), { stdio: ['ignore', 'ignore', 'pipe'] });
+let n = 0;
+const temp = (ext) => path.join(tmp, `${n++}.${ext}`);
+
+// Sources: each returns the path of a full-size image.
+const file = (p) => p;
+// Clips filmed upright came with black bars, so those are trimmed off.
+const frame = (src, t) => { const o = temp('png'), raw = temp('png'); run('ffmpeg', '-v', 'error', '-y', '-ss', String(t), '-i', src, '-frames:v', '1', raw); return sharp(raw).trim({ threshold: 18 }).toFile(o).then(() => o); };
+const heic = (p) => { const o = temp('jpg'); run('sips', '-s', 'format', 'jpeg', p, '--out', o); return o; };
+const deckImage = (page, index) => { const pre = path.join(tmp, `deck${n++}`); run('pdfimages', '-j', '-f', String(page), '-l', String(page), DECK, pre); return `${pre}-${String(index).padStart(3, '0')}.jpg`; };
+const pdfCrop = (pdf, page, fx, fy, fw, fh, dpi = 200) => { const pre = temp('x'); const W = 8.5 * dpi, H = 11 * dpi; run('pdftoppm', '-r', String(dpi), '-f', String(page), '-l', String(page), '-singlefile', '-png', '-x', String(Math.round(fx * W)), '-y', String(Math.round(fy * H)), '-W', String(Math.round(fw * W)), '-H', String(Math.round(fh * H)), pdf, pre); return `${pre}.png`; };
+
+// Outputs.
+const still = async (id, name, src, { width = 1280, trim = false, flat = false } = {}) => {
+  const dir = path.join(OUT, id); fs.mkdirSync(dir, { recursive: true });
+  let img = sharp(src).rotate();
+  if (flat) img = img.flatten({ background: '#ffffff' });
+  if (trim) img = sharp(await img.png().toBuffer()).trim({ threshold: 12 });
+  await img.resize({ width, withoutEnlargement: true }).webp({ quality: 76, effort: 5 }).toFile(path.join(dir, `${name}.webp`));
+};
+const clip = (id, name, src, ss, t, vf = 'scale=960:-2') => {
+  const dir = path.join(OUT, id); fs.mkdirSync(dir, { recursive: true });
+  run('ffmpeg', '-v', 'error', '-y', ...(ss ? ['-ss', String(ss)] : []), ...(t ? ['-t', String(t)] : []), '-i', src, '-an', '-vf', `fps=30,${vf},pad=ceil(iw/2)*2:ceil(ih/2)*2`, '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '26', '-preset', 'slow', '-movflags', '+faststart', path.join(dir, `${name}.mp4`));
+};
+const thumb = async (id, src, { position = 'centre', flat = false } = {}) => {
+  fs.mkdirSync(THUMBS, { recursive: true });
+  let img = sharp(src).rotate();
+  if (flat) img = img.flatten({ background: '#ffffff' });
+  await img.resize(192, 128, { fit: 'cover', position }).webp({ quality: 74, effort: 5 }).toFile(path.join(THUMBS, `${id}.webp`));
+};
+
+// Hardware.
+const dogPic = heic(`${BROLL}/quadrued pic2.HEIC`);
+await thumb('robot-dog', dogPic);
+await thumb('pid-seesaw', await frame(MAKER, 24.2));
+
+const microPhoto = deckImage(2, 0);
+clip('micromanipulator', 'mechanism', MAKER, 48.2, 5.6);
+await still('micromanipulator', 'assembly', microPhoto, { width: 900 });
+await still('micromanipulator', 'microstepping', `${D}/microstepping_comparison.png`, { width: 1400, flat: true });
+await still('micromanipulator', 'encoder', await frame(`${OLD}/39_encoder_magnet_board.mp4`, 0.8), { width: 900 });
+await still('micromanipulator', 'bench', await frame(`${OLD}/35_stepper_breadboard_pico_vertical.mp4`, 2), { width: 900 });
+await thumb('micromanipulator', microPhoto);
+
+const shipDone = await frame(`${OLD}/17_ship_finished_on_books.mp4`, 1.2);
+await still('ship-in-a-bottle', 'finished', shipDone, { width: 1000 });
+clip('ship-in-a-bottle', 'rigging', `${OLD}/22_ship_rigging_masts.mp4`);
+clip('ship-in-a-bottle', 'inserting', `${OLD}/24_ship_inserting_into_bottle.mp4`);
+clip('ship-in-a-bottle', 'raising', `${OLD}/25_ship_raising_masts_in_bottle.mp4`);
+await thumb('ship-in-a-bottle', shipDone);
+
+// Other projects: one photo each.
+const ev = await frame(`${OLD}/11_ev_closeup.mp4`, 1.4);
+const cannon = await frame(`${OLD}/28_cannon_closeup_vertical.mp4`, 2);
+await still('other', 'electric-vehicle', ev, { width: 640 });
+await still('other', 'cannon', cannon, { width: 640 });
+
+// Software.
+const board = await frame(`${OLD}/46_chess_board_game.mp4`, 2.5);
+clip('chess-engine', 'game', `${OLD}/46_chess_board_game.mp4`);
+await still('chess-engine', 'minimax', await frame(`${OLD}/45_chess_minimax_diagram.mp4`, 0.5), { width: 1000 });
+await still('chess-engine', 'code', await frame(`${OLD}/44_chess_code_editor.mp4`, 1.5), { width: 1200 });
+await thumb('chess-engine', board);
+
+const EG = `${D}/evograd_networks`;
+for (const [name, f] of [['xor', 'xor_network'], ['sine', 'sine_regression_network'], ['damped-sine', 'damped_sine_network']]) await still('hybrid-networks', name, `${EG}/${f}.png`, { width: 1400, flat: true });
+await thumb('hybrid-networks', `${EG}/xor_network.png`, { flat: true });
+
+const T = `${D}/tennis_`;
+for (const [name, f] of [['win-probability', 'bayesian_win_prob_evolution_static_vs_bayesian'], ['match-importance', 'point_importance_importance_during_one_match'], ['serve', 'point_importance_serve_win_prob_vs_importance_logistic'], ['distribution', 'point_importance_importance_distribution_all_scores_bo5'], ['top-points', 'point_importance_top100_most_important_points_bo5']]) await still('tennis-simulation', name, `${T}${f}.png`, { width: 1400, flat: true });
+await thumb('tennis-simulation', `${T}bayesian_win_prob_evolution_static_vs_bayesian.png`, { flat: true });
+
+const poster = await frame(`${OLD}/49_svm_poster_closeup.mp4`, 1.2);
+await still('protein-classifier', 'poster', poster, { width: 1000 });
+await still('protein-classifier', 'notebook', await frame(`${OLD}/47_svm_jupyter_notebook_plots.mp4`, 3), { width: 1200 });
+await thumb('protein-classifier', poster);
+
+// Figures from the papers, leaving out the first pages with everyone's addresses.
+const wm1 = pdfCrop(WM, 2, 0.2, 0.05, 0.62, 0.215), wm2 = pdfCrop(WM, 4, 0.14, 0.05, 0.72, 0.225), wm3 = pdfCrop(WM, 3, 0.15, 0.05, 0.7, 0.16);
+await still('world-models', 'figure-1', wm1, { width: 1100, trim: true, flat: true });
+await still('world-models', 'figure-3', wm2, { width: 1100, trim: true, flat: true });
+await still('world-models', 'figure-2', wm3, { width: 1100, trim: true, flat: true });
+await thumb('world-models', wm1, { flat: true });
+
+const AO = fs.readdirSync(D).find((f) => f.startsWith('Orbit_Determination'));
+const star = pdfCrop(`${D}/${AO}`, 3, 0.04, 0.3, 0.46, 0.255), orbit = pdfCrop(`${D}/${AO}`, 9, 0.5, 0.08, 0.46, 0.18), photo = pdfCrop(`${D}/${AO}`, 4, 0.02, 0.05, 0.96, 0.2);
+await still('asteroid-orbit', 'field', star, { width: 900, trim: true, flat: true });
+await still('asteroid-orbit', 'orbit', orbit, { width: 900, trim: true, flat: true });
+await still('asteroid-orbit', 'photometry', photo, { width: 1200, trim: true, flat: true });
+await thumb('asteroid-orbit', star, { flat: true });
+
+fs.rmSync(tmp, { recursive: true, force: true });
+const total = (d) => fs.readdirSync(d, { recursive: true }).reduce((a, f) => { const p = path.join(d, f); return a + (fs.statSync(p).isFile() ? fs.statSync(p).size : 0); }, 0);
+console.log('projects MB', (total(OUT) / 1e6).toFixed(1), 'thumbs KB', (total(THUMBS) / 1e3).toFixed(0));

@@ -12,6 +12,8 @@ const sharp = require('sharp');
 const HOME = os.homedir();
 const CLIPS = {
   dog: { src: `${HOME}/Downloads/robot dog photos icloud/IMG_2665.MOV`, ss: 14.8, t: 6, vf: 'fps=30', lock: { margin: 64 } },
+  // The phone was turned on its side partway through this clip, so it needs turning back.
+  'dog-front': { src: `${HOME}/Downloads/IMG_2648.MOV`, ss: 20.4, t: 7.5, pre: 'transpose=2', vf: 'transpose=2,fps=24', trackFps: 30, lock: { margin: 48 } },
 };
 const WIDTH = 1280, QUALITY = 72;
 
@@ -27,7 +29,7 @@ for (const [name, c] of Object.entries(CLIPS)) {
   const { width: srcW, height: srcH } = await sharp(path.join(tmp, files[0])).metadata();
   let crop = null;
   if (c.lock) {
-    const track = trackCamera(c.src, c.ss, c.t);
+    const track = trackCamera(c.src, c.ss, c.t, c.pre).filter((_, i, all) => !c.trackFps || Math.round((i * 24) / c.trackFps) !== Math.round(((i - 1) * 24) / c.trackFps));
     const px = track.map(([x, y]) => [x * srcW, y * srcH]);
     const xs = px.map((p) => p[0]), ys = px.map((p) => p[1]);
     const midX = (Math.min(...xs) + Math.max(...xs)) / 2, midY = (Math.min(...ys) + Math.max(...ys)) / 2;
@@ -45,7 +47,7 @@ for (const [name, c] of Object.entries(CLIPS)) {
     const info = await img.resize({ width: WIDTH }).webp({ quality: QUALITY, effort: 5 }).toFile(dest);
     bytes += info.size; w = info.width; h = info.height;
   }
-  fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify({ count: files.length, width: w, height: h, fps: 30 }));
+  fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify({ count: files.length, width: w, height: h, fps: c.vf.includes('fps=24') ? 24 : 30 }));
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log(name, 'frames', files.length, `${w}x${h}`, 'total MB', (bytes / 1e6).toFixed(1));
 }

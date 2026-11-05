@@ -41,8 +41,8 @@ function meet(a, r1, b, r2) {
 // feet stand on the cardboard, so it would be underneath, and here it would float), and meshes 25-26, a spare servo
 // and horn from the robot dog file that isn't on the real machine.
 function seesawPose() {
-  const TILT = 4.94; // sensor end up, in degrees, measured off the first video frame
-  const BALL_ALONG = 47.6; // ball centre along the beam from the pivot, towards +X, measured off the same frame
+  const TILT = -8.5; // sensor end up, in degrees, measured off the first video frame (the ball is being placed)
+  const BALL_ALONG = 94; // ball centre along the beam from the pivot, towards +X, measured off the same frame
   const BEAM = 7.5 + TILT;
   const beam = aroundY(BEAM);
   // Ball: slides along the groove (it is seated in it in the STEP at 80.06 mm), then tilts with the beam.
@@ -57,7 +57,7 @@ function seesawPose() {
   const beamPin = apply(beam, [-140.47, 0, -5.63]);
   const P = [beamPin[0], beamPin[2]], S = [-55 + MOUNT[0], MOUNT[2]];
   const LA = [-124, 7.48], LB = [-145, -28.9], HA = [-145, -28.9], HB = [-111.77, -49.32]; // pin centres in the STEP
-  const E = meet(P, Math.hypot(LA[0] - LB[0], LA[1] - LB[1]), S, Math.hypot(HA[0] - HB[0], HA[1] - HB[1])).sort((a, b) => a[0] - b[0])[0]; // the elbow on the far side from the pivot
+  const E = meet(P, Math.hypot(LA[0] - LB[0], LA[1] - LB[1]), S, Math.hypot(HA[0] - HB[0], HA[1] - HB[1])).sort((a, b) => a[1] - b[1])[0]; // the elbow on the far side from the pivot
   const pinned = (a0, b0, a1, b1) => { // takes the pin pair a0,b0 onto a1,b1 by turning about Y, with the link's Y shift
     const deg = (Math.atan2(b0[1] - a0[1], b0[0] - a0[0]) - Math.atan2(b1[1] - a1[1], b1[0] - a1[0])) / DEG;
     return chain(move(a1[0], LINK_Y, a1[1]), aroundY(deg), move(-a0[0], 0, -a0[1]));

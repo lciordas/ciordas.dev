@@ -3,103 +3,347 @@
     "name": "Lucas Ciordas",
     "tagline": "Robotics, control systems, and machine learning.",
     "links": [
-      { "label": "GitHub", "url": "https://github.com/lciordas" }
+      {
+        "label": "GitHub",
+        "url": "https://github.com/lciordas"
+      }
     ],
     "hint": "Arrow keys to move, Enter to open, or scroll"
   },
   "columns": [
-    { "id": "hardware", "title": "Hardware", "items": ["robot-dog", "pid-seesaw", "micromanipulator", "ship-in-a-bottle", "electric-vehicle", "combustion-cannon"] },
-    { "id": "software", "title": "Software", "items": ["chess-engine", "hybrid-networks", "tennis-simulation", "protein-classifier", "world-models", "asteroid-orbit"] }
+    {
+      "id": "hardware",
+      "title": "Hardware",
+      "items": [
+        "robot-dog",
+        "pid-seesaw",
+        "micromanipulator",
+        "ship-in-a-bottle"
+      ]
+    },
+    {
+      "id": "software",
+      "title": "Software",
+      "items": [
+        "chess-engine",
+        "hybrid-networks",
+        "tennis-simulation",
+        "protein-classifier",
+        "world-models",
+        "asteroid-orbit"
+      ]
+    }
   ],
   "lists": {
     "distinctions": {
       "title": "Distinctions",
       "items": [
-        { "title": "NeurIPS 2026 workshop paper", "detail": "Continual World Models, presenting in Sydney" },
-        { "title": "Xerox Award for Innovation", "detail": "University of Rochester" },
-        { "title": "National Merit Semifinalist", "detail": "2027" },
-        { "title": "General Excellence Award", "detail": "Regis High School, Grades 9, 10, 11" },
-        { "title": "Science Olympiad, 3rd of 34", "detail": "Electric Vehicle, NYC Regionals 2025" }
+        {
+          "title": "NeurIPS 2026 workshop paper",
+          "detail": "Continual World Models, presenting in Sydney"
+        },
+        {
+          "title": "Xerox Award for Innovation",
+          "detail": "University of Rochester"
+        },
+        {
+          "title": "National Merit Semifinalist",
+          "detail": "2027"
+        }
       ]
     },
     "experience": {
       "title": "Experience",
       "items": [
-        { "title": "Software Engineering Intern", "detail": "AINS, AI-native facilities management. Summer 2026" },
-        { "title": "Summer Science Program", "detail": "Astrophysics research, Summer 2026" },
-        { "title": "Columbia SHAPE", "detail": "Walking Robots, Summer 2025" },
-        { "title": "Engineering Club Leader", "detail": "Regis High School" }
+        {
+          "title": "Software Engineering Intern",
+          "detail": "AINS, AI-native facilities management. Summer 2026"
+        },
+        {
+          "title": "Summer Science Program",
+          "detail": "Astrophysics research, Summer 2026"
+        },
+        {
+          "title": "Engineering Club Leader",
+          "detail": "Regis High School"
+        }
       ]
     }
   },
   "projects": {
     "robot-dog": {
-      "title": "Robot Dog", "tag": "Quadruped with 6-DOF body control", "kind": "scroll",
+      "title": "Robot Dog",
+      "tag": "Quadruped with 6-DOF body control",
+      "kind": "scroll",
       "summary": "Quadrupedal robot designed in CAD with a small team. Inverse kinematics maps three degrees of freedom per leg to six degrees of freedom at the body.",
       "captions": [
-        "Quadrupedal robot, designed in CAD with a small team during Columbia SHAPE's Walking Robots course. Several leg geometries were modeled before settling on a simple linkage.",
+        "Quadrupedal robot, designed in CAD with a small team. Several leg geometries were modeled before settling on a simple linkage.",
         "Inverse kinematics maps the three degrees of freedom in each leg to full six-degree-of-freedom control of the body.",
         "The same solver commands the body through arbitrary poses while the feet stay planted.",
-        "Walking gait, with the camera tracking the robot across the floor."
-      ]
+        "From the front quarter, the roll, pitch, and yaw of the body are easier to see.",
+        "Walking gait, with the camera tracking the robot across the mat."
+      ],
+      "thumb": "robot-dog"
     },
     "pid-seesaw": {
-      "title": "PID Seesaw", "tag": "Closed-loop ball balancing", "kind": "scroll",
+      "title": "PID Seesaw",
+      "tag": "Closed-loop ball balancing",
+      "kind": "scroll",
       "summary": "Ball-balancing beam. An infrared distance sensor reports the ball's position, and a servo and linkage tilt the beam under PID control.",
       "captions": [
         "Ball-balancing beam. An infrared distance sensor measures the ball's position, and a servo drives the beam through a linkage.",
         "A PID controller holds the ball at center and rejects disturbances. The second revision upgraded the hardware and corrected the control law: setting the servo angle to the controller output, rather than adding the output to the angle, removed an unintended integrator and the lag it caused."
-      ]
+      ],
+      "thumb": "pid-seesaw"
     },
     "micromanipulator": {
-      "title": "Micromanipulator", "tag": "Stepper-driven precision positioning, in progress", "kind": "detail", "image": "micromanipulator",
-      "summary": "A low-cost precision positioner built from custom 3D-printed parts, stepper motors, encoders, and a microcontroller. A corrected microstepping formula, derived from the motor's coil geometry, reduces error to as little as 1/25 of a full step. A row of 17 axially magnetized magnets forms a locally rotating field that increases encoder resolution 8.5 times over a single diametric magnet. Work in progress: closing the loop in software and moving from Python to C++.",
-      "tech": ["Stepper motors", "Magnetic encoders", "Python", "C++", "3D printing"], "links": []
+      "title": "Micromanipulator",
+      "tag": "Closed-loop stepper control, 100 nm theoretical resolution",
+      "kind": "detail",
+      "summary": "A low-cost, 3D-printed alternative to industrial micromanipulators, which cost $1,000 to $60,000. Geometric microstepping accounts for the true 45° phase spacing of the motor's coils, where the standard formula assumes 90°. A row of 17 axially magnetized magnets forms a locally rotating field that increases encoder resolution 8.5 times over a single diametric magnet. Angular error fell from about 0.08° in open loop to 0.0045° with closed-loop control, and about 0.0005° with PID control in C++, which allows a theoretical end-effector resolution of 100 nm. Physical testing of that resolution is the next step.",
+      "tech": [
+        "NEMA 17 stepper",
+        "MT6835 magnetic encoder",
+        "Raspberry Pi Pico 2",
+        "C++",
+        "MicroPython",
+        "3D printing"
+      ],
+      "links": [],
+      "thumb": "micromanipulator",
+      "media": [
+        {
+          "src": "media/projects/micromanipulator/mechanism.mp4",
+          "caption": "Drive mechanism on the bench."
+        },
+        {
+          "src": "media/projects/micromanipulator/microstepping.webp",
+          "caption": "Traditional and geometric microstepping: phase currents, field angle, and magnetic angle error.",
+          "light": true
+        },
+        {
+          "src": "media/projects/micromanipulator/assembly.webp",
+          "caption": "Assembled manipulator."
+        },
+        {
+          "src": "media/projects/micromanipulator/encoder.webp",
+          "caption": "Magnetic encoder board."
+        },
+        {
+          "src": "media/projects/micromanipulator/bench.webp",
+          "caption": "Bench setup during motor control testing."
+        }
+      ]
     },
     "ship-in-a-bottle": {
-      "title": "Ship in a Bottle", "tag": "Scratch-built, with custom tools", "kind": "detail", "image": "ship-in-a-bottle",
+      "title": "Ship in a Bottle",
+      "tag": "Scratch-built, with custom tools",
+      "kind": "detail",
       "summary": "A ship built from scratch and assembled inside the bottle. The work demanded extreme precision and custom tools made from clothes hangers to reach inside.",
-      "tech": ["Hand fabrication", "Custom tooling"], "links": []
-    },
-    "electric-vehicle": {
-      "title": "Electric Vehicle", "tag": "3rd of 34 schools, NYC Regionals", "kind": "detail", "image": "electric-vehicle",
-      "summary": "A vehicle designed and assembled from scratch for the Science Olympiad Electric Vehicle event, placing 3rd of 34 schools at the 2025 NYC Regionals.",
-      "tech": ["CAD", "Electronics", "3D printing"], "links": []
-    },
-    "combustion-cannon": {
-      "title": "Combustion Cannon", "tag": "Handheld, spark-ignited", "kind": "detail", "image": "combustion-cannon",
-      "summary": "A handheld combustion cannon, ignited by a spark generator salvaged from a spent lighter.",
-      "tech": ["Fabrication"], "links": []
+      "tech": [
+        "Hand fabrication",
+        "Custom tooling"
+      ],
+      "links": [],
+      "thumb": "ship-in-a-bottle",
+      "media": [
+        {
+          "src": "media/projects/ship-in-a-bottle/finished.webp",
+          "caption": "Finished ship in its bottle."
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/rigging.mp4",
+          "caption": "Rigging the masts."
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/inserting.mp4",
+          "caption": "Passing the hull through the neck."
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/raising.mp4",
+          "caption": "Raising the masts inside the bottle."
+        }
+      ]
     },
     "chess-engine": {
-      "title": "Chess Engine", "tag": "Bitboards, NNUE, 2000+ Elo", "kind": "detail", "image": "chess-engine",
+      "title": "Chess Engine",
+      "tag": "Bitboards, NNUE, 2000+ Elo",
+      "kind": "detail",
       "summary": "A chess engine built on a bitboard representation and minimax search, later extended with iterative deepening and NNUE evaluation, which replaces handcrafted heuristics with a neural network. Rated 2000+ Elo against other bots on Lichess.",
-      "tech": ["Bitboards", "Minimax", "Iterative deepening", "NNUE"], "links": []
+      "tech": [
+        "Bitboards",
+        "Minimax",
+        "Iterative deepening",
+        "NNUE"
+      ],
+      "links": [],
+      "thumb": "chess-engine",
+      "media": [
+        {
+          "src": "media/projects/chess-engine/game.mp4",
+          "caption": "The engine playing a game."
+        },
+        {
+          "src": "media/projects/chess-engine/minimax.webp",
+          "caption": "Minimax search over a game tree."
+        },
+        {
+          "src": "media/projects/chess-engine/code.webp",
+          "caption": "Engine source."
+        }
+      ]
     },
     "hybrid-networks": {
-      "title": "Hybrid Neural Networks", "tag": "NEAT combined with gradient descent", "kind": "detail", "image": "hybrid-networks",
-      "summary": "A neural network library that re-implements NEAT from its original paper and combines it with gradient descent, producing compact, expressive networks suited to engineering and physics problems.",
-      "tech": ["NEAT", "Gradient descent", "Python"], "links": []
+      "title": "EvoGrad",
+      "tag": "Hybrid neural networks: NEAT with gradient descent",
+      "kind": "detail",
+      "summary": "A neural network library that re-implements NEAT from its original paper and combines it with gradient descent. Evolution searches over network structure while gradient descent tunes the weights, producing compact, expressive networks suited to engineering and physics problems.",
+      "tech": [
+        "NEAT",
+        "Gradient descent",
+        "Python"
+      ],
+      "links": [],
+      "thumb": "hybrid-networks",
+      "media": [
+        {
+          "src": "media/projects/hybrid-networks/xor.webp",
+          "caption": "Network evolved for XOR.",
+          "light": true
+        },
+        {
+          "src": "media/projects/hybrid-networks/sine.webp",
+          "caption": "Network evolved for sin(x) regression.",
+          "light": true
+        },
+        {
+          "src": "media/projects/hybrid-networks/damped-sine.webp",
+          "caption": "Network evolved for damped sine regression.",
+          "light": true
+        }
+      ]
     },
     "tennis-simulation": {
-      "title": "Tennis Match Simulation", "tag": "Bayesian updates, Monte Carlo", "kind": "detail", "image": "tennis-simulation",
+      "title": "Tennis Statistics Library",
+      "tag": "Bayesian updates, Monte Carlo",
+      "kind": "detail",
       "summary": "A library that simulates tennis matches from simple inputs, updated during play with Bayesian statistics. Monte Carlo simulation produces point importance and win probability.",
-      "tech": ["Bayesian statistics", "Monte Carlo", "Python"], "links": []
+      "tech": [
+        "Bayesian statistics",
+        "Monte Carlo",
+        "Python"
+      ],
+      "links": [],
+      "thumb": "tennis-simulation",
+      "media": [
+        {
+          "src": "media/projects/tennis-simulation/win-probability.webp",
+          "caption": "Win probability through a match, static compared with Bayesian updates.",
+          "light": true
+        },
+        {
+          "src": "media/projects/tennis-simulation/match-importance.webp",
+          "caption": "Point importance during one match.",
+          "light": true
+        },
+        {
+          "src": "media/projects/tennis-simulation/distribution.webp",
+          "caption": "Distribution of point importance across all possible scores, best of 5 sets.",
+          "light": true
+        },
+        {
+          "src": "media/projects/tennis-simulation/serve.webp",
+          "caption": "Serve win probability against point importance.",
+          "light": true
+        },
+        {
+          "src": "media/projects/tennis-simulation/top-points.webp",
+          "caption": "The 100 most important points, best of 5 sets.",
+          "light": true
+        }
+      ]
     },
     "protein-classifier": {
-      "title": "Alzheimer's Protein Classifier", "tag": "SVM, 80.3% accuracy", "kind": "detail", "image": "protein-classifier",
+      "title": "Alzheimer's Protein Classifier",
+      "tag": "SVM, 80.3% accuracy",
+      "kind": "detail",
       "summary": "A support vector machine over genomic and proteomic data that classifies whether a protein sequence is associated with Alzheimer's disease, with controls to correct for sequence length bias. Accuracy: 80.3%.",
-      "tech": ["Support vector machines", "Bioinformatics", "Python"], "links": []
+      "tech": [
+        "Support vector machines",
+        "Bioinformatics",
+        "Python"
+      ],
+      "links": [],
+      "thumb": "protein-classifier",
+      "media": [
+        {
+          "src": "media/projects/protein-classifier/poster.webp",
+          "caption": "Research poster."
+        },
+        {
+          "src": "media/projects/protein-classifier/notebook.webp",
+          "caption": "Sequence length analysis in the project notebook."
+        }
+      ]
     },
     "world-models": {
-      "title": "Plan Shallow While You Learn", "tag": "Research, NeurIPS 2026 workshop", "kind": "detail", "image": "world-models",
+      "title": "Plan Shallow While You Learn",
+      "tag": "Research, NeurIPS 2026 workshop",
+      "kind": "detail",
       "summary": "Co-authored paper accepted to the Continual World Models workshop at NeurIPS 2026. It shows that while a world model adapts to changed physics, planning compute should favor breadth over depth to maximize returns.",
-      "tech": ["Reinforcement learning", "World models", "Planning"], "links": []
+      "tech": [
+        "Reinforcement learning",
+        "World models",
+        "Planning"
+      ],
+      "links": [],
+      "thumb": "world-models",
+      "media": [
+        {
+          "src": "media/projects/world-models/figure-1.webp",
+          "caption": "Return against imagination depth, for a healthy model and three damping levels.",
+          "light": true
+        },
+        {
+          "src": "media/projects/world-models/figure-2.webp",
+          "caption": "Return improvement from reallocating the same planning budget.",
+          "light": true
+        },
+        {
+          "src": "media/projects/world-models/figure-3.webp",
+          "caption": "Deployment streams on the drag tiers.",
+          "light": true
+        }
+      ]
     },
     "asteroid-orbit": {
-      "title": "Orbit of Asteroid 1991 JF1", "tag": "Research, Summer Science Program", "kind": "detail", "image": "asteroid-orbit",
+      "title": "Orbit of Asteroid 1991 JF1",
+      "tag": "Research, Summer Science Program",
+      "kind": "detail",
       "summary": "In a team of three, determined the orbit of asteroid 1991 JF1 from original observations: imaging over three nights, plate solving for celestial coordinates, and computing orbital elements with the Method of Gauss. Results were written up as a technical paper and submitted to the Minor Planet Center.",
-      "tech": ["Astrometry", "Method of Gauss", "Orbital mechanics"], "links": []
+      "tech": [
+        "Astrometry",
+        "Method of Gauss",
+        "Orbital mechanics"
+      ],
+      "links": [],
+      "thumb": "asteroid-orbit",
+      "media": [
+        {
+          "src": "media/projects/asteroid-orbit/field.webp",
+          "caption": "Calibrated observation, with the asteroid circled."
+        },
+        {
+          "src": "media/projects/asteroid-orbit/orbit.webp",
+          "caption": "Orbits of 6249 Jennifer and Earth in the ecliptic plane.",
+          "light": true
+        },
+        {
+          "src": "media/projects/asteroid-orbit/photometry.webp",
+          "caption": "Photometric calibration against reference stars.",
+          "light": true
+        }
+      ]
     }
   },
   "style": {
@@ -110,7 +354,23 @@
     "columnGap": 64,
     "width": 1180,
     "showTags": true,
-    "showNumbers": true,
-    "shardDim": 0.5
+    "showNumbers": false,
+    "shardDim": 0.5,
+    "showThumbs": true
+  },
+  "other": {
+    "title": "Other projects",
+    "items": [
+      {
+        "title": "Electric Vehicle",
+        "detail": "Designed and built from scratch",
+        "image": "media/projects/other/electric-vehicle.webp"
+      },
+      {
+        "title": "Alcohol Cannon",
+        "detail": "Handheld, with a salvaged spark igniter",
+        "image": "media/projects/other/cannon.webp"
+      }
+    ]
   }
 }
