@@ -33,11 +33,9 @@ export function mountSequence(canvas, base) {
     get total() { return count; },
     start,
     resize(w, h, ratio) { W = w; H = h; dpr = ratio; canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); current = -1; },
-    // The on-screen rectangle of the frame: fills wide screens, sits whole on narrow ones.
+    // Where the frame sits on the canvas: it fills the canvas, trimming any difference in shape.
     rect() {
-      const a = frameW / frameH, wide = W / H > 0.9;
-      const k = wide ? Math.max(W / frameW, H / frameH) : Math.max(W / frameW, (H * 0.5) / frameH);
-      const dw = frameW * k, dh = frameH * k;
+      const a = frameW / frameH, k = Math.max(W / frameW, H / frameH), dw = frameW * k, dh = frameH * k;
       return { x: (W - dw) / 2, y: (H - dh) / 2, w: dw, h: dh, a };
     },
     draw(i, force) {

@@ -21,7 +21,7 @@ Run `node draft/tools/build-name.mjs` from the repo root. It needs the local `to
 
 ## Project sections
 
-Each project scrolls through four beats: exploded CAD comes together, the camera turns to the footage's angle, a light line wipes from CAD to video, then the video plays with the scroll. Code is in `js/projects/`, and the words and camera angles are in the `PROJECTS` list in `work.js`.
+Each project sits in a rounded window in the middle of the screen, with room around it for text. As you scroll, CAD parts scattered across the whole screen fly in and assemble inside the window, the camera turns to the footage's angle, a light line wipes from CAD to video, then the video plays with the scroll. The window's size is set by `--rw` in `css/site.css`. The dog clip is cut with `tools/build-frames.mjs`, whose `lock` option follows the background and cancels the camera's movement. Code is in `js/projects/`, and the words and camera angles are in the `PROJECTS` list in `work.js`.
 
 - Add `?to=work` to the address to skip the intro and reach the projects.
 - `node draft/tools/build-frames.mjs` re-extracts the video frames, with clip times at the top of the file.

@@ -1,14 +1,15 @@
-// work: the scroll-driven project sections. Each one runs CAD explode, turn, scan into footage, then motion on scroll.
+// work: the scroll-driven project sections. Scattered CAD parts fly in and assemble inside a rounded window,
+// a light line wipes from CAD to footage, then the footage moves with the scroll.
 import { mountSequence } from './sequence.js';
 import { mountCad, loadModel } from './cad.js';
 import { hasWebGL, REDUCED } from '../_util.js';
 
 export const PROJECTS = [
   {
-    id: 'seesaw', index: '01', title: 'PID Seesaw', model: 'seesaw', frames: 'media/seesaw', explode: 0.75,
+    id: 'seesaw', index: '01', title: 'PID Seesaw', model: 'seesaw', frames: 'media/seesaw',
     views: [
-      { p: 0, az: -0.75, el: 0.42, dist: 5.2, tx: 0, ty: 0, tz: 0 },
-      { p: 0.42, az: 0.5, el: 0.2, dist: 4.4, tx: 0, ty: 0, tz: 0 },
+      { p: 0, az: -0.75, el: 0.42, dist: 3.9, tx: 0, ty: 0, tz: 0 },
+      { p: 0.42, az: 0.5, el: 0.2, dist: 3.5, tx: 0, ty: 0, tz: 0 },
       { p: 0.54, az: 0, el: 0.06, dist: 3.09, tx: 0.037, ty: 0.023, tz: 0 },
     ],
     // The beam tips over and the ball rolls to where the footage starts.
@@ -19,20 +20,20 @@ export const PROJECTS = [
       cad.tilt([1, 2, 3, 4], pivot, POSE.seesawAngle * k, 'y', { part: 2, x: POSE.seesawSlide * k, y: 0, z: POSE.seesawDrop * k });
     },
     copy: [
-      { from: 0.17, to: 0.36, side: 'left', text: 'A ball-balancing seesaw. A servo and an infrared sensor keep the ball at its center.' },
+      { from: 0.36, to: 0.52, side: 'left', text: 'A ball-balancing seesaw. A servo and an infrared sensor keep the ball at its center.' },
       { from: 0.67, to: 0.82, side: 'left', text: 'I upgraded the hardware, and got past a conceptual bug: I was adding the PID output to the seesaw’s angle.' },
       { from: 0.84, to: 0.985, side: 'right', text: 'Setting the angle to the output removed the lag. I had been integrating the controller’s output by accident.' },
     ],
   },
   {
-    id: 'dog', index: '02', title: 'Robot Dog', model: 'dog', frames: 'media/dog', explode: 0.8, up: [0, 0, Math.PI / 2],
+    id: 'dog', index: '02', title: 'Robot Dog', model: 'dog', frames: 'media/dog', up: [0, 0, Math.PI / 2],
     views: [
-      { p: 0, az: 2.4, el: 0.42, dist: 6.2, tx: 0, ty: 0, tz: 0 },
-      { p: 0.42, az: 1.5, el: 0.22, dist: 5.2, tx: 0, ty: 0, tz: 0 },
-      { p: 0.54, az: 0.77, el: 0.1, dist: 3.6, tx: -0.03, ty: 0.22, tz: 0 },
+      { p: 0, az: 1.7, el: 0.42, dist: 4.9, tx: 0, ty: 0, tz: 0 },
+      { p: 0.42, az: 0.75, el: 0.2, dist: 4.5, tx: 0, ty: 0, tz: 0 },
+      { p: 0.54, az: 0.25, el: 0.08, dist: 4.55, tx: -0.29, ty: 0.07, tz: 0 },
     ],
     copy: [
-      { from: 0.17, to: 0.36, side: 'left', text: 'A quadruped robot, designed in CAD with a few friends.' },
+      { from: 0.36, to: 0.52, side: 'left', text: 'A quadruped robot, designed in CAD with a few friends.' },
       { from: 0.67, to: 0.82, side: 'left', text: 'Inverse kinematics uses three degrees of freedom per leg to give the body a full six.' },
       { from: 0.84, to: 0.985, side: 'right', text: 'So it can not only walk, but also gyrate and dance.' },
     ],
@@ -60,13 +61,15 @@ function buildSection(cfg) {
   s.className = 'project'; s.id = cfg.id; s.setAttribute('aria-label', cfg.title);
   s.innerHTML = `
     <div class="stage">
-      <div class="title" aria-hidden="false"><span class="index">${cfg.index}</span><h3>${cfg.title}</h3></div>
+      <div class="window" aria-hidden="true"><div class="title"><span class="index">${cfg.index}</span><span class="big">${cfg.title}</span></div></div>
       <canvas class="cad" aria-hidden="true"></canvas>
-      <canvas class="frames" role="img" aria-label="${cfg.title} in motion"></canvas>
-      <i class="scan" aria-hidden="true"></i>
-      <i class="shade" aria-hidden="true"></i>
+      <div class="screen">
+        <canvas class="frames" role="img" aria-label="${cfg.title} in motion"></canvas>
+        <i class="scan" aria-hidden="true"></i>
+        <div class="bar" aria-hidden="true"><i></i></div>
+      </div>
+      <h3 class="head"><span class="index">${cfg.index}</span>${cfg.title}</h3>
       ${cfg.copy.map((c) => `<p class="copy copy--${c.side}">${c.text}</p>`).join('')}
-      <div class="bar" aria-hidden="true"><i></i></div>
     </div>`;
   return s;
 }
@@ -78,7 +81,7 @@ export function mountWork(container, options = {}) {
     container.appendChild(el);
     const q = (sel) => el.querySelector(sel);
     const item = {
-      cfg, el, stage: q('.stage'), title: q('.title'), cadC: q('.cad'), framesC: q('.frames'), scan: q('.scan'), shade: q('.shade'), bar: q('.bar i'),
+      cfg, el, stage: q('.stage'), title: q('.title'), head: q('.head'), screen: q('.screen'), cadC: q('.cad'), framesC: q('.frames'), scan: q('.scan'), bar: q('.bar i'),
       copies: [...el.querySelectorAll('.copy')], seq: mountSequence(q('.frames'), cfg.frames), cad: null, p: 0, near: false, loading: false,
     };
     if (!gl) item.cadC.style.display = 'none';
@@ -86,22 +89,33 @@ export function mountWork(container, options = {}) {
   });
   const size = () => {
     const w = innerWidth, h = innerHeight, dpr = Math.min(devicePixelRatio || 1, w < 768 ? 1.5 : 2);
-    items.forEach((it) => { it.seq.resize(w, h, Math.min(dpr, 1.5)); it.cad?.resize(w, h, dpr); it.forceDraw = true; });
+    items.forEach((it) => {
+      const r = it.screen.getBoundingClientRect();
+      it.seq.resize(r.width, r.height, Math.min(dpr, 1.5));
+      it.fit = h / r.height; // camera distances are set for a window that fills the screen's height
+      if (it.cad) {
+        it.cad.resize(w, h, dpr);
+        const v = it.cfg.views[0];
+        it.cad.setScatter({ ...v, dist: v.dist * it.fit }, w / h);
+      }
+      it.forceDraw = true;
+    });
   };
   const ensure = (it) => {
     if (it.loading) return; it.loading = true;
     it.seq.start();
     if (gl) loadModel(it.cfg.model).then((m) => {
-      it.cad = mountCad(it.cadC, m, { up: it.cfg.up, explode: it.cfg.explode });
+      it.cad = mountCad(it.cadC, m, { up: it.cfg.up });
       size();
     });
   };
   const apply = (it, p) => {
     const { cfg } = it;
-    // Title, behind the model.
+    // Big title in the empty window, small heading once it's gone.
     const tOut = 1 - smooth(0.09, 0.19, p);
-    it.title.style.opacity = tOut; it.title.style.transform = `translate3d(0,${-p * 90}vh,0)`;
+    it.title.style.opacity = tOut;
     it.title.style.visibility = tOut > 0.001 ? 'visible' : 'hidden';
+    it.head.style.opacity = smooth(0.16, 0.24, p);
     // Scan from CAD into footage.
     const wipe = smooth(0.54, 0.66, p);
     const pct = wipe * 100;
@@ -114,20 +128,16 @@ export function mountWork(container, options = {}) {
       const show = p < 0.68;
       it.cadC.style.visibility = show ? 'visible' : 'hidden';
       if (show) {
-        it.cad.setExplode(REDUCED ? 0 : 1 - smooth(0.05, 0.4, p));
+        it.cad.setExplode(REDUCED ? 0 : 1 - clamp((p - 0.02) / 0.42)); // each part eases on its own
         cfg.pose?.(it.cad, p);
         const v = viewAt(cfg.views, p);
-        // Wide shots pull back on narrow screens. The final shot follows the footage's on-screen size.
-        const H = innerHeight, A = innerWidth / H, matchT = smooth(cfg.views[cfg.views.length - 2].p, cfg.views[cfg.views.length - 1].p, p);
-        const wideFit = Math.max(1, 1.45 / A), footFit = H / it.seq.rect().h;
-        it.cad.setView(v.az, v.el, v.dist * lerp(wideFit, footFit, matchT), v.tx, v.ty, v.tz);
+        it.cad.setView(v.az, v.el, v.dist * it.fit, v.tx, v.ty, v.tz);
         it.cad.render();
       }
     }
     // Motion.
     if (it.seq.total) it.seq.seek(smooth(0.64, 0.995, p) * 0.9999);
     if (it.forceDraw && it.seq.total) { it.seq.draw(Math.round(smooth(0.64, 0.995, p) * (it.seq.total - 1)), true); it.forceDraw = false; }
-    it.shade.style.opacity = smooth(0.62, 0.7, p);
     // Words.
     it.copies.forEach((node, i) => {
       const c = cfg.copy[i];
