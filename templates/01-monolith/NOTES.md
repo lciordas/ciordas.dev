@@ -79,7 +79,7 @@ Compared side by side with the reference at 1440×900 and 390×844, using frame 
 | Stone surface | Approximated | Procedural shader, not a sculpted model with painted textures. Bands and veins read alike, the exact pattern differs |
 | Stone silhouette | Approximated | Profile measured from the reference outline, with a different surface detail |
 | Stone plates opening under the moving pointer | Approximated | Real plates slide apart and tip, wider at higher speed, narrow at rest. Plate shapes come from generated fracture cells |
-| Glassy puff that bends the image behind the pointer, keeps travelling after a sudden stop, and swirls when circled | Approximated | A small fluid solve drives a soft lens over a separate background layer, so the stone and titles stay clean. Tuned against timed video of the reference: head position, strength, and fade after a stop. The reference glows brighter during long spins |
+| Glassy puff that bends the image behind the pointer, keeps travelling after a sudden stop, and swirls when circled | Approximated | A small fluid solve drives a soft lens over a separate background layer, so the stone and titles stay clean. Tuned against timed video of the reference: head position, strength, and fade after a stop. Hills move somewhat more than the reference during long spins |
 | Shard shapes | Approximated | Cut from the stone by fracture cells with generated creases. The reference pieces have more folded detail |
 | Landscape | Approximated | Generated terrain and plants. Same layering and mood, different specific shapes |
 | Water reflection | Approximated | True mirror pass with ripple. The reference pools sit in different places |
