@@ -58,9 +58,9 @@ void main(){
   float z2=(fbm(vec3(p.xy*.5,37.))-.5)*1.+.26;
   float z3=(fbm(vec3(p.xy*.5,43.))-.5)*1.-.26;
   float z4=(fbm(vec3(p.xy*.5,47.))-.5)*.8+.42;
-  float maroon=smoothstep(.5,.65,n1)*sheet(w.z,z1,.32);
+  float maroon=smoothstep(.51,.6,n1)*sheet(w.z,z1,.32);
   float sand=smoothstep(.5,.63,n2)*sheet(w.z,z2,.28);
-  float orange=smoothstep(.53,.68,n3)*sheet(w.z,z3,.32);
+  float orange=smoothstep(.54,.64,n3)*sheet(w.z,z3,.32);
   float veil=smoothstep(.45,.66,n4)*sheet(w.z,z4,.16);
   gl_FragColor=vec4(maroon,sand,orange,veil);
 }`;
@@ -79,22 +79,24 @@ export function bakeSurface(renderer, data, size = 1024) {
   const rt = (s) => new THREE.WebGLRenderTarget(s, s, { type: THREE.HalfFloatType, depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, wrapS: THREE.MirroredRepeatWrapping, wrapT: THREE.MirroredRepeatWrapping });
 
   const field = rt(size);
+  // Mipmaps let the material look up a blurrier copy for anything seen deep inside.
+  field.texture.generateMipmaps = true; field.texture.minFilter = THREE.LinearMipmapLinearFilter;
   quad.material = new THREE.ShaderMaterial({ vertexShader: VS, fragmentShader: FIELD_FS, depthTest: false, depthWrite: false });
   renderer.setRenderTarget(field); renderer.render(scene, cam);
   quad.material.dispose();
 
   // The 3D block, one slice at a time.
   const small = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-  const vs = small ? 192 : 320, vd = small ? 24 : 40;
+  const vs = small ? 192 : 512, vd = small ? 24 : 40;
   const volume = new THREE.WebGL3DRenderTarget(vs, vs, vd, { depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
   // 3D targets ignore the options above, so the smooth filtering has to be set here.
-  volume.texture.minFilter = volume.texture.magFilter = THREE.LinearFilter;
-  volume.texture.generateMipmaps = false;
+  volume.texture.minFilter = THREE.LinearMipmapLinearFilter; volume.texture.magFilter = THREE.LinearFilter;
   volume.texture.wrapS = volume.texture.wrapT = volume.texture.wrapR = THREE.MirroredRepeatWrapping;
   volume.texture.needsUpdate = false;
   const volMat = new THREE.ShaderMaterial({ vertexShader: VS, fragmentShader: VOL_FS, depthTest: false, depthWrite: false, uniforms: { uZ: { value: 0 } } });
   quad.material = volMat;
-  for (let z = 0; z < vd; z++) { volMat.uniforms.uZ.value = (z + 0.5) / vd; renderer.setRenderTarget(volume, z); renderer.render(scene, cam); }
+  // Mipmaps are built after the last slice only, since they cover the whole block.
+  for (let z = 0; z < vd; z++) { volume.texture.generateMipmaps = z === vd - 1; volMat.uniforms.uZ.value = (z + 0.5) / vd; renderer.setRenderTarget(volume, z); renderer.render(scene, cam); }
   volMat.dispose();
 
   // Draw the letters flat in white.

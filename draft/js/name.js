@@ -32,55 +32,80 @@ ${GLSL_NOISE}
 const float SPAN=${SPAN.toFixed(1)};
 const float VD=${VOL_DEPTH.toFixed(2)};
 
-// How strongly each pigment absorbs red, green, and blue as light passes through it.
-// A little pigment tints the light, and a lot takes nearly all of it away.
-const vec3 MAROON=vec3(1.,2.7,3.5);
-const vec3 SAND=vec3(.45,.62,.94);
-const vec3 ORANGE=vec3(.3,1.,1.47);
+// How strongly the rock and each pigment absorb red, green, and blue per unit of depth.
+// Red gets through almost everything, so more rock means a deeper, more saturated colour.
+const vec3 ROCK=vec3(.06,.22,.28);
+const vec3 MAROON=vec3(1.,2.8,3.85);
+const vec3 SAND=vec3(.7,1.,2.1);
+const vec3 ORANGE=vec3(1.,3.5,4.4);
+// Keeps the march from showing its layers as steps.
+float dither(vec2 p){ return fract(52.9829189*fract(dot(p,vec2(.06711056,.00583715)))); }
 // Slight rounding from the blurred letter shape. It only bends the view into the rock.
 vec3 pillow(vec2 uv){
-  const float E=.004;
-  vec2 g=vec2(texture2D(tMask,uv+vec2(E,0.)).r-texture2D(tMask,uv-vec2(E,0.)).r,
-              texture2D(tMask,uv+vec2(0.,E)).r-texture2D(tMask,uv-vec2(0.,E)).r);
-  return normalize(vec3(-g*3.,1.));
+  const float E=.01;
+  vec2 g=vec2(texture2D(tMask,uv+vec2(E,0.)).g-texture2D(tMask,uv-vec2(E,0.)).g,
+              texture2D(tMask,uv+vec2(0.,E)).g-texture2D(tMask,uv-vec2(0.,E)).g);
+  return normalize(vec3(-g*1.6,1.));
 }
-vec4 pigment(vec3 p){ return texture(tVol,vec3(p.xy/SPAN+.5,p.z/VD+.5)); }
-// Light from behind travels through the rock toward the eye. p starts on the near side of the block.
-vec3 volume(vec3 p, vec3 d, float len, float clear, vec2 uv){
+vec2 toUv(vec2 p){ return p/SPAN+.5; }
+// A lamp hung far behind the name. Being so deep, it slides against the letters as they turn.
+float lamp(vec2 p){
+  vec2 a=vec2(sin(uTime*.13)*1.5,cos(uTime*.17)*.55-.1), b=vec2(cos(uTime*.09+1.)*2.1,sin(uTime*.11+2.)*.8);
+  return .9+.22*exp(-dot(p-a,p-a)*.55)+.16*exp(-dot(p-b,p-b)*.9);
+}
+// The letter is treated as a tall prism running back through the block. A ray that slips out of a
+// stroke's side crosses no more rock until it enters the next stroke, so thin strokes let more light
+// through and the walls and neighbouring strokes show through as the letter turns.
+vec3 volume(vec3 p, vec3 d, float len, float clear, float dens){
   float dt=len/float(LAYERS);
   vec3 tau=vec3(0.), glow=vec3(0.);
-  const float start=.5;
+  float jit=dither(gl_FragCoord.xy);
   float sandSum=0.;
+  // Fine tearing roughens the pigment clouds, which on their own are too soft at this size.
+  float tear=mix(.62,1.38,smoothstep(.3,.7,texture2D(tField,toUv(p.xy+d.xy*VD*.2)).a));
   for(int i=0;i<LAYERS;i++){
-    float t=(float(i)+start)*dt;
-    vec4 v=pigment(p+d*t);
-    vec3 sig=(v.r*MAROON*3.2+v.g*SAND*4.2+v.b*ORANGE*1.8)*(1.-clear);
+    float t=(float(i)+jit)*dt, depth=t/VD;
+    vec3 q=p+d*t;
+    vec2 w=toUv(q.xy);
+    float inside=smoothstep(.3,.7,texture2D(tMask,toUv(p.xy+d.xy*t*.55)).r);
+    // Light scatters on its way out, so the deeper a cloud hangs the softer it looks.
+    vec4 v=textureLod(tVol,vec3(w,q.z/VD+.5),depth*1.7);
+    // Pigment keeps showing past the wall, only fainter, so the bands still run through thin parts.
+    vec3 sig=(ROCK*inside+(v.r*MAROON*1.9+v.g*SAND*.72+v.b*ORANGE*.85)*mix(.45,1.,inside)*tear)*(1.-clear)*dens;
     vec3 here=exp(-tau);
-    // Pigment catches some of the light as it passes, so clouds have body instead of being holes.
-    glow+=here*dt*(v.r*vec3(.2,.03,.01)+v.g*vec3(.14,.1,.05)+v.b*vec3(.2,.08,.03)+v.a*p_pale*.7);
-    sandSum+=v.g*dt;
-    // Filaments hang at a few depths, and shift with the view like everything else.
+    glow+=here*dt*inside*(v.r*vec3(.1,.012,.004)+v.g*vec3(.1,.055,.02)+v.b*vec3(.14,.04,.016)+v.a*vec3(1.,.82,.74)*.42);
+    sandSum+=v.g*dt*inside;
+    // Filaments hang at a few depths: crisp near the face, hazy further in.
     if(i==1||i==3||i==6){
-      vec2 w=(p.xy+d.xy*t)/SPAN+.5;
-      glow+=here*mix(p_pale,vec3(1.,.62,.42),.3)*texture2D(tField,w).g*.15;
+      vec2 fw=toUv(p.xy+d.xy*(float(i)+.5)*dt);
+      glow+=here*inside*p_pale*textureLod(tField,fw,float(i)*.12).g*.27;
     }
     tau+=sig*dt;
   }
-  vec3 c=p_pale*exp(-tau)+glow;
-  // Fine mineral flecks in the sandy and dark bands.
-  float fleck=step(.965,hash21(floor(uv*1500.)));
-  c+=vec3(.8,.6,.34)*fleck*(smoothstep(.04,.26,sandSum)*.14+(1.-exp(-tau.g*.5))*.05);
-  // Stay below pure white, so bright areas read as light through stone rather than glare.
-  return c/(1.+max(c-.72,0.)*.55);
-}
-vec3 beauty(vec2 uv, vec3 d, vec3 N, float edge, float clear){
-  // Bend the view as it enters the stone. Where the letter is thin, there is less rock to cross.
-  vec3 dir=normalize(vec3((d.xy+N.xy*.1)*.82,d.z));
-  float len=VD*mix(.62,1.,smoothstep(.0,.9,edge))/max(.5,-dir.z);
-  vec3 c=volume(vec3(vP.xy,VD*.5),dir,len,clear,uv);
-  // A faint soft bloom of light where the edge thins out.
-  c=mix(c,p_pale*.96,.2*pow(1.-edge,2.6));
+  vec3 c=p_pale*lamp(p.xy+d.xy*(len+2.2))*exp(-tau)+glow;
+  // Mineral flecks suspended at two depths, so they drift against each other rather than sit on top.
+  vec2 fa=(p.xy+d.xy*VD*.12)/SPAN+.5, fb=(p.xy+d.xy*VD*.4)/SPAN+.5;
+  float fleck=step(.97,hash21(floor(fa*1500.)))+.6*step(.975,hash21(floor(fb*1100.)+7.));
+  c+=vec3(.8,.55,.34)*fleck*smoothstep(.04,.26,sandSum)*.07;
   return c;
+}
+vec3 beauty(vec2 uv, vec3 d, vec3 N, float edge, float thick, float clear){
+  // Bend the view as it enters the stone, then cross the whole depth of the block.
+  vec3 dir=normalize(vec3((d.xy+N.xy*.12)*1.15,d.z));
+  float len=VD/max(.5,-dir.z);
+  vec3 start=vec3(vP.xy,VD*.5);
+  vec3 c=volume(start,dir,len,clear,mix(.55,1.,thick));
+  // Most of the light has been knocked about on its way through, so a share of it comes out as a
+  // soft blur of the same clouds. That gives the dark bands a red bloom instead of a hard edge.
+  vec2 mid=toUv(vP.xy+dir.xy*VD*.5);
+  vec4 s=textureLod(tVol,vec3(mid,.5),3.);
+  vec3 soft=p_pale*lamp(vP.xy+dir.xy*(len+2.2))*exp(-(ROCK*.6+s.r*MAROON*1.8+s.g*SAND*.65+s.b*ORANGE*.85)*mix(.55,1.,thick)*(1.-clear));
+  c=mix(c,soft,.28);
+  // The thinnest rock at the outline glows, with no hard rim.
+  c=mix(c,p_pale*1.04,.4*pow(1.-edge,2.));
+  // Ease the brightest light down as a whole, so it stays peach and reads as light through stone rather than glare.
+  float m=max(c.r,max(c.g,c.b));
+  return m>.88?c*(.88+.12*(1.-exp((.88-m)/.12)))/m:c;
 }
 // Screen-space helpers for the printed looks.
 float cell(float size){ vec2 p=mod(gl_FragCoord.xy,size)-size*.5; return length(p)/(size*.5); }
@@ -89,7 +114,7 @@ void main(){
   vec2 uv=vP.xy/SPAN+.5;
   vec2 ray=vRay.xy/max(.25,-vRay.z);
   vec4 mk=texture2D(tMask,uv);
-  float edge=clamp((mk.r-.5)*2.,0.,1.);
+  float edge=clamp((mk.r-.5)*2.,0.,1.), thick=smoothstep(.5,.84,mk.g);
   vec3 NF=pillow(uv);
   vec3 N=vFace>.5?NF:normalize(vN);
   vec4 f=texture2D(tField,uv);
@@ -113,7 +138,7 @@ void main(){
     c=mix(c,vec3(1.,.36,.03),smoothstep(.36,.66,t));
     c=mix(c,vec3(1.,.95,.42),smoothstep(.64,.95,t));
   } else if(uMode==9){ // halftone print
-    float lum=dot(beauty(uv,normalize(vRay),NF,edge,0.),vec3(.3,.6,.1));
+    float lum=dot(beauty(uv,normalize(vRay),NF,edge,thick,0.),vec3(.3,.6,.1));
     float r=clamp(1.02-lum*.92,0.,1.);
     c=mix(vec3(1.,.8,.2),vec3(.05,.04,.04),smoothstep(r-.07,r+.07,1.-cell(7.*uRes.x)));
     if(vFace<.5) c=vec3(.05,.04,.04);
@@ -130,7 +155,7 @@ void main(){
       float h=smoothstep(uHotSize,uHotSize*.18,d+(f.b-.5)*uHotSize*.55);
       clear=h*h*uHotAmt;
     }
-    c=beauty(uv,normalize(vRay),NF,edge,clear);
+    c=beauty(uv,normalize(vRay),NF,edge,thick,clear);
     c*=1.+clear*.14;
     if(uMatte>.001) c=mix(c,c*.82+p_shard*.1,uMatte);
     // A band of light that crosses the name when it asks to be clicked.
@@ -139,12 +164,11 @@ void main(){
       c*=1.+s*.1;
     }
   } else {
-    // Sides and broken faces: the same glowing rock seen at an angle.
+    // Sides and broken faces: the same lit rock at an angle. Starting all rays near one depth keeps
+    // the layers from showing as stripes on a face that cuts across them.
     vec3 dir=normalize(normalize(vRay)-normalize(vN)*.4);
-    // Broken faces and thin side walls show the same rock, a little dimmer than the lit front.
-    c=.86*volume(vec3(vP.xy,VD*(.5*vP.z/${(DEPTH / 2).toFixed(4)})),dir,VD*.72,0.,uv);
-    // Broken faces cut across the layers, so soften them to keep them from looking striped.
-    c=mix(c,mix(p_stone,p_pale,.3),.5);
+    c=volume(vec3(vP.xy,VD*(.3+.1*vP.z/${(DEPTH / 2).toFixed(4)})),dir,VD*.5,0.,.8);
+    c=mix(c,p_stone*1.25,.25);
   }
   gl_FragColor=vec4(c,uFade);
 }`;
@@ -205,7 +229,7 @@ export function mountName(scene, data, palU, baked) {
   const halo = new THREE.Mesh(new THREE.PlaneGeometry(SPAN, SPAN), new THREE.ShaderMaterial({
     uniforms: haloU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
-    fragmentShader: 'precision highp float; varying vec2 vUv; uniform sampler2D tMask; uniform float uAmt; uniform vec3 p_stone,p_pale; void main(){ float g=texture2D(tMask,vUv).g; gl_FragColor=vec4(mix(p_stone,p_pale,g*.45)*g*g*.17*uAmt,1.); }',
+    fragmentShader: 'precision highp float; varying vec2 vUv; uniform sampler2D tMask; uniform float uAmt; uniform vec3 p_stone,p_pale; void main(){ float g=texture2D(tMask,vUv).g; gl_FragColor=vec4(mix(p_stone,p_pale,g*.45)*g*g*.24*uAmt,1.); }',
   }));
   halo.position.z = -DEPTH / 2 - 0.02; halo.renderOrder = -1; root.add(halo);
 

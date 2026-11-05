@@ -9,6 +9,15 @@ Lucas's own site, in progress. So far it holds only the opening sequence and a p
 3. The letters float on springs and nudge every few seconds to invite a click (`js/name.js`).
 4. Clicking cracks the name from that point and bursts it into shards (`js/name.js`, timed in `js/main.js`).
 
+## The letter material
+
+The letters are rendered as light passing through rock, not as a coloured surface (`js/name.js`, with colours in `js/palette.js`).
+
+- Each pixel follows a view ray back through a block of pigment clouds baked at startup (`js/bake.js`). The rock and pigments absorb green and blue faster than red, so more rock means a deeper colour.
+- Each letter acts as a deep prism. A ray that slips out of a stroke's side crosses no more rock, so thin strokes glow and heavy joins stay deep, and the walls shift as a letter turns.
+- Deeper clouds use blurrier copies of the bake, and part of the light comes out as a soft blur of the clouds, which gives dark bands a red bloom.
+- A lamp hung far behind the name slides against the letters as they turn.
+
 ## Trying things
 
 - Add `?font=shoulders`, `?font=teko`, `?font=inter`, or `?font=anton` to the address to compare fonts. Barlow Condensed is the default.
