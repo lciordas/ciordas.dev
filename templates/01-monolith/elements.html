@@ -39,6 +39,7 @@ import { mountCarouselInput } from './elements/carousel-input.js';
 import { mountMediaPlane } from './elements/media-plane.js';
 import { mountBlockDissolve } from './elements/block-dissolve.js';
 import { mountFilmPost } from './elements/film-post.js';
+import { mountCursorSmear } from './elements/cursor-smear.js';
 import { mountRenderWindows } from './elements/render-windows.js';
 import { mountLoaderOutline } from './elements/loader-outline.js';
 import { mountCrackedWord, mountRollLink, mountDrawArrow } from './elements/ui-links.js';
@@ -69,8 +70,9 @@ await Promise.all([document.fonts.load('400 100px "Archivo Black"'), document.fo
     over = stone.pointerRay(ray.ray.origin, ray.ray.direction);
     if (!over) stone.clearPointer();
     stone.setHot(over ? 0.8 : 0, 0.34);
+    stone.setPlates(over ? 0.85 : 0);
   });
-  box.addEventListener('pointerleave', () => { over = false; stone.clearPointer(); stone.setHot(0); });
+  box.addEventListener('pointerleave', () => { over = false; stone.clearPointer(); stone.setHot(0); stone.setPlates(0); });
   box.addEventListener('click', () => {
     goal = goal ? 0 : 1;
     if (goal) stone.throwChips(60, 3);
@@ -216,6 +218,29 @@ await Promise.all([document.fonts.load('400 100px "Archivo Black"'), document.fo
   const size = () => { const w = box.clientWidth, h = box.clientHeight; r.setPixelRatio(Math.min(devicePixelRatio, 2)); r.setSize(w, h, false); post.resize(w, h, Math.min(devicePixelRatio, 2)); cam.aspect = w / h; cam.updateProjectionMatrix(); };
   new ResizeObserver(size).observe(box); size();
   const tick = (t) => { m.rotation.y = t / 1600; m.rotation.x = t / 2600; r.setRenderTarget(post.main); r.clear(); r.render(sc, cam); post.bloomPass(); post.present(t / 1000); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+// Cursor smear
+{
+  const box = add('Cursor smear', 'Glassy trail that bends the image behind the pointer. Move the mouse quickly across the stage.', "const smear = mountCursorSmear(renderer); smear.resize(w, h); smear.move(x, y); smear.update(dt); post.setSmear(smear.texture, keepTexture, 1);");
+  const c = document.createElement('canvas'); Object.assign(c.style, { width: '100%', height: '100%' }); box.appendChild(c);
+  const r = new THREE.WebGLRenderer({ canvas: c }); r.outputColorSpace = THREE.LinearSRGBColorSpace;
+  const post = mountFilmPost(r, { bloom: 0.2 });
+  const smear = mountCursorSmear(r);
+  const blank = new THREE.WebGLRenderTarget(2, 2);
+  const sc = new THREE.Scene();
+  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const bg = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+    vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }',
+    fragmentShader: 'varying vec2 vUv; void main(){ float bars=smoothstep(.46,.5,abs(fract(vUv.x*14.)-.5)); vec3 c=mix(vec3(.24,.09,.05),vec3(.66,.42,.22),smoothstep(.1,.75,1.-vUv.y)); gl_FragColor=vec4(c*(1.-bars*.8),1.); }',
+  }));
+  sc.add(bg);
+  const size = () => { const w = box.clientWidth, h = box.clientHeight, d = Math.min(devicePixelRatio, 2); r.setPixelRatio(d); r.setSize(w, h, false); post.resize(w, h, d); smear.resize(w, h); };
+  new ResizeObserver(size).observe(box); size();
+  box.addEventListener('pointermove', (e) => { const b = box.getBoundingClientRect(); smear.move((e.clientX - b.left) / b.width, 1 - (e.clientY - b.top) / b.height); });
+  box.addEventListener('pointerleave', () => smear.leave());
+  let last = 0;
+  const tick = (t) => { const dt = Math.min(0.05, (t - last) / 1000 || 0.016); last = t; r.setRenderTarget(post.main); r.clear(); r.render(sc, cam); post.bloomPass(); smear.update(dt); post.setSmear(smear.texture, blank.texture, smear.energy > 0 ? 1 : 0); post.present(t / 1000); requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
 }
 </script>

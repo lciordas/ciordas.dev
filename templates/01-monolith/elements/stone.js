@@ -7,6 +7,8 @@ import { rng, vnoise3, GLSL_NOISE, ensureStage, damp, clamp, smooth, lerp, palet
 
 export const STONE_H = 5.75, STONE_W = 1.62, STONE_D = 0.98;
 const CELLS = 26;
+// Plate motion under the pointer, in stone units and radians.
+const PLATE_REACH = 2.2, PLATE_GAP = 0.2, PLATE_LIFT = 0.08, PLATE_TIP = 0.15;
 
 const wobble = (x, y, z) => [
   x + 0.05 * Math.sin(y * 9 + z * 5),
@@ -80,17 +82,27 @@ function buildStone(seed) {
   ico.computeVertexNormals();
   const nor = ico.attributes.normal.array, idx = ico.index.array;
 
-  // Assign triangles to the nearest seed.
+  // Each triangle joins every cell that one of its corners or its centre falls in.
+  // Border triangles therefore belong to both sides, and the shader trims them along the true line.
   const cellTris = seeds.map(() => []);
-  for (let t = 0; t < idx.length; t += 3) {
-    const a = idx[t] * 3, b = idx[t + 1] * 3, c = idx[t + 2] * 3;
-    const w = wobble((qs[a] + qs[b] + qs[c]) / 3, (qs[a + 1] + qs[b + 1] + qs[c + 1]) / 3, (qs[a + 2] + qs[b + 2] + qs[c + 2]) / 3);
+  const nearest = (x, y, z) => {
+    const w = wobble(x, y, z);
     let best = 0, bd = 1e9;
     for (let s = 0; s < CELLS; s++) {
       const d = (w[0] - seeds[s].x) ** 2 + (w[1] - seeds[s].y) ** 2 + (w[2] - seeds[s].z) ** 2;
       if (d < bd) { bd = d; best = s; }
     }
-    cellTris[best].push(idx[t], idx[t + 1], idx[t + 2]);
+    return best;
+  };
+  const vertexCell = new Int16Array(qs.length / 3);
+  for (let v = 0; v < vertexCell.length; v++) vertexCell[v] = nearest(qs[v * 3], qs[v * 3 + 1], qs[v * 3 + 2]);
+  for (let t = 0; t < idx.length; t += 3) {
+    const a = idx[t] * 3, b = idx[t + 1] * 3, c = idx[t + 2] * 3;
+    const owners = new Set([
+      vertexCell[idx[t]], vertexCell[idx[t + 1]], vertexCell[idx[t + 2]],
+      nearest((qs[a] + qs[b] + qs[c]) / 3, (qs[a + 1] + qs[b + 1] + qs[c + 1]) / 3, (qs[a + 2] + qs[b + 2] + qs[c + 2]) / 3),
+    ]);
+    owners.forEach((o) => cellTris[o].push(idx[t], idx[t + 1], idx[t + 2]));
   }
 
   // Each cell becomes a thin hollow shell: outer skin, inner skin, walls.
@@ -142,10 +154,10 @@ function buildStone(seed) {
 
 const VERT = /* glsl */`
 attribute vec3 aUnit, aQ; attribute float aFace, aCell;
-varying vec3 vUnit, vQ, vN, vV, vMv, vCreaseN; varying float vFace;
+varying vec3 vUnit, vQ, vN, vV, vMv, vCreaseN; varying float vFace, vCell;
 uniform float uMatte;
 void main(){
-  vUnit=aUnit; vQ=aQ; vFace=aFace;
+  vUnit=aUnit; vQ=aQ; vFace=aFace; vCell=aCell;
   vN=normalize(normalMatrix*normal);
   vec3 p=position;
   // Broken pieces crumple along a few sharp creases.
@@ -163,11 +175,11 @@ void main(){
 const FRAG = /* glsl */`
 precision highp float;
 #define CELLS ${CELLS}
-varying vec3 vUnit, vQ, vN, vV, vMv, vCreaseN; varying float vFace;
+varying vec3 vUnit, vQ, vN, vV, vMv, vCreaseN; varying float vFace, vCell;
 uniform int uMode;
 uniform vec3 uSeeds[CELLS];
 uniform float uSeedShift, uTime, uMatte;
-uniform float uBurstR, uBurstAmt, uCrackAll, uCrackGlow, uActiveAmt, uHotAmt, uHotSize, uFade;
+uniform float uBurstR, uBurstAmt, uCrackAll, uCrackGlow, uActiveAmt, uHotAmt, uHotSize, uFade, uPlateAmt, uPlateR;
 uniform vec3 uBurstO, uHot;
 uniform int uActive;
 uniform vec3 p_pale, p_stone, p_deep, p_shard, p_low;
@@ -220,11 +232,13 @@ void main(){
   } else {
     // Distance to the nearest fracture line, needed for shard edges and cracks.
     float e=1.; int i1=-1,i2=-1;
-    if(uMatte>.001||uBurstAmt>.002||uCrackAll>.002||uActiveAmt>.002){
+    if(uMatte>.001||uBurstAmt>.002||uCrackAll>.002||uActiveAmt>.002||uPlateAmt>.002){
       vec3 q=wob(vQ);
       float d1=9.,d2=9.;
       for(int i=0;i<CELLS;i++){ float d=distance(q,uSeeds[i]); if(d<d1){d2=d1;i2=i1;d1=d;i1=i;} else if(d<d2){d2=d;i2=i;} }
       e=d2-d1;
+      // Separated plates end exactly on the fracture line, with a hair of overlap to hide the seam.
+      if((uMatte>.001||uPlateAmt>.002)&&i1!=int(vCell+.5)&&distance(q,uSeeds[int(vCell+.5)])>d1+.005) discard;
     }
     // Broken pieces get a clean edge cut along that line.
     if(uMatte>.001){
@@ -244,7 +258,7 @@ void main(){
       // Inside of the shell: folds from near black up to the shard colour.
       float l=clamp(dot(FN,normalize(vec3(-.3,.55,.8))),0.,1.);
       vec3 inner=mix(p_low*.05,p_shard*.9,smoothstep(.42,.98,l));
-      c=mix(mix(p_deep*.42,p_stone*.28,l),inner,clamp(uMatte*1.2,0.,1.));
+      c=mix(mix(p_deep*.5,p_stone*.56,l),inner,clamp(uMatte*1.2,0.,1.));
     }
     // Cracks along the fracture cells.
     if(vFace>.75 && (uBurstAmt>.002||uCrackAll>.002||uActiveAmt>.002)){
@@ -262,6 +276,16 @@ void main(){
         float slit=(1.-smoothstep(sw*.72,sw,e))*step(.02,near);
         vec3 lip=mix(p_deep*.2,p_stone*.42,smoothstep(sw*.2,sw*.75,e));
         c=mix(c,lip,slit);
+      }
+    }
+    // Plates pulled apart by the pointer: a fine seam with a pale lip, and a lift in tone.
+    if(vFace>.75&&uPlateAmt>.002){
+      float pl=smoothstep(uPlateR,uPlateR*.4,distance(vQ,uHot))*uPlateAmt;
+      if(pl>.003){
+        float w=.004+.007*pl;
+        c=mix(c,p_deep*.42,(1.-smoothstep(w*.4,w,e))*min(1.,pl*3.));
+        c+=p_pale*exp(-e*48.)*pl*.2;
+        c=mix(c,c*.9+p_pale*.16,pl*.42);
       }
     }
     // Heat under the pointer.
@@ -290,6 +314,7 @@ export function mountStone(container, options = {}) {
     uCrackAll: { value: 0 }, uCrackGlow: { value: 0 },
     uActive: { value: -1 }, uActiveAmt: { value: 0 },
     uHot: { value: new THREE.Vector3(0, 0, 1) }, uHotAmt: { value: 0 }, uHotSize: { value: 0.55 },
+    uPlateAmt: { value: 0 }, uPlateR: { value: 1.25 },
       };
   const material = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms, alphaToCoverage: true });
 
@@ -314,6 +339,8 @@ export function mountStone(container, options = {}) {
       slot: new THREE.Vector3(), slotQ: new THREE.Quaternion(), slotScale: 1, cur: new THREE.Vector3(), curQ: new THREE.Quaternion(), curScale: 1,
       lift: 0,
       delay: 0,
+      // Plate motion under the pointer.
+      open: new THREE.Vector3(), tilt: 0, tiltAxis: new THREE.Vector3(1, 0, 0), openRate: 6.5 + R() * 4.5,
     };
   });
   const wireframe = new THREE.LineSegments(wire, new THREE.LineBasicMaterial({ color: 0xf6ece0, transparent: true, opacity: 0.85 }));
@@ -387,8 +414,9 @@ export function mountStone(container, options = {}) {
   });
 
   // State
-  const st = { energy: 0, burst: 0, burstR: 0, hot: 0, hotTarget: 0, activeAmt: 0, activeTarget: 0, shatter: 0, parallaxX: 0, parallaxY: 0, hitActive: -1 };
+  const st = { energy: 0, burst: 0, burstR: 0, hot: 0, hotTarget: 0, activeAmt: 0, activeTarget: 0, shatter: 0, parallaxX: 0, parallaxY: 0, hitActive: -1, plate: 0, plateTarget: 0, hitRaw: new THREE.Vector3(0, STONE_H / 2, STONE_D), hitP: new THREE.Vector3(0, STONE_H / 2, STONE_D), hitFresh: true };
   const tmpInv = new THREE.Matrix4(), rO = new THREE.Vector3(), rD = new THREE.Vector3();
+  const plateDir = new THREE.Vector3(), plateN = new THREE.Vector3(), plateT = new THREE.Vector3(), plateAxis = new THREE.Vector3(), tiltQ = new THREE.Quaternion();
   const axisQ = new THREE.Quaternion(), scratchV = new THREE.Vector3(), scratchQ = new THREE.Quaternion(), worldInvQ = new THREE.Quaternion();
 
   const api = {
@@ -413,6 +441,8 @@ export function mountStone(container, options = {}) {
     },
     addEnergy(v) { st.energy = Math.min(1, st.energy + v); },
     setHot(v, size) { st.hotTarget = v; if (size) uniforms.uHotSize.value = size; },
+    // How far the plates around the pointer pull apart, from 0 to 1. Faster pointers open them wider.
+    setPlates(v) { st.plateTarget = REDUCED ? 0 : clamp(v); },
     // Ray in world space. Returns true when it hits the stone.
     pointerRay(origin, dir) {
       pivot.updateWorldMatrix(true, false);
@@ -428,6 +458,8 @@ export function mountStone(container, options = {}) {
       const e = new THREE.Vector3(ox + dx * t, oy + dy * t, oz + dz * t).normalize();
       const u = new THREE.Vector3(e.x, e.y * 1.75, e.z);
       uniforms.uHot.value.lerp(u, 0.3);
+      st.hitRaw.set(e.x * STONE_W, e.y * (STONE_H / 2) + STONE_H / 2, e.z * STONE_D);
+      if (st.plate < 0.01) st.hitP.copy(st.hitRaw);
       let best = 0, bd = 9;
       seeds.forEach((s, i) => { const d = s.distanceTo(u); if (d < bd) { bd = d; best = i; } });
       st.hitActive = best;
@@ -456,7 +488,12 @@ export function mountStone(container, options = {}) {
       }
       const wantOpen = st.hitActive >= 0 && st.hitActive === uniforms.uActive.value;
       st.activeAmt = damp(st.activeAmt, wantOpen ? 1 : 0, wantOpen ? 3.6 : 5, dt);
-      uniforms.uActiveAmt.value = st.activeAmt;
+      // The plates replace the old painted slit whenever they are in use.
+      uniforms.uActiveAmt.value = st.plateTarget > 0 || st.plate > 0.01 ? 0 : st.activeAmt;
+      st.plate = damp(st.plate, st.plateTarget, st.plateTarget > st.plate ? 10 : 4.5, dt);
+      if (st.plate < 0.001 && !st.plateTarget) st.plate = 0;
+      uniforms.uPlateAmt.value = st.plate;
+      st.hitP.x = damp(st.hitP.x, st.hitRaw.x, 12, dt); st.hitP.y = damp(st.hitP.y, st.hitRaw.y, 12, dt); st.hitP.z = damp(st.hitP.z, st.hitRaw.z, 12, dt);
       // Shard placement
       const shatter = opts.shatter ?? st.shatter;
       pivot.getWorldQuaternion(worldInvQ).invert();
@@ -485,6 +522,24 @@ export function mountStone(container, options = {}) {
         it.mesh.position.y += Math.sin(raw * Math.PI) * (it.center.y - STONE_H / 2) * 0.22;
         const sc = lerp(1, it.curScale, e);
         it.mesh.scale.setScalar(sc);
+        // Plates near the pointer slide apart and tip, like a shell splitting open.
+        const whole = 1 - clamp(shatter * 6);
+        if (whole > 0 && (st.plate > 0 || it.tilt > 1e-4 || it.open.lengthSq() > 1e-7)) {
+          plateDir.subVectors(it.center, st.hitP);
+          const dist = plateDir.length();
+          if (dist > 1e-3) plateDir.divideScalar(dist); else plateDir.set(0, 1, 0);
+          plateN.set(it.center.x / (STONE_W * STONE_W), 0, it.center.z / (STONE_D * STONE_D)).normalize();
+          const near = st.plate * (1 - smooth(0.35, PLATE_REACH, dist));
+          plateT.copy(plateDir).multiplyScalar(PLATE_GAP * near).addScaledVector(plateN, PLATE_LIFT * near);
+          const rate = (near > it.tilt ? 1 : 0.55) * it.openRate;
+          it.open.x = damp(it.open.x, plateT.x, rate, dt); it.open.y = damp(it.open.y, plateT.y, rate, dt); it.open.z = damp(it.open.z, plateT.z, rate, dt);
+          it.tilt = damp(it.tilt, near, rate, dt);
+          plateAxis.crossVectors(plateN, plateDir);
+          if (plateAxis.lengthSq() > 1e-5) it.tiltAxis.copy(plateAxis.normalize());
+          it.mesh.position.addScaledVector(it.open, whole);
+          tiltQ.setFromAxisAngle(it.tiltAxis, it.tilt * PLATE_TIP * whole);
+          it.mesh.quaternion.multiply(tiltQ);
+        }
       });
       // Chips
       chipState.forEach((s, i) => {

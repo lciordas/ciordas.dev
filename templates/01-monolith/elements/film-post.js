@@ -1,5 +1,6 @@
 // film-post: the final image. Soft bloom, vignette and a fine woven grain, plus the
 // block-dissolve mix used by the intro. Pass your scene through render().
+// Call setSmear() with a cursor-smear texture to bend the image behind the pointer.
 import * as THREE from 'three';
 import { DISSOLVE_GLSL } from './block-dissolve.js';
 
@@ -20,14 +21,31 @@ export function mountFilmPost(renderer, options = {}) {
   const u = {
     tMain: { value: main.texture }, tBloom: { value: blurB.texture }, tStage: { value: stage.texture },
     uBloom: { value: bloom }, uGrain: { value: grain }, uVig: { value: vignette }, uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uDpr: { value: 1 },
+    tSmear: { value: null }, tKeep: { value: null }, uSmear: { value: 0 }, uSmearTint: { value: new THREE.Color('#8a5a36') },
     uDissolve: { value: 1 }, uCell: { value: 48 }, uMark: { value: new THREE.Color('#ffd9b0') }, uBlack: { value: 0 },
   };
-  const final = FS(`precision highp float; varying vec2 vUv; uniform sampler2D tMain,tBloom,tStage; uniform float uBloom,uGrain,uVig,uTime,uDissolve,uCell,uDpr,uBlack; uniform vec2 uRes; uniform vec3 uMark;
+  const final = FS(`precision highp float; varying vec2 vUv; uniform vec3 uSmearTint; uniform sampler2D tMain,tBloom,tStage,tSmear,tKeep; uniform float uSmear,uBloom,uGrain,uVig,uTime,uDissolve,uCell,uDpr,uBlack; uniform vec2 uRes; uniform vec3 uMark;
     ${DISSOLVE_GLSL}
     float h(vec2 p){ vec3 q=fract(vec3(p.xyx)*.1031); q+=dot(q,q.yzx+33.33); return fract((q.x+q.y)*q.z); }
     void main(){
-      vec3 c=texture2D(tMain,vUv).rgb;
-      c+=texture2D(tBloom,vUv).rgb*uBloom;
+      vec2 uvS=vUv; float lens=0.;
+      if(uSmear>.001){
+        vec3 s=texture2D(tSmear,vUv).xyz;
+        if(s.z>.002){
+          const float E=.014;
+          vec2 grad=vec2(texture2D(tSmear,vUv+vec2(E,0.)).z-texture2D(tSmear,vUv-vec2(E,0.)).z,
+                         texture2D(tSmear,vUv+vec2(0.,E)).z-texture2D(tSmear,vUv-vec2(0.,E)).z);
+          float keep=1.-texture2D(tKeep,vUv).a;
+          lens=smoothstep(.01,.85,s.z)*keep*uSmear;
+          // A random length per grain turns dark edges into a fine spray along the drag.
+          float spray=h(floor(gl_FragCoord.xy/(1.5*uDpr))+floor(uTime*24.)*vec2(3.,5.));
+          vec2 off=-s.xy*(.62+.55*spray*spray*spray)-grad*.09;
+          uvS=vUv+off*keep*uSmear;
+        }
+      }
+      vec3 c=texture2D(tMain,uvS).rgb;
+      c+=texture2D(tBloom,uvS).rgb*uBloom;
+      c=mix(c,max(c,uSmearTint),lens*.6);
       vec2 v=vUv-.5; c*=1.-dot(v,v)*uVig*1.6;
       c=min(c,vec3(1.));
       if(uDissolve<1.){
@@ -47,6 +65,8 @@ export function mountFilmPost(renderer, options = {}) {
     }`, u);
   const api = {
     main, stage, uniforms: u,
+    // keep is optional: pixels with alpha in that texture stay sharp.
+    setSmear(texture, keep, amount = 1) { u.tSmear.value = texture; u.tKeep.value = keep; u.uSmear.value = amount; },
     resize(w, h, dpr) {
       const W = Math.floor(w * dpr), H = Math.floor(h * dpr);
       main.setSize(W, H); stage.setSize(W, H);

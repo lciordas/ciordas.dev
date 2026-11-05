@@ -6,6 +6,7 @@ import { mountTitleRing } from '../elements/title-ring.js';
 import { mountCarouselInput } from '../elements/carousel-input.js';
 import { mountMediaPlane } from '../elements/media-plane.js';
 import { mountFilmPost } from '../elements/film-post.js';
+import { mountCursorSmear } from '../elements/cursor-smear.js';
 import { mountRenderWindows } from '../elements/render-windows.js';
 import { mountLoaderOutline } from '../elements/loader-outline.js';
 import { mountCrackedWord, mountRollLink, mountDrawArrow } from '../elements/ui-links.js';
@@ -101,6 +102,19 @@ const plane = mountMediaPlane(null, { scene, paletteUniforms: palU });
 // The stone and plane are mirrored together with the landscape.
 scene.remove(plane.mesh); stone.group.add(plane.mesh);
 const post = mountFilmPost(renderer, {});
+const smear = mountCursorSmear(renderer);
+// The stone and titles stay sharp in front of the smear, so they are drawn once more as a mask.
+const smearKeep = new THREE.WebGLRenderTarget(4, 4, { depthBuffer: true, samples: 4 });
+post.setSmear(smear.texture, smearKeep.texture, 0);
+const drawSmearKeep = () => {
+  const skyV = land.sky.visible, rootV = land.root.visible;
+  land.sky.visible = false; land.root.visible = false;
+  renderer.setRenderTarget(smearKeep);
+  renderer.setClearColor(0x000000, 0);
+  renderer.clear();
+  renderer.render(scene, camera);
+  land.sky.visible = skyV; land.root.visible = rootV;
+};
 let ring = null;
 
 const windows = mountRenderWindows(renderer, {
@@ -122,7 +136,7 @@ const S = {
   phase: 'loading', // loading | windows | dissolve | ready
   index: 0,
   shatter: 0, zoom: 0, sideA: 0, fillA: 0, aboutMix: 0, aboutSpin: 0,
-  camX: 0, camY: 0, mx: 0, my: 0, tmx: 0, tmy: 0,
+  camX: 0, camY: 0, mx: 0, my: 0, tmx: 0, tmy: 0, ptrX: 0, ptrY: 0, ptrSpeed: 0,
   hover: false, pal: firstPalette, busy: false, projectOpen: false,
   ptrInside: false, lastCrackAt: 0, crackCooldown: 0, lastPos: 0,
 };
@@ -191,6 +205,8 @@ const resize = () => {
   camera.aspect = S.w / S.h;
   camera.updateProjectionMatrix();
   post.resize(S.w, S.h, S.dpr);
+  smear.resize(S.w, S.h);
+  smearKeep.setSize(Math.max(2, Math.floor(S.w * S.dpr / 2)), Math.max(2, Math.floor(S.h * S.dpr / 2)));
   land.resize(S.w * S.dpr, S.h * S.dpr);
   windows.layout(S.w, S.h, S.dpr);
   loader?.layout();
@@ -449,8 +465,9 @@ const input = mountCarouselInput(canvas, {
 addEventListener('pointermove', (e) => {
   ndc.set((e.clientX / S.w) * 2 - 1, -(e.clientY / S.h) * 2 + 1);
   S.tmx = ndc.x; S.tmy = ndc.y; S.ptrInside = e.pointerType !== 'touch';
+  if (e.pointerType !== 'touch') smear.move(e.clientX / S.w, 1 - e.clientY / S.h);
 });
-document.addEventListener('pointerleave', () => { S.ptrInside = false; });
+document.addEventListener('pointerleave', () => { S.ptrInside = false; smear.leave(); });
 // Project view: scrolling or clicking anywhere outside the screen goes back home.
 canvas.addEventListener('wheel', (e) => {
   if (S.route.name !== 'project' || S.phase !== 'ready') return;
@@ -516,6 +533,11 @@ const frame = () => {
   if (!over) stone.clearPointer();
   if (S.route.name === 'about') { stone.clearPointer(); }
   stone.setHot(over ? (S.route.name === 'about' ? 1 : 0.55) : 0, S.route.name === 'about' ? 0.46 : 0.34);
+  // A resting pointer leaves a narrow split. Moving it pulls the plates wide apart.
+  const ptrStep = Math.hypot(ndc.x - S.ptrX, ndc.y - S.ptrY) / Math.max(dt, 1e-3);
+  S.ptrX = ndc.x; S.ptrY = ndc.y;
+  S.ptrSpeed = damp(S.ptrSpeed, ptrStep, ptrStep > S.ptrSpeed ? 16 : 3, dt);
+  stone.setPlates(over && S.route.name === 'home' ? 0.13 + 0.87 * clamp(S.ptrSpeed / 1.15) : 0);
 
   stone.update(dt, t, { shatter: S.shatter, parallaxX: S.mx * 0.7, parallaxY: S.my * 0.45 });
   land.update(dt, t);
@@ -548,6 +570,12 @@ const frame = () => {
   renderer.clear();
   renderer.render(scene, camera);
   post.bloomPass();
+  const smearOn = S.phase === 'ready';
+  if (smearOn) smear.update(dt); else smear.leave();
+  post.uniforms.tSmear.value = smear.texture;
+  post.uniforms.uSmearTint.value.copy(palU.p_haze.value);
+  post.uniforms.uSmear.value = smearOn && smear.energy > 0 ? 1 : 0;
+  if (post.uniforms.uSmear.value) drawSmearKeep();
   if (S.phase === 'windows' || S.phase === 'dissolve') {
     // Panels look into the same camera, so the stone lines up across all of them.
     windows.render(t - (S.windowsAt ?? t), post.stage, post.main.texture);
@@ -567,4 +595,4 @@ fontsReady.then(() => {
   frame();
   runIntro();
 });
-window.__monolith = { S, stone, input, post };
+window.__monolith = { S, stone, input, post, smear };
