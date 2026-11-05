@@ -32,8 +32,10 @@ const float SPAN=${SPAN.toFixed(1)};
 
 // Colour of the rock: pale gold in the light, deep ember in the dense bands.
 vec3 ramp(float m){
-  vec3 c=mix(p_pale,p_stone,smoothstep(.06,.4,m));
-  return mix(c,p_deep,smoothstep(.36,.72,m));
+  vec3 c=mix(p_pale,p_stone,smoothstep(.04,.34,m));
+  c=mix(c,p_low,smoothstep(.34,.56,m));
+  c=mix(c,p_deep,smoothstep(.54,.76,m));
+  return mix(c,vec3(.1,.026,.008),smoothstep(.84,1.,m)*.8);
 }
 // Rounded look taken from the blurred letter shape.
 vec3 pillow(vec2 uv){
@@ -42,7 +44,7 @@ vec3 pillow(vec2 uv){
               texture2D(tMask,uv+vec2(0.,E)).r-texture2D(tMask,uv-vec2(0.,E)).r);
   vec2 g2=vec2(texture2D(tMask,uv+vec2(E*3.,0.)).g-texture2D(tMask,uv-vec2(E*3.,0.)).g,
                texture2D(tMask,uv+vec2(0.,E*3.)).g-texture2D(tMask,uv-vec2(0.,E*3.)).g);
-  return normalize(vec3(-(g*5.2+g2*2.4),1.));
+  return normalize(vec3(-(g*3.0+g2*1.2),1.));
 }
 // Looking through the letter: slices of rock stacked in depth, each shifted along the view ray.
 vec3 inside(vec2 uv, vec2 ray, float edge){
@@ -50,28 +52,39 @@ vec3 inside(vec2 uv, vec2 ray, float edge){
   for(int i=0;i<LAYERS;i++){
     float d=(float(i)+.5)/float(LAYERS);
     vec4 f=texture2D(tField,uv+ray*d*.5/SPAN);
-    float a=mix(.2,.62,smoothstep(.28,.72,f.r));
+    float a=mix(.14,.7,smoothstep(.34,.76,f.r));
     sum+=through*a*ramp(f.r);
     through*=1.-a;
     // Filaments glow from within, strongest in the dark bands.
-    sum+=through*p_pale*f.g*(.5+.75*smoothstep(.35,.8,f.r))*(1.-d*.62)*.21;
+    sum+=through*p_pale*f.g*(.5+.75*smoothstep(.35,.8,f.r))*(1.-d*.62)*.3;
   }
   // Light behind everything, brighter where the rock is thin near the edges.
   vec4 far=texture2D(tField,uv+ray*.6/SPAN);
-  vec3 light=mix(p_stone*.72,p_pale*.86,far.b*.5+(1.-edge)*.4);
+  vec3 light=mix(p_stone*.92,p_pale*1.02,far.b*.6+(1.-edge)*.3);
   return sum+through*light;
 }
 vec3 beauty(vec2 uv, vec2 ray, vec3 N, vec3 V, float edge){
   vec2 bent=ray+N.xy*.34;
   vec3 c=inside(uv,bent,edge);
+  // Dense bands sink toward black, and the colour stays rich instead of milky.
+  float band=texture2D(tField,uv+bent*.1/SPAN).r;
+  c*=mix(1.06,.34,smoothstep(.62,.98,band));
+  c=mix(vec3(dot(c,vec3(.3,.6,.1))),c,1.26);
   // Wax-like glow along the edges, where light scatters out of the stone.
-  float wax=pow(1.-edge,1.5);
-  c=mix(c,p_pale*.98,wax*.5);
-  // A soft sheen from the rounded surface.
   vec3 L=normalize(vec3(-.3,.62,.72));
+  float lit=clamp(dot(N,L),0.,1.);
+  c*=mix(.8,1.06,smoothstep(.45,1.,lit));
+  float wax=pow(1.-edge,1.7);
+  c=mix(c,p_pale*.96,wax*mix(.22,.56,smoothstep(.55,.95,lit)));
+  // A soft sheen from the rounded surface.
   float spec=pow(max(dot(reflect(-L,N),V),0.),26.);
   c+=p_pale*spec*.13;
   c+=(texture2D(tField,uv).a-.5)*.028;
+  // Exposure with a soft shoulder, so the brightest areas stay warm and never clip to yellow.
+  c*=.84;
+  float top=max(c.r,max(c.g,c.b));
+  vec3 soft=mix(c/max(top,.001),p_pale,.5*smoothstep(.75,1.25,top))*(1.-exp(-top*2.7));
+  c=mix(c,soft,smoothstep(.6,.9,top));
   return c;
 }
 // Screen-space helpers for the printed looks.
@@ -139,8 +152,8 @@ void main(){
     }
     // A band of light that crosses the name when it asks to be clicked.
     if(uSweep>-1.5){
-      float s=exp(-pow((vP.x-uSweep*2.6+vP.y*.22)*3.1,2.));
-      c=mix(c,c*.9+p_pale*.42,s*.72);
+      float s=exp(-pow((vP.x-uSweep*2.8+vP.y*.22)*2.1,2.));
+      c=mix(c,c*1.04+p_stone*.1,s*.5);
     }
     // Heat under the pointer.
     if(uHotAmt>.002){
@@ -373,7 +386,7 @@ export function mountName(scene, data, palU, baked) {
         });
         // Every few seconds a wave runs through the letters and a band of light crosses them.
         if (st.phase === 'float' && calm > 0.5 && t > st.nudgeAt) {
-          st.nudgeAt = t + 3.4 + R() * 1.2;
+          st.nudgeAt = t + 5.2 + R() * 1.6;
           st.pulse = 1;
           st.sweepAt = t;
           letters.forEach((L) => { L.kickAt = t + (L.cx + 2) * 0.09; L.kicked = false; });
@@ -383,7 +396,7 @@ export function mountName(scene, data, palU, baked) {
         });
         st.pulse = (st.pulse || 0) * Math.exp(-1.7 * dt);
         if (st.sweepAt !== undefined) {
-          const k = (t - st.sweepAt) / 1.15;
+          const k = (t - st.sweepAt) / 2.9;
           uniforms.uSweep.value = k > 1.1 ? -2 : -1.1 + k * 2.2;
         }
       } else {

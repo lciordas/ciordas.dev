@@ -18,8 +18,11 @@ export function mountTrace(parent, letters, options = {}) {
       const n = pts.length, a = [], b = [];
       for (let i = lo; ; i = (i + 1) % n) { a.push(pts[i]); if (i === hi) break; }
       for (let i = lo; ; i = (i - 1 + n) % n) { b.push(pts[i]); if (i === hi) break; }
-      const delay = (li / Math.max(1, letters.length - 1)) * 0.54 + ci * 0.035;
-      [a, b].forEach((s) => { const len = lengths(s); strands.push({ pts: s, len, total: len[len.length - 1], delay, dur: 0.42 }); });
+      // Letters start close together and finish close together, with a little looseness between them.
+      const jitter = (Math.sin(li * 12.9898 + 4.1) * 43758.5453) % 1;
+      const delay = (li / Math.max(1, letters.length - 1)) * 0.16 + Math.abs(jitter) * 0.05 + ci * 0.012;
+      const dur = 0.72 + Math.abs(jitter) * 0.07;
+      [a, b].forEach((s) => { const len = lengths(s); strands.push({ pts: s, len, total: len[len.length - 1], delay, dur }); });
     });
   });
 

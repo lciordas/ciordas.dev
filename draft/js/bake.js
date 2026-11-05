@@ -15,7 +15,7 @@ void main(){
   vec3 q=vec3(w.x*.5,w.y*.5,0.);
   // Sediment: horizontal layers with cloudy, torn edges.
   float tear=fbm(vec3(q.x*1.2,q.y*1.5,1.3)+3.1);
-  float h=q.y*3.1+(tear-.5)*1.05;
+  float h=q.y*5.2+(tear-.5)*1.15+1.9;
   float layer=fbm(vec3(h*1.25,.4,2.7));
   float blot=fbm(vec3(q.x*1.9,h*2.6,4.2)+9.);
   float blot2=fbm(vec3(q.x*3.8,h*6.2,7.)+tear*1.5);
@@ -72,7 +72,7 @@ export function bakeSurface(renderer, data, size = 1024) {
   };
   const onlyR = new THREE.Vector4(0, 1, 1, 1), onlyG = new THREE.Vector4(1, 0, 1, 1);
   for (let i = 0; i < 2; i++) { pass(px * 1.6, 0, onlyR); pass(0, px * 1.6, onlyR); }
-  for (const s of [3, 6, 9]) { pass(px * s, 0, onlyG); pass(0, px * s, onlyG); }
+  for (const s of [9, 5, 2.5, 1.2]) { pass(px * s, 0, onlyG); pass(0, px * s, onlyG); }
   renderer.setRenderTarget(null);
   b.dispose(); blur.dispose(); white.dispose();
   flat.traverse((o) => o.geometry?.dispose());

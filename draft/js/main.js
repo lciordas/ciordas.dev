@@ -10,9 +10,10 @@ const gsap = window.gsap;
 const params = new URLSearchParams(location.search);
 const FONT_KEYS = ['barlow', 'shoulders', 'teko', 'inter', 'anton'];
 const fontKey = FONT_KEYS.includes(params.get('font')) ? params.get('font') : 'barlow';
-const skipIntro = params.has('skip') || REDUCED;
+const STYLE = params.get('style');
+const skipIntro = params.has('skip') || REDUCED || !!STYLE;
 
-const PALETTE = { top: '#0b0502', mid: '#291305', haze: '#744515', low: '#4a2f12', pale: '#ffdfae', stone: '#e8772a', deep: '#832604', shard: '#d9a067' };
+const PALETTE = { top: '#0c0402', mid: '#2a1105', haze: '#70400f', low: '#b9531a', pale: '#fcd0a4', stone: '#e0802f', deep: '#7c1f05', shard: '#c98f58' };
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('gl'), enterBtn = $('enter'), portfolio = $('portfolio'), replay = $('replay'), fallback = $('fallback');
@@ -202,7 +203,7 @@ function start(data) {
     S.mx = damp(S.mx, S.tmx, 3, dt); S.my = damp(S.my, S.tmy, 3, dt);
     name.st.mx = S.mx; name.st.my = S.my;
     skyU.uMouse.value.set(S.mx, S.my);
-    if (S.phase === 'ready') skyU.uGlow.value = 1 + (name.st.pulse || 0) * 0.9;
+    if (S.phase === 'ready') skyU.uGlow.value = 1 + (name.st.pulse || 0) * 0.35;
     if (S.phase === 'ready' || S.phase === 'portfolio') {
       if (name.st.phase === 'float') name.uniforms.uHotAmt.value = damp(name.uniforms.uHotAmt.value, S.hotT || 0, 5, dt);
     }
@@ -215,6 +216,15 @@ function start(data) {
     );
     camera.lookAt(0, 0, 0);
 
+    // Shows one window style across the whole screen, for choosing between them.
+    if (STYLE && STYLE !== 'beauty') {
+      const slot = windows.items.find((i) => i.mode === STYLE);
+      sky.visible = false; name.setMode(STYLE);
+      renderer.setRenderTarget(null); renderer.setClearColor(new THREE.Color(slot?.bg || '#000'), 1); renderer.clear();
+      renderer.render(scene, camera);
+      name.setMode('beauty'); sky.visible = true;
+      return;
+    }
     if (S.phase === 'loading' || S.phase === 'trace') {
       renderer.setRenderTarget(null); renderer.setClearColor(0x030303, 1); renderer.clear();
       return;
