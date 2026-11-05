@@ -6,6 +6,7 @@
     { key: '1', label: 'Monolith', href: '/templates/01-monolith/' },
     { key: '2', label: 'Expedition', href: '/templates/02-expedition/' },
     { key: '3', label: 'Circuit', href: '/templates/03-circuit/' },
+    { key: '4', label: 'Draft', href: '/draft/' },
   ];
   if (window.self !== window.top || document.getElementById('site-tabs')) return;
 
