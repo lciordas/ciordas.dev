@@ -17,6 +17,10 @@ const CLIPS = {
   seesaw() {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '13.4', '-t', '3', '-i', MAKER, '-ss', '21.03', '-t', '4.97', '-i', MAKER, '-filter_complex', '[0:v]setpts=PTS-STARTPTS,fps=30,scale=1280:720[a];[1:v]setpts=PTS-STARTPTS,fps=30,scale=1280:720[b];[a][b]concat=n=2:v=1[o]', '-map', '[o]', ...encode, path.join(OUT, 'seesaw.mp4')]);
   },
+  // The micromanipulator on the desk, its end effector moved by hand. The model lines up with the first frame.
+  micromanipulator() {
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '48.2', '-t', '5.3', '-i', MAKER, '-vf', 'fps=30,scale=1280:720', ...encode, path.join(OUT, 'micromanipulator.mp4')]);
+  },
   // The dog walking on the mat the whole way, held in the middle of the frame.
   async 'dog-walk'() {
     const src = `${ICLOUD}/IMG_2780.MOV`, ss = 7, t = 7.5, box = { x: 0.42, y: 0.16, w: 0.3, h: 0.26 };

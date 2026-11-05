@@ -17,6 +17,18 @@ const ANIMATED = {
     assemble: [0.03, 0.52], title: [0.08, 0.2], wipe: [0.62, 0.68], clipAt: 0.68,
     copyAt: [[0.28, 0.6], [0.7, 1]],
   },
+  // Lined up with the first frame of the clip from matched screw heads on two of the motor mounts.
+  micromanipulator: {
+    model: 'micromanipulator', length: 440, clip: 'media/video/micromanipulator.mp4',
+    up: [0.0223, 0.6193, 1.2759], fov: 28.58,
+    views: [
+      { p: 0, az: 0.8, el: 0.38, dist: 6.6, tx: -0.11, ty: 0.31, tz: 0 },
+      { p: 0.5, az: -0.35, el: 0.12, dist: 6.2, tx: -0.11, ty: 0.31, tz: 0 },
+      { p: 0.62, az: 0, el: 0, dist: 5.9152, tx: -0.1128, ty: 0.3136, tz: 0 },
+    ],
+    assemble: [0.03, 0.52], title: [0.08, 0.2], wipe: [0.62, 0.68], clipAt: 0.68,
+    copyAt: [[0.28, 0.6], [0.7, 1]],
+  },
   'robot-dog': {
     model: 'dog', up: [0, 0, 1.5325], fov: 34.28, length: 1500, frames: 'media/dog', frames2: 'media/dog-front', clip: 'media/video/dog-walk.mp4',
     views: [
@@ -67,6 +79,14 @@ function buildAnimated(id, cfg, p, index, next, content) {
         ${(p.captions || []).map((c, i) => `<p class="copy copy--${i % 2 ? 'right' : 'left'}">${esc(c)}</p>`).join('')}
       </div>
     </div>
+    ${p.media?.length ? `
+    <div class="detail detail--after">
+      <div class="detail__body">
+        <p>${esc(p.summary)}</p>
+        ${p.tech?.length ? `<ul class="tech">${p.tech.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+      </div>
+      <div class="detail__grid">${p.media.map((m) => figure(m, p.title)).join('')}</div>
+    </div>` : ''}
     ${endLinks(next, content)}`;
   return s;
 }

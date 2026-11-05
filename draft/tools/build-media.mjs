@@ -48,7 +48,6 @@ await thumb('robot-dog', dogPic);
 await thumb('pid-seesaw', await frame(MAKER, 24.2));
 
 const microPhoto = deckImage(2, 0);
-clip('micromanipulator', 'mechanism', MAKER, 48.2, 5.6);
 await still('micromanipulator', 'assembly', microPhoto, { width: 900 });
 await still('micromanipulator', 'microstepping', `${D}/microstepping_comparison.png`, { width: 1400, flat: true });
 await still('micromanipulator', 'encoder', await frame(`${OLD}/39_encoder_magnet_board.mp4`, 0.8), { width: 900 });

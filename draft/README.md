@@ -34,9 +34,9 @@ After the name shatters, the overview page is underneath it: projects in two col
 
 The words and the overview's look live in `data/content.json`. Edit them in the Editor tab (`/draft/edit/`): type on the preview, changes save in that browser, and Publish commits the file through GitHub using your own token.
 
-Animated projects sit in a rounded window with room around it for text. CAD parts float at random across the whole screen, then assemble in the window as you scroll. A light line wipes from CAD to footage, which either moves with the scroll or plays as a video. Their timing and camera angles are in `ANIMATED` in `js/projects/work.js`, the window's size is `--rw` in `css/site.css`. Models bake from the STEP files with `tools/build-cad.mjs`, including the assembled seesaw and the dog's standing pose. Scroll footage comes from `tools/build-frames.mjs`, videos from `tools/build-video.mjs`. Project photos, graphs, short clips, and list pictures come from `tools/build-media.mjs`.
+Animated projects sit in a rounded window with room around it for text. CAD parts float at random across the whole screen, then assemble in the window as you scroll. A light line wipes from CAD to footage, which either moves with the scroll or plays as a video. Their timing and camera angles are in `ANIMATED` in `js/projects/work.js`, the window's size is `--rw` in `css/site.css`. Models bake from the STEP files with `tools/build-cad.mjs`, including the assembled seesaw and the dog's standing pose. The micromanipulator bakes straight from its FreeCAD files (`tools/freecad-assembly.py` reads the assembly; FreeCAD itself isn't needed), and its camera is lined up with the clip's first frame. A project with pictures or graphs shows them below its animation. Scroll footage comes from `tools/build-frames.mjs`, videos from `tools/build-video.mjs`. Project photos, graphs, short clips, and list pictures come from `tools/build-media.mjs`.
 
 - Add `?to=overview` to the address to skip the intro.
 - `node draft/tools/build-frames.mjs` re-extracts the video frames, with clip times at the top of the file.
-- `node draft/tools/build-cad.mjs` rebuilds the CAD files from the STL exports.
+- `node draft/tools/build-cad.mjs [model]` rebuilds the CAD files from the STEP and FreeCAD files.
 Both tools need the local `toolkit` folder, plus the source files in Downloads.

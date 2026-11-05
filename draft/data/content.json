@@ -6,6 +6,10 @@
       {
         "label": "GitHub",
         "url": "https://github.com/lciordas"
+      },
+      {
+        "label": "Email",
+        "url": "mailto:22lciordas@gmail.com"
       }
     ],
     "hint": "Arrow keys to move, Enter to open, or scroll"
@@ -99,8 +103,12 @@
     "micromanipulator": {
       "title": "Micromanipulator",
       "tag": "Closed-loop stepper control, 100 nm theoretical resolution",
-      "kind": "detail",
+      "kind": "scroll",
       "summary": "A low-cost, 3D-printed alternative to industrial micromanipulators, which cost $1,000 to $60,000. Geometric microstepping accounts for the true 45° phase spacing of the motor's coils, where the standard formula assumes 90°. A row of 17 axially magnetized magnets forms a locally rotating field that increases encoder resolution 8.5 times over a single diametric magnet. Angular error fell from about 0.08° in open loop to 0.0045° with closed-loop control, and about 0.0005° with PID control in C++, which allows a theoretical end-effector resolution of 100 nm. Physical testing of that resolution is the next step.",
+      "captions": [
+        "A low-cost, 3D-printed micromanipulator. Three NEMA 17 stepper motors turn horns that move the end effector through parallel brass rods on ball joints, in place of industrial units that cost $1,000 to $60,000.",
+        "Geometric microstepping accounts for the true 45° phase spacing of the motor's coils, and a row of 17 axially magnetized magnets raises encoder resolution 8.5 times. Angular error fell from about 0.08° in open loop to 0.0005° with PID control, for a theoretical end-effector resolution of 100 nm."
+      ],
       "tech": [
         "NEMA 17 stepper",
         "MT6835 magnetic encoder",
@@ -112,10 +120,6 @@
       "links": [],
       "thumb": "micromanipulator",
       "media": [
-        {
-          "src": "media/projects/micromanipulator/mechanism.mp4",
-          "caption": "Drive mechanism on the bench."
-        },
         {
           "src": "media/projects/micromanipulator/microstepping.webp",
           "caption": "Traditional and geometric microstepping: phase currents, field angle, and magnetic angle error.",

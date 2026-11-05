@@ -1,7 +1,8 @@
 // Turns a STEP assembly into a compact binary: one part per solid, posed into place, simplified meshes,
 // crisp normals, and CAD edge lines. All poses are baked into the vertices, so the page needs no pose code.
-// Run from the repo root: node draft/tools/build-cad.mjs
+// Run from the repo root: node draft/tools/build-cad.mjs [model name]
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -150,9 +151,35 @@ function dogPose() {
   return parts;
 }
 
+
+// --- Micromanipulator, from the FreeCAD files, as designed. Three identical actuators sit round the base block. The
+// tree lists each actuator as 51 solids in the same order, starting at index 2, 53 and 104. The rest are the base
+// block (0), the end effector (1), and the screws and pins that hold the actuators to the base (155 to 172).
+// Small parts that sit together are joined: each motor, each ball joint with its crimp beads, and each rod with its
+// collets and rubber bands. (The real rods look a little longer than these, so the end effector here sits lower.)
+function micromanipulatorPose() {
+  const parts = [{ name: 'base block', meshes: [[0, ID]], keep: true }, { name: 'end effector', meshes: [[1, ID]], keep: true }];
+  for (let i = 155; i <= 172; i++) parts.push({ name: `base fastener ${i - 154}`, meshes: [[i, ID]] });
+  ['A', 'B', 'C'].forEach((key, k) => {
+    const b = 2 + k * 51, group = (name, list, keep) => parts.push({ name: `${key} ${name}`, meshes: list.map((j) => [b + j, ID]), keep });
+    group('motor mount', [0], true);
+    group('stepper motor', Array.from({ length: 11 }, (_, j) => 1 + j));
+    group('horn', [12], true);
+    group('encoder magnets', [37]);
+    group('encoder board', [38]);
+    group('horn ball joints', [19, 20, 21, 24, 25, 26, 27]);
+    group('end ball joints', [28, 29, 30, 33, 34, 35, 36]);
+    group('rod 1', [13, 16, 18, 22, 32]);
+    group('rod 2', [14, 15, 17, 23, 31]);
+    [39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50].forEach((j, n) => group(`fastener ${n + 1}`, [j]));
+  });
+  return parts;
+}
+
 const MODELS = {
   seesaw: { file: `${HOME}/Downloads/full pid seesaw ref.step`, parts: seesawPose, angular: 0.25, ratio: 0.7, keepRatio: 1, error: 0.002 },
   dog: { file: `${HOME}/Downloads/robot dog reference.step`, parts: dogPose, angular: 0.35, ratio: 0.34, keepRatio: 0.7, error: 0.006 },
+  micromanipulator: { freecad: [`${HOME}/Downloads/micromanip files`, 'Assembly_MicroManipulator'], parts: micromanipulatorPose, angular: 0.6, ratio: 0.12, keepRatio: 0.6, error: 0.02, keepError: 0.004 },
 };
 
 const occt = await occtImport();
@@ -160,6 +187,29 @@ function readStep(file, angular) {
   const r = occt.ReadStepFile(new Uint8Array(fs.readFileSync(file)), { linearUnit: 'millimeter', linearDeflectionType: 'bounding_box_ratio', linearDeflection: 0.002, angularDeflection: angular });
   if (!r.success) throw new Error(`could not read ${file}`);
   return r.meshes;
+}
+// A FreeCAD assembly: one mesh per placed solid, already moved into place, in the order the assembly lists them.
+function readFreecad([folder, top], angular) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'freecad-'));
+  try {
+    const placed = JSON.parse(execFileSync('python3', ['-I', path.join(here, 'freecad-assembly.py'), folder, top, tmp], { maxBuffer: 2 ** 28 }).toString());
+    const shapes = new Map();
+    return placed.map((p) => {
+      if (!shapes.has(p.brp)) {
+        const r = occt.ReadBrepFile(new Uint8Array(fs.readFileSync(p.brp)), { linearUnit: 'millimeter', linearDeflectionType: 'bounding_box_ratio', linearDeflection: 0.004, angularDeflection: angular });
+        if (!r.success) throw new Error(`could not read ${p.label}`);
+        shapes.set(p.brp, r.meshes);
+      }
+      const [x, y, z, w] = p.q, m = [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w), p.pos[0], 2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w), p.pos[1], 2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y), p.pos[2]];
+      const pos = [], idx = [];
+      for (const me of shapes.get(p.brp)) {
+        const a = me.attributes.position.array, base = pos.length / 3;
+        for (let i = 0; i < a.length; i += 3) pos.push(...apply(m, [a[i], a[i + 1], a[i + 2]]));
+        for (const v of me.index.array) idx.push(v + base);
+      }
+      return { attributes: { position: { array: pos } }, index: { array: idx } };
+    });
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 function weld(mesh) {
   const P = mesh.attributes.position.array, I = mesh.index.array, map = new Map(), pos = [], remap = new Int32Array(P.length / 3);
@@ -233,11 +283,13 @@ function buildPart(tris, pos, cfg) {
   }
   return { P: outP, N: outN, I: outI, L: lines };
 }
+const only = process.argv[2];
 for (const [name, cfg] of Object.entries(MODELS)) {
-  const meshes = readStep(cfg.file, cfg.angular);
+  if (only && only !== name) continue;
+  const meshes = cfg.freecad ? readFreecad(cfg.freecad, cfg.angular) : readStep(cfg.file, cfg.angular);
   const parts = cfg.parts().map((def) => {
     const { idx, pos } = gather(meshes, def.meshes);
-    return { name: def.name, srcTris: idx.length / 3, ...buildPart(idx, pos, { ratio: def.keep ? cfg.keepRatio : cfg.ratio, error: cfg.error }) };
+    return { name: def.name, srcTris: idx.length / 3, ...buildPart(idx, pos, { ratio: def.keep ? cfg.keepRatio : cfg.ratio, error: def.keep ? (cfg.keepError ?? cfg.error) : cfg.error }) };
   }).sort((a, b) => b.I.length - a.I.length);
   const min = [1e9, 1e9, 1e9], max = [-1e9, -1e9, -1e9];
   for (const p of parts) for (let i = 0; i < p.P.length; i += 3) for (let a = 0; a < 3; a++) { min[a] = Math.min(min[a], p.P[i + a]); max[a] = Math.max(max[a], p.P[i + a]); }

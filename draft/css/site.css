@@ -105,6 +105,7 @@ html.lenis, html.lenis body { height: auto; }
 .bar i { display: block; height: 100%; background: rgba(255, 214, 176, .7); transform: scaleX(0); transform-origin: left; }
 /* Project pages without an animation */
 .detail { min-height: 100vh; min-height: 100svh; max-width: 1180px; margin: 0 auto; padding: clamp(70px, 11vh, 110px) clamp(20px, 5vw, 64px) 30px; display: flex; flex-direction: column; gap: 24px; }
+.detail--after { min-height: 0; padding-top: clamp(40px, 8vh, 80px); }
 .detail__title { margin: 0; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: clamp(38px, 5.4vw, 72px); line-height: 1; text-transform: uppercase; }
 .detail__title .index, .head .index { margin-right: .7em; font: 500 13px "Hanken Grotesk", system-ui, sans-serif; letter-spacing: .24em; color: var(--muted); vertical-align: middle; }
 .detail__top { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 52px); align-items: start; }
