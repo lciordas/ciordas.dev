@@ -103,17 +103,25 @@ const plane = mountMediaPlane(null, { scene, paletteUniforms: palU });
 scene.remove(plane.mesh); stone.group.add(plane.mesh);
 const post = mountFilmPost(renderer, {});
 const smear = mountCursorSmear(renderer);
-// The stone and titles stay sharp in front of the smear, so they are drawn once more as a mask.
+// The stone and titles stay sharp in front of the smear. Each frame the smear is active, they are
+// drawn alone as a mask, and the landscape is drawn without them as the image to bend.
 const smearKeep = new THREE.WebGLRenderTarget(4, 4, { depthBuffer: true, samples: 4 });
-post.setSmear(smear.texture, smearKeep.texture, 0);
-const drawSmearKeep = () => {
-  const skyV = land.sky.visible, rootV = land.root.visible;
+const smearBack = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: true });
+post.setSmear(smear.texture, smearKeep.texture, 0, smearBack.texture);
+const drawSmearLayers = () => {
+  const skyV = land.sky.visible, rootV = land.root.visible, stoneV = stone.group.visible, ringV = ring ? ring.group.visible : false;
   land.sky.visible = false; land.root.visible = false;
   renderer.setRenderTarget(smearKeep);
   renderer.setClearColor(0x000000, 0);
   renderer.clear();
   renderer.render(scene, camera);
   land.sky.visible = skyV; land.root.visible = rootV;
+  stone.group.visible = false; if (ring) ring.group.visible = false;
+  renderer.setRenderTarget(smearBack);
+  renderer.setClearColor(0x000000, 1);
+  renderer.clear();
+  renderer.render(scene, camera);
+  stone.group.visible = stoneV; if (ring) ring.group.visible = ringV;
 };
 let ring = null;
 
@@ -207,6 +215,7 @@ const resize = () => {
   post.resize(S.w, S.h, S.dpr);
   smear.resize(S.w, S.h);
   smearKeep.setSize(Math.max(2, Math.floor(S.w * S.dpr / 2)), Math.max(2, Math.floor(S.h * S.dpr / 2)));
+  smearBack.setSize(Math.max(2, Math.floor(S.w * Math.max(1, S.dpr / 2))), Math.max(2, Math.floor(S.h * Math.max(1, S.dpr / 2))));
   land.resize(S.w * S.dpr, S.h * S.dpr);
   windows.layout(S.w, S.h, S.dpr);
   loader?.layout();
@@ -575,7 +584,7 @@ const frame = () => {
   post.uniforms.tSmear.value = smear.texture;
   post.uniforms.uSmearTint.value.copy(palU.p_haze.value);
   post.uniforms.uSmear.value = smearOn && smear.energy > 0 ? 1 : 0;
-  if (post.uniforms.uSmear.value) drawSmearKeep();
+  if (post.uniforms.uSmear.value) drawSmearLayers();
   if (S.phase === 'windows' || S.phase === 'dissolve') {
     // Panels look into the same camera, so the stone lines up across all of them.
     windows.render(t - (S.windowsAt ?? t), post.stage, post.main.texture);

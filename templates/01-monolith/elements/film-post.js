@@ -21,31 +21,33 @@ export function mountFilmPost(renderer, options = {}) {
   const u = {
     tMain: { value: main.texture }, tBloom: { value: blurB.texture }, tStage: { value: stage.texture },
     uBloom: { value: bloom }, uGrain: { value: grain }, uVig: { value: vignette }, uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uDpr: { value: 1 },
-    tSmear: { value: null }, tKeep: { value: null }, uSmear: { value: 0 }, uSmearTint: { value: new THREE.Color('#8a5a36') },
+    tSmear: { value: null }, tKeep: { value: null }, tBack: { value: main.texture }, uSmear: { value: 0 }, uSmearTint: { value: new THREE.Color('#8a5a36') },
     uDissolve: { value: 1 }, uCell: { value: 48 }, uMark: { value: new THREE.Color('#ffd9b0') }, uBlack: { value: 0 },
   };
-  const final = FS(`precision highp float; varying vec2 vUv; uniform vec3 uSmearTint; uniform sampler2D tMain,tBloom,tStage,tSmear,tKeep; uniform float uSmear,uBloom,uGrain,uVig,uTime,uDissolve,uCell,uDpr,uBlack; uniform vec2 uRes; uniform vec3 uMark;
+  const final = FS(`precision highp float; varying vec2 vUv; uniform vec3 uSmearTint; uniform sampler2D tMain,tBloom,tStage,tSmear,tKeep,tBack; uniform float uSmear,uBloom,uGrain,uVig,uTime,uDissolve,uCell,uDpr,uBlack; uniform vec2 uRes; uniform vec3 uMark;
     ${DISSOLVE_GLSL}
     float h(vec2 p){ vec3 q=fract(vec3(p.xyx)*.1031); q+=dot(q,q.yzx+33.33); return fract((q.x+q.y)*q.z); }
     void main(){
-      vec2 uvS=vUv; float lens=0.;
-      if(uSmear>.001){
-        vec3 s=texture2D(tSmear,vUv).xyz;
-        if(s.z>.002){
-          const float E=.014;
-          vec2 grad=vec2(texture2D(tSmear,vUv+vec2(E,0.)).z-texture2D(tSmear,vUv-vec2(E,0.)).z,
-                         texture2D(tSmear,vUv+vec2(0.,E)).z-texture2D(tSmear,vUv-vec2(0.,E)).z);
-          float keep=1.-texture2D(tKeep,vUv).a;
-          lens=smoothstep(.01,.85,s.z)*keep*uSmear;
-          // A random length per grain turns dark edges into a fine spray along the drag.
-          float spray=h(floor(gl_FragCoord.xy/(1.5*uDpr))+floor(uTime*24.)*vec2(3.,5.));
-          vec2 off=-s.xy*(.62+.55*spray*spray*spray)-grad*.09;
-          uvS=vUv+off*keep*uSmear;
-        }
+      vec3 c=texture2D(tMain,vUv).rgb;
+      vec3 s=uSmear>.001?texture2D(tSmear,vUv).xyz:vec3(0.);
+      if(s.z>.0015||dot(s.xy,s.xy)>1e-7){
+        // Bend a copy of the image with the kept objects removed, then lay the objects back on top.
+        // Nothing kept is ever sampled, so its edges stay clean.
+        vec2 off=s.xy*uSmear;
+        float lens=smoothstep(.1,.46,s.z)*uSmear;
+        // A soft frosted blur inside the lens. The grain pattern is fixed on screen so nothing flickers.
+        float a=6.2832*fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))));
+        float r=min(.0052,length(off)*.05)+lens*.0012;
+        vec2 asp=vec2(uRes.y/uRes.x,1.);
+        vec2 d1=vec2(cos(a),sin(a))*r*asp, d2=vec2(-sin(a),cos(a))*r*.62*asp;
+        vec3 b=(texture2D(tBack,vUv+off+d1).rgb+texture2D(tBack,vUv+off-d1).rgb+texture2D(tBack,vUv+off+d2).rgb+texture2D(tBack,vUv+off-d2).rgb)*.25;
+        b=mix(b,max(b,uSmearTint*1.22),lens*.36);
+        // Fade in with the very first pixel of bending, so the copy never shows as a seam.
+        float w=smoothstep(.0002,.002,length(off))+lens;
+        float keep=smoothstep(.02,.25,texture2D(tKeep,vUv).a);
+        c=mix(c,b,min(1.,w)*(1.-keep));
       }
-      vec3 c=texture2D(tMain,uvS).rgb;
-      c+=texture2D(tBloom,uvS).rgb*uBloom;
-      c=mix(c,max(c,uSmearTint),lens*.6);
+      c+=texture2D(tBloom,vUv).rgb*uBloom;
       vec2 v=vUv-.5; c*=1.-dot(v,v)*uVig*1.6;
       c=min(c,vec3(1.));
       if(uDissolve<1.){
@@ -65,8 +67,9 @@ export function mountFilmPost(renderer, options = {}) {
     }`, u);
   const api = {
     main, stage, uniforms: u,
-    // keep is optional: pixels with alpha in that texture stay sharp.
-    setSmear(texture, keep, amount = 1) { u.tSmear.value = texture; u.tKeep.value = keep; u.uSmear.value = amount; },
+    // keep: pixels with alpha in that texture stay sharp. background: the image to bend, drawn
+    // without those objects. Without one, the finished image is bent instead.
+    setSmear(texture, keep, amount = 1, background = null) { u.tSmear.value = texture; u.tKeep.value = keep; u.uSmear.value = amount; u.tBack.value = background ? background : main.texture; },
     resize(w, h, dpr) {
       const W = Math.floor(w * dpr), H = Math.floor(h * dpr);
       main.setSize(W, H); stage.setSize(W, H);
