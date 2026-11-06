@@ -1,5 +1,5 @@
 // Draws the NeurIPS paper's cover for the overview and its title and programme slides, with the site's fonts.
-// Run from the repo root: node draft/tools/build-paper.mjs
+// Run from the repo root: node tools/build-paper.mjs
 // Sources, downloaded once into toolkit/sources: the NeurIPS logo from neurips.cc, and Benh LIEU SONG's photo of the
 // Sydney Opera House and Harbour Bridge from Wikimedia Commons (CC BY-SA 4.0, credited in the slide's caption).
 import { createRequire } from 'node:module';
@@ -7,9 +7,9 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
-const require = createRequire(path.join(here, '../../toolkit/x.js'));
+const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp'), opentype = require('opentype.js');
-const SRC = path.join(here, '../../toolkit/sources'), FONTS = path.join(here, '../../toolkit/node_modules/@fontsource');
+const SRC = path.join(here, '../toolkit/sources'), FONTS = path.join(here, '../toolkit/node_modules/@fontsource');
 const OUT = path.join(here, '../media/projects/world-models'), THUMBS = path.join(here, '../media/thumbs');
 const get = (name, url) => { const f = path.join(SRC, name); if (!fs.existsSync(f)) { fs.mkdirSync(SRC, { recursive: true }); execFileSync('curl', ['-sL', '-A', 'ciordas-dev-site/1.0', '-o', f, url]); } return f; };
 const photo = get('sydney.jpg', 'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7d/Sydney_Opera_House_and_Harbour_Bridge_Dusk_%283%29_2019-06-21.jpg/1920px-Sydney_Opera_House_and_Harbour_Bridge_Dusk_%283%29_2019-06-21.jpg');

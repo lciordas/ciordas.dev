@@ -1,11 +1,11 @@
-// Gathers project photos, graphs, short clips and list thumbnails into draft/media/projects and draft/media/thumbs.
-// Run from the repo root: node draft/tools/build-media.mjs
+// Gathers project photos, graphs, short clips and list thumbnails into media/projects and media/thumbs.
+// Run from the repo root: node tools/build-media.mjs
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
-const require = createRequire(path.join(here, '../../toolkit/x.js'));
+const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp');
 const D = `${os.homedir()}/Downloads`, OLD = `${D}/old_clips`, BROLL = `${D}/maker portfolio b-roll`, MAKER = `${D}/maker_portfolio_v1.mp4`;
 const DECK = `${D}/SRP Micromanipulator Presentation - Lucas Ciordas.pdf`, WM = `${os.homedir()}/Documents/NeurIPS/authored papers/Plan_Shallow_While_You_Learn.pdf`;

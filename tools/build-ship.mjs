@@ -1,5 +1,5 @@
 // Cuts the short build video for the ship in a bottle page from the long YouTube video, hard cuts in build order.
-// Run from the repo root: node draft/tools/build-ship.mjs
+// Run from the repo root: node tools/build-ship.mjs
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';

@@ -1,6 +1,6 @@
 // Turns a font and a name into the geometry the intro uses: outlines for tracing,
 // and each letter already cut into shards with the crack lines between them.
-// Run from the repo root: node draft/tools/build-name.mjs
+// Run from the repo root: node tools/build-name.mjs
 // Needs the local toolkit folder, which holds fontkit, polygon-clipping, and d3-delaunay.
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const toolkit = path.join(here, '../../toolkit/');
+const toolkit = path.join(here, '../toolkit/');
 const require = createRequire(toolkit + 'x.js');
 const fontkit = require('fontkit');
 const pc = require('polygon-clipping');

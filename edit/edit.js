@@ -1,6 +1,6 @@
-// Site editor: changes draft/data/content.json, which the overview and project pages read.
+// Site editor: changes data/content.json, which the overview and project pages read.
 // Work is saved in this browser as you type. Publishing commits the file through GitHub with your own token.
-const REPO = 'lciordas/ciordas.dev', FILE = 'draft/data/content.json';
+const REPO = 'lciordas/ciordas.dev', FILE = 'data/content.json';
 const DRAFT = 'lc-content-draft', TOKEN = 'lc-github-token';
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch { /* preview or private mode */ } }, del(k) { try { localStorage.removeItem(k); } catch { /* same */ } } };
 const $ = (id) => document.getElementById(id);
@@ -153,7 +153,7 @@ const loadPreview = () => {
   overviewReady = false;
   const page = $('page').value;
   store.set(DRAFT, JSON.stringify(c));
-  frame.src = page === 'overview' ? `/draft/?edit=1&v=${Date.now()}` : `/draft/?draft=1&v=${Date.now()}#${page}`;
+  frame.src = page === 'overview' ? `/?edit=1&v=${Date.now()}` : `/?draft=1&v=${Date.now()}#${page}`;
   $('tip').textContent = page === 'overview' ? 'Click any text in the preview and type.' : 'Scroll in the preview. Choose a page again to refresh it.';
 };
 $('page').addEventListener('change', loadPreview);

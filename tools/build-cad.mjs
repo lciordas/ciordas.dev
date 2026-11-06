@@ -1,12 +1,12 @@
 // Turns a STEP assembly into a compact binary: one part per solid, posed into place, simplified meshes,
 // crisp normals, and CAD edge lines. All poses are baked into the vertices, so the page needs no pose code.
-// Run from the repo root: node draft/tools/build-cad.mjs [model name]
+// Run from the repo root: node tools/build-cad.mjs [model name]
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
-const require = createRequire(path.join(here, '../../toolkit/x.js'));
+const require = createRequire(path.join(here, '../toolkit/x.js'));
 const { MeshoptSimplifier } = require('meshoptimizer');
 const occtImport = require('occt-import-js');
 await MeshoptSimplifier.ready;

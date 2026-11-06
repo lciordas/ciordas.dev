@@ -1,5 +1,5 @@
 // The logos in the overview's intro strip, in their own colours for a dark page.
-// Run from the repo root: node draft/tools/build-logos.mjs
+// Run from the repo root: node tools/build-logos.mjs
 // Sources in toolkit/sources: Regis's wordmark from regis.org (its version for dark backgrounds), Columbia's from
 // Wikimedia Commons (public domain; navy turned to Columbia blue so it shows on dark), the Summer Science
 // Program's from ssp.org, the wide NeurIPS logo from neurips.cc (its dark grey lettering lightened), and LinkedIn's stealth startup badge.
@@ -7,9 +7,9 @@ import { createRequire } from 'node:module';
 import fs from 'node:fs'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
-const require = createRequire(path.join(here, '../../toolkit/x.js'));
+const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp');
-const SRC = path.join(here, '../../toolkit/sources'), OUT = path.join(here, '../media/logos');
+const SRC = path.join(here, '../toolkit/sources'), OUT = path.join(here, '../media/logos');
 const H = 120;
 const svg = (file, edit = (s) => s) => sharp(Buffer.from(edit(fs.readFileSync(path.join(SRC, file), 'utf8'))), { density: 600 });
 // The badge is grey on black: its black becomes see-through, so it sits on the page like the others.

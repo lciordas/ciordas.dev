@@ -1,5 +1,5 @@
 // Cuts short muted web videos from source footage.
-// Run from the repo root: node draft/tools/build-video.mjs [clip name]
+// Run from the repo root: node tools/build-video.mjs [clip name]
 // A clip with `follow` keeps its subject in the middle of the frame and removes camera shake from around it.
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
@@ -7,9 +7,9 @@ import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path'
 import { fileURLToPath } from 'node:url';
 import { trackCamera, trackSubject, lowpass } from './track.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
-const require = createRequire(path.join(here, '../../toolkit/x.js'));
+const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp');
-const HOME = os.homedir(), OUT = path.join(here, '../media/video'), FRAMES = path.join(here, '../../toolkit/frames');
+const HOME = os.homedir(), OUT = path.join(here, '../media/video'), FRAMES = path.join(here, '../toolkit/frames');
 const MAKER = `${HOME}/Downloads/maker_portfolio_v1.mp4`, ICLOUD = `${HOME}/Downloads/iCloud Photos`;
 const encode = ['-an', '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '24', '-preset', 'slow', '-movflags', '+faststart'];
 const CLIPS = {

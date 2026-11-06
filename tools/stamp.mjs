@@ -1,6 +1,6 @@
 // Stamps the page's styles and scripts with a short code from their contents, so a browser fetches a changed
 // file at once instead of reusing its saved copy for up to ten minutes. Run from the repo root before
-// publishing: node draft/tools/stamp.mjs
+// publishing: node tools/stamp.mjs
 import crypto from 'node:crypto';
 import fs from 'node:fs'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
