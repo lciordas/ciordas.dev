@@ -1,9 +1,10 @@
 // Draws the NeurIPS paper's cover for the overview and its three slides (title, programme, and the paper's figures),
-// with the site's fonts. Slides are laid out on a 1600×900 grid and drawn at twice that, for sharp text on retina
-// screens. Run from the repo root: node tools/build-paper.mjs
+// with the site's fonts. The slides are SVG on a 1600×900 grid, their words as vector paths, so they stay as sharp as
+// the page's own text at any size: a picture of text, scaled down to fit, always came out soft. Only the title's photo
+// is a picture, inside its SVG. Run from the repo root: node tools/build-paper.mjs
 // Sources, downloaded once into toolkit/sources: the NeurIPS logo from neurips.cc, and Benh LIEU SONG's photo of the
 // Sydney Opera House and Harbour Bridge from Wikimedia Commons (CC BY-SA 4.0, credited in the slide's caption).
-// The figures are cut from the paper's PDF with pdftoppm.
+// The figures are cut from the paper's PDF as vectors with pdftocairo.
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
@@ -56,10 +57,22 @@ const INK = '#f4efe8', MUTED = 'rgba(244,239,232,.68)', ACCENT = '#ffb98a';
 const TITLE = 'Plan Shallow While You Learn', SUB = 'Reallocating Planning Compute During World-Model Adaptation';
 const AUTHORS = [['Nicholas Ciordas', INK], ['  ·  ', MUTED], ['Jan Safrata', INK], ['  ·  ', MUTED], ['Lucas Ciordas', ACCENT], ['  ·  ', MUTED], ['David Safrata', INK]];
 const logoPng = (h) => sharp(fs.readFileSync(logo), { density: Math.round((h / 36) * 72) }).png().toBuffer();
+// The same logo as vector, h tall at x, y: its 36×36 drawing with Inkscape's extras dropped, and its "NeurIPS" (set in
+// whatever sans the viewer has) drawn as a path, so it looks the same everywhere.
+function logoSvg(x, y, h) {
+  const src = fs.readFileSync(logo, 'utf8');
+  const g = src.match(/<g[\s\S]*?<\/g>/)[0].replace(/\s(inkscape|sodipodi):[\w-]+="[^"]*"/g, '').replace(/\s(id|height|width)="[^"]*"/g, '');
+  const word = line(REG, [['NeurIPS', '#b3b3b3']], 6.06136, 11.368404, 18.40287);
+  return `<svg x="${x}" y="${y}" width="${h}" height="${h}" viewBox="0 0 36 36">${g}<g transform="scale(0.91392935,1.0941765)">${word}</g></svg>`;
+}
+const writeSvg = (name, body, W = 1600, H = 900) => {
+  const f = path.join(OUT, `${name}.svg`);
+  fs.writeFileSync(f, `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${body}</svg>`);
+  console.log(name, `${(fs.statSync(f).size / 1024).toFixed(0)} KB`);
+};
 // Drawn k times the size it's laid out at.
 const svg = (w, h, body, k = 1) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w * k}" height="${h * k}" viewBox="0 0 ${w} ${h}">${body}</svg>`);
 const K = 2;
-const save = (img, name, opts) => img.webp({ effort: 6, smartSubsample: true, ...opts }).toFile(path.join(OUT, `${name}.webp`));
 
 // The photo with a dark wash on the left and bottom, where the words sit.
 async function backdrop(w, h, crop, shade, k = 1, src = photo, wash = null) {
@@ -99,9 +112,11 @@ async function title() {
   wrap(MED, SUB, 34, 900).forEach((l) => { body.push(line(MED, [[l, INK]], 34, X, y)); y += 46; });
   body.push(line(REG, AUTHORS, 26, X, y + 30));
   body.push(line(MED, [['Sydney  ·  December 12, 2026', MUTED]], 24, X, y + 82));
+  // The photo and its dark wash are the one picture, at twice the grid; the words and logo go over it as vectors.
   const shade = await wash(W * K, H * K, [[0, 0.95], [0.5, 0.78], [0.85, 0.12]]);
-  const img = await backdrop(W, H, { left: 0, top: 0, width: 3840, height: 1518 }, body.join(''), K, photoBig, shade);
-  await save(sharp(await img.toBuffer()).composite([{ input: await logoPng(190 * K), left: (X - 20) * K, top: 70 * K }]), 'title', { quality: 88 });
+  const img = await backdrop(W, H, { left: 0, top: 0, width: 3840, height: 1518 }, '', K, photoBig, shade);
+  const photoData = (await sharp(await img.toBuffer()).webp({ quality: 84, effort: 6, smartSubsample: true }).toBuffer()).toString('base64');
+  writeSvg('title', `<image width="${W}" height="${H}" preserveAspectRatio="none" xlink:href="data:image/webp;base64,${photoData}"/>${logoSvg(X - 20, 70, 190)}${body.join('')}`);
 }
 
 // Three of the workshop's accepted papers, from its schedule on neurips.cc, with this one marked.
@@ -124,59 +139,53 @@ async function programme() {
     body.push(line(REG, by, 24, X, y + ts.length * 44 + 4));
     y += h + 66;
   }
-  // A purple glow from the top right corner, worked out pixel by pixel like the title's wash.
-  const w = W * K, h = H * K, buf = Buffer.alloc(w * h * 4);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const d = Math.hypot(((x + 0.5) / w - 0.92) / 0.7, ((y + 0.5) / h - 0.05) / 0.7);
-    buf.set([0x7a, 0x4f, 0xa8, Math.round(255 * 0.32 * Math.max(0, 1 - d))], (y * w + x) * 4);
-  }
-  const glow = await sharp(buf, { raw: { width: w, height: h, channels: 4 } }).png().toBuffer();
-  const base = await sharp({ create: { width: w, height: h, channels: 3, background: '#0e0c0b' } }).composite([{ input: glow }]).png().toBuffer();
-  await save(sharp(base).composite([{ input: svg(W, H, body.join(''), K) }, { input: await logoPng(130 * K), left: (X - 14) * K, top: 66 * K }]), 'programme', { quality: 90 });
+  // A purple glow from the top right corner: an ellipse 0.7 of the slide across each way, fading out linearly.
+  const glow = `<defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="${W * 0.92}" cy="${H * 0.05}" r="${W * 0.7}" gradientTransform="translate(${W * 0.92} ${H * 0.05}) scale(1 ${H / W}) translate(${-W * 0.92} ${-H * 0.05})"><stop offset="0" stop-color="#7a4fa8" stop-opacity=".32"/><stop offset="1" stop-color="#7a4fa8" stop-opacity="0"/></radialGradient></defs><rect width="${W}" height="${H}" fill="#0e0c0b"/><rect width="${W}" height="${H}" fill="url(#g)"/>`;
+  writeSvg('programme', `${glow}${logoSvg(X - 14, 66, 130)}${body.join('')}`);
 }
 
 // The paper's three figures on one white slide: depth and reallocation side by side, the deployment streams wide
-// below, all at one scale so their lettering matches. Each is cut from its page (fractions of a letter page),
-// rendered at 600 dpi and trimmed to its ink. The paper's Figure 3 clips the last 0 of its top-right "1000", so that
-// digit is redrawn from the 0 beside it (page pixels at 600 dpi: source x, y, w, h, then destination x).
+// below, all at one scale so their lettering matches. Each is cut from its page (fractions of a letter page) as SVG
+// with pdftocairo and framed to its ink. The paper's Figure 3 clips the last 0 of its top-right "1000"; dropping that
+// one clip (the "unclip" id) brings the digit back.
 const FIGS = [
   ['1  Return vs. imagination depth', 2, 0.2, 0.05, 0.62, 0.215],
   ['2  Gain from reallocation, same budget', 3, 0.15, 0.05, 0.7, 0.16],
-  ['3  Deployment streams on the drag tiers', 4, 0.12, 0.045, 0.76, 0.273, [4157, 1234, 22, 42, 4184]],
+  ['3  Deployment streams on the drag tiers', 4, 0.12, 0.045, 0.76, 0.273, 'clip-5'],
 ];
 async function figures() {
-  const DPI = 600, tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'paper-'));
-  const figs = [];
-  for (const [label, page, fx, fy, fw, fh, fix] of FIGS) {
-    const pre = path.join(tmp, `p${page}`), Wp = 8.5 * DPI, Hp = 11 * DPI, ox = Math.round(fx * Wp), oy = Math.round(fy * Hp);
-    execFileSync('pdftoppm', ['-r', String(DPI), '-f', String(page), '-l', String(page), '-singlefile', '-png', '-x', String(ox), '-y', String(oy), '-W', String(Math.round(fw * Wp)), '-H', String(Math.round(fh * Hp)), PAPER, pre]);
-    let img = sharp(`${pre}.png`).flatten({ background: '#ffffff' });
-    if (fix) {
-      const [x, y, w, h, to] = fix;
-      const digit = await sharp(`${pre}.png`).flatten({ background: '#ffffff' }).extract({ left: x - ox, top: y - oy, width: w, height: h }).png().toBuffer();
-      img = sharp(await img.composite([{ input: digit, left: to - ox, top: y - oy }]).png().toBuffer());
-    }
-    const buf = await img.trim({ threshold: 12 }).png().toBuffer();
-    const { width, height } = await sharp(buf).metadata();
-    figs.push({ label, buf, w: width, h: height });
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'paper-')), figs = [];
+  for (const [i, [label, page, fx, fy, fw, fh, unclip]] of FIGS.entries()) {
+    const f = path.join(tmp, `p${page}.svg`), pt = (v) => String(Math.round(v));
+    execFileSync('pdftocairo', ['-svg', '-f', String(page), '-l', String(page), '-x', pt(fx * 612), '-y', pt(fy * 792), '-W', pt(fw * 612), '-H', pt(fh * 792), PAPER, f]);
+    let src = fs.readFileSync(f, 'utf8');
+    if (unclip) src = src.replace(`<g clip-path="url(#${unclip})">`, '<g>');
+    // Where the ink is, in the SVG's own points: drawn at 600 dpi and trimmed to it.
+    const D = 600 / 72, { info } = await sharp(Buffer.from(src.replace(/(width|height)="([\d.]+)pt"/g, '$1="$2"')), { density: 600 }).flatten({ background: '#fff' }).trim({ threshold: 12 }).toBuffer({ resolveWithObject: true });
+    const box = { x: -info.trimOffsetLeft / D, y: -info.trimOffsetTop / D, w: info.width / D, h: info.height / D };
+    // Its insides, ids made unique per figure, coordinates to two decimals.
+    const inner = src.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '')
+      .replace(/id="/g, `id="f${i}-`).replace(/(href|url\()(=")?#/g, (m) => m.replace('#', `#f${i}-`))
+      .replace(/ (d|x|y)="([^"]*)"/g, (m, k, v) => ` ${k}="${v.replace(/(\d+\.\d\d)\d+/g, '$1')}"`);
+    figs.push({ label, inner, box, w: box.w, h: box.h });
   }
   fs.rmSync(tmp, { recursive: true, force: true });
-  // Laid out in slide pixels at full size. One scale s (slide px per source px) for all three, as large as fits.
-  const W = 1600 * K, H = 900 * K, M = 50 * K, GAP = 50 * K, LH = 40 * K, LS = 22 * K;
+  // Laid out on the 1600×900 grid. One scale s (grid units per point) for all three, as large as fits.
+  const W = 1600, H = 900, M = 50, GAP = 50, LH = 40, LS = 22;
   const [a, b, c] = figs;
   const s = Math.min((W - 2 * M - GAP) / (a.w + b.w), (W - 2 * M) / c.w, (H - 2 * M - 2 * LH - GAP) / (Math.max(a.h, b.h) + c.h));
-  const sz = (f) => ({ w: Math.round(f.w * s), h: Math.round(f.h * s) });
-  const [A, B, C] = figs.map(sz);
-  const topH = Math.max(A.h, B.h), used = 2 * LH + topH + GAP + C.h, y0 = Math.round((H - used) / 2);
-  const rowW = A.w + GAP + B.w, x0 = Math.round((W - rowW) / 2);
+  const [A, B, C] = figs.map((f) => ({ w: f.w * s, h: f.h * s }));
+  const topH = Math.max(A.h, B.h), used = 2 * LH + topH + GAP + C.h, y0 = (H - used) / 2;
+  const rowW = A.w + GAP + B.w, x0 = (W - rowW) / 2;
   const place = [
     [a, A, x0, y0 + LH + (topH - A.h)],
     [b, B, x0 + A.w + GAP, y0 + LH + (topH - B.h)],
-    [c, C, Math.round((W - C.w) / 2), y0 + LH + topH + GAP + LH],
+    [c, C, (W - C.w) / 2, y0 + LH + topH + GAP + LH],
   ];
-  const labels = place.map(([f, , x, y]) => { const [num, ...rest] = f.label.split('  '); return line(SEMI, [[`FIG. ${num}`, '#b4561f'], [`   ${rest.join(' ')}`, '#57514b']], LS, x, y - 18 * K, { ls: 0.02 }); }).join('');
-  const comps = await Promise.all(place.map(async ([f, d, left, top]) => ({ input: await sharp(f.buf).resize(d.w, d.h, { kernel: 'lanczos3' }).png().toBuffer(), left, top })));
-  await save(sharp(svg(W, H, `<rect width="100%" height="100%" fill="#ffffff"/>${labels}`)).composite(comps), 'figures', { quality: 90 });
+  const r = (v) => n(v);
+  const labels = place.map(([f, , x, y]) => { const [num, ...rest] = f.label.split('  '); return line(SEMI, [[`FIG. ${num}`, '#b4561f'], [`   ${rest.join(' ')}`, '#57514b']], LS, x, y - 18, { ls: 0.02 }); }).join('');
+  const art = place.map(([f, d, x, y]) => `<svg x="${r(x)}" y="${r(y)}" width="${r(d.w)}" height="${r(d.h)}" viewBox="${r(f.box.x)} ${r(f.box.y)} ${r(f.box.w)} ${r(f.box.h)}">${f.inner}</svg>`).join('');
+  writeSvg('figures', `<rect width="${W}" height="${H}" fill="#ffffff"/>${labels}${art}`);
 }
 
 fs.mkdirSync(OUT, { recursive: true });

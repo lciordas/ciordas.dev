@@ -537,12 +537,16 @@
       "thumb": "protein-classifier",
       "media": [
         {
-          "src": "media/projects/protein-classifier/poster.webp",
-          "caption": "Research poster."
-        },
-        {
-          "src": "media/projects/protein-classifier/notebook.webp",
-          "caption": "Sequence length analysis in the project notebook."
+          "src": "media/projects/protein-classifier/charts.webp",
+          "caption": "Accuracy and sequence length bias",
+          "points": [
+            "**Fig. 2.1** Protein model: as the data shrinks to 10%, raw accuracy falls from **~89%** to **~78%**, adjusted from **~80%** to **~69%**.",
+            "**Fig. 2.2** Genome model: raw accuracy stays near **95–97%**, but adjusted accuracy is only **~50–53%**.",
+            "**Fig. 3.1** Alzheimer's-associated proteins skew shorter, peaking near **200–300** amino acids against **400–500** for the rest.",
+            "**Fig. 3.2** Non-Alzheimer's genes are dominated by a spike of **~17,000** sequences under **100** nucleotides.",
+            "Length differs between the classes, so the classifier controls for it: **80.3%** accuracy."
+          ],
+          "light": true
         }
       ]
     },
