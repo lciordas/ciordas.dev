@@ -81,7 +81,8 @@ body.is-editing .ov-hero-name { visibility: visible; }
 .ov-fact li > span { color: var(--muted); }
 .ov-fact li > span strong { font-weight: 600; color: var(--ink); }
 /* Papers one under another, honors in two columns, so long titles have room. */
-.ov-fact--research ul { flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+.ov-fact--research { padding-top: clamp(10px, 1.9vh, 18px); padding-bottom: clamp(10px, 1.9vh, 18px); }
+.ov-fact--research ul { flex-direction: column; flex-wrap: nowrap; gap: clamp(10px, 1.7vh, 16px); }
 .ov-fact--distinctions ul { flex-direction: column; flex-wrap: nowrap; gap: 3px; }
 .rrow { display: flex; align-items: center; gap: 14px; padding: 6px 10px 6px 6px; margin: -6px 0 -6px -6px; border-radius: 12px; color: var(--ink); text-decoration: none; outline: none; transition: background-color .18s ease, color .18s ease, box-shadow .18s ease; }
 .rrow img { flex: none; width: clamp(44px, 3.8vw, 58px); aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: #1a1815; }

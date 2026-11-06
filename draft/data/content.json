@@ -398,7 +398,7 @@
     },
     "asteroid-orbit": {
       "title": "Orbit of Asteroid 1991 JF1",
-      "tag": "Summer Science Program · Research paper",
+      "tag": "Summer Science Program",
       "kind": "detail",
       "summary": "In a team of three, determined the orbit of asteroid 1991 JF1 from original observations: imaging over three nights, plate solving for celestial coordinates, and computing orbital elements with the Method of Gauss. Results were written up as a technical paper and submitted to the Minor Planet Center.",
       "tech": [
