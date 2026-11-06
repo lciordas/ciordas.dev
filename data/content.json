@@ -349,11 +349,25 @@
         },
         {
           "src": "media/projects/chess-engine/bitboards.webp",
-          "caption": "Bitboards: the position as twelve 64-bit integers, so moves for every piece of a type come from a few shifts and masks. [Chess Programming Wiki](https://www.chessprogramming.org/Bitboards)"
+          "caption": "Bitboards: the board as integers",
+          "points": [
+            "**12** integers of **64 bits**, one per piece type and color.",
+            "Each bit is a square: **a1** is bit **0**, **h8** is bit **63**.",
+            "One shift and mask moves **every piece** of a type at once.",
+            "**Magic bitboards** turn sliding attacks into one table lookup.",
+            "More: [Chess Programming Wiki](https://www.chessprogramming.org/Bitboards)"
+          ]
         },
         {
           "src": "media/projects/chess-engine/nnue.webp",
-          "caption": "NNUE: a neural network scores the position, and each move updates only the few inputs it changes. [Chess Programming Wiki](https://www.chessprogramming.org/NNUE)"
+          "caption": "NNUE: an efficiently updatable neural network",
+          "points": [
+            "Replaces handcrafted terms: material, piece tables, king safety.",
+            "Inputs are piece–square pairs; at most **32** are on.",
+            "A move flips **2–4** inputs; the first layer updates incrementally.",
+            "Small later layers keep evaluation fast on a **CPU**.",
+            "More: [Chess Programming Wiki](https://www.chessprogramming.org/NNUE)"
+          ]
         }
       ]
     },
