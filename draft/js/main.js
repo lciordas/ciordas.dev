@@ -61,7 +61,7 @@ let content = null;
 const loadContent = async () => {
   // The editor's preview shows unpublished work saved in this browser.
   if (params.has('draft')) { try { content = JSON.parse(localStorage.getItem('lc-content-draft')); } catch { content = null; } }
-  content = content || await (await fetch('data/content.json')).json();
+  content = content || await (await fetch('data/content.json', { cache: 'no-cache' })).json(); // always the latest words
   return content;
 };
 const showPortfolio = async (direct) => {

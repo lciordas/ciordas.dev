@@ -39,6 +39,7 @@ Animated projects sit in a rounded window on the left, with the project's bullet
 Pictures and clips for a project (`media` in `data/content.json`) sit in a sideways gallery on the left two thirds of the screen, with each picture's caption on the right and the project's heading and description above, all on one screen; the pictures size themselves to the room left. Scrolling down slides the row across one picture at a time, each holding still for a while; scrolling sideways, the left and right arrow keys, the arrow buttons, or clicking the next picture also move it. It sits below an animated project's demo, and is the whole page for projects without one. A clip in it plays while it holds. The gallery's size is `--sw` in `css/site.css`, and the scroll each picture takes is `SLIDE_VH` in `js/projects/work.js`.
 
 - Add `?to=overview` to the address to skip the intro.
+- `node draft/tools/stamp.mjs` before publishing: stamps the stylesheet and scripts in `index.html` with codes from their contents, so visitors get changes at once rather than a copy saved for up to ten minutes.
 - `node draft/tools/build-frames.mjs`, then `node draft/tools/build-video.mjs dog-walk` and `node draft/tools/build-video.mjs dog`, rebuild the dog's video (steadied frames go in the local `toolkit/frames`). Clip times are at the top of each file.
 - `node draft/tools/build-cad.mjs [model]` rebuilds the CAD files from the STEP and FreeCAD files.
 Both tools need the local `toolkit` folder, plus the source files in Downloads.
