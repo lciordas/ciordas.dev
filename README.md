@@ -4,7 +4,8 @@ Personal site for Lucas Ciordas, hosted on GitHub Pages at https://ciordas.dev.
 
 ## How it works
 
-- `index.html` is the home page. Edit it and push to `main`; GitHub Pages redeploys automatically within a minute or two.
+- The site is in `draft/` (see `draft/README.md`). The top-level `index.html` just sends visitors there. Push to `main` and GitHub Pages redeploys within a minute or two.
+- The editor for the site's words is at `/draft/edit/`.
 - `CNAME` tells GitHub Pages which custom domain this site answers to. Don't delete it.
 
 ## Making changes
