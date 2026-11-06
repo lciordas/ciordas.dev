@@ -216,7 +216,9 @@ export function mountWork(container, options = {}) {
       it.fit = h / r.height; // camera distances are set for a window that fills the screen's height
       if (it.cad) {
         it.cad.resize(w, h, dpr);
-        it.cad.setShift(r.left + r.width / 2 - w / 2, r.top + r.height / 2 - h / 2);
+        // Measured against the section's own screen, so it's right wherever the page happens to be scrolled.
+        const st = it.cadC.getBoundingClientRect();
+        it.cad.setShift(r.left - st.left + r.width / 2 - st.width / 2, r.top - st.top + r.height / 2 - st.height / 2);
         const v = it.cfg.views[0];
         it.cad.setScatter({ ...v, dist: v.dist * it.fit }, w / h);
       }
