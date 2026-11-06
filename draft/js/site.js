@@ -48,9 +48,8 @@ export function renderOverview(root, c) {
   const across = c.columns.map((col) => Math.max(1, Math.ceil(col.items.filter((id) => c.projects[id]).length / 2)));
   const extras = c.style?.showExtras === true;
   const other = c.other?.items?.length ? `<div class="ov-other"><h3 data-edit="other.title">${esc(c.other.title)}</h3><ul>${c.other.items.map((it, i) => `<li><img src="${esc(it.image)}" alt="${esc(it.title)}" loading="lazy" decoding="async"><strong data-edit="other.items.${i}.title">${esc(it.title)}</strong><span data-edit="other.items.${i}.detail">${esc(it.detail)}</span></li>`).join('')}</ul></div>` : '';
-  // The intro's first sentence is set in bold, along with any **marked** words.
-  const intro = String(c.site.intro || ''), cut = intro.indexOf('. ') + 1;
-  const bio = cut > 0 ? `<strong>${rich(intro.slice(0, cut))}</strong>${rich(intro.slice(cut))}` : rich(intro);
+  // Words **marked** in the intro are set in bold.
+  const intro = String(c.site.intro || ''), bio = rich(intro);
   const icons = (cls) => `<nav class="ov-links ${cls}" aria-label="Links">${(c.site.links || []).map(link).join('')}</nav>`;
   const research = (c.research?.items || []).filter((id) => c.projects[id]).map((id) => {
     const p = c.projects[id];
@@ -177,7 +176,8 @@ export function mountSite({ root, work, content, onReplay }) {
     if (r.top < 0 || r.bottom > innerHeight) { if (work.lenis) work.lenis.scrollTo(best, { offset: -innerHeight * 0.3 }); else best.scrollIntoView({ block: 'center' }); }
   });
   addEventListener('scroll', () => {
-    const past = window.scrollY > root.offsetHeight - innerHeight * 0.25;
+    // Only once the overview's own bar has gone, so the two never sit on top of each other.
+    const past = window.scrollY > root.offsetHeight - (bar?.offsetHeight || 64);
     back.classList.toggle('on', past);
     // Back at the top after a single project: show everything in order again.
     if (window.scrollY < innerHeight * 0.2 && work.focused()) {

@@ -52,7 +52,7 @@ const moveIn = (arr, i, d) => { const j = i + d; if (j < 0 || j >= arr.length) r
 const TABS = {
   overview() {
     const out = [el('p', { className: 'note', textContent: 'Order and contents of the overview. The scroll order of the project pages follows these lists.' }),
-      el('h2', { textContent: 'Heading' }), field('Name', 'site.name'), field('Intro under the name (the first sentence is bold)', 'site.intro', { long: true }), field('Hint at the top right', 'site.hint')];
+      el('h2', { textContent: 'Heading' }), field('Name', 'site.name'), field('Intro under the name (wrap words in **double asterisks** for bold)', 'site.intro', { long: true }), field('Hint at the top right', 'site.hint')];
     c.columns.forEach((col, k) => {
       out.push(el('h2', { textContent: `Column ${k + 1}` }), field('Column title', `columns.${k}.title`));
       col.items.forEach((id, i) => out.push(el('div', { className: 'item' },

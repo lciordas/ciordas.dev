@@ -173,7 +173,7 @@ html.lenis, html.lenis body { height: auto; }
 .head { position: absolute; z-index: 4; left: var(--rx); bottom: calc(50% + var(--rh) / 2 + 14px); margin: 0; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: clamp(22px, 2.4vw, 36px); line-height: 1; letter-spacing: .01em; text-transform: uppercase; opacity: 0; }
 .scan { position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -.5px; background: #ffe9cf; box-shadow: 0 0 22px 4px rgba(255, 196, 134, .62), 0 0 90px 22px rgba(255, 170, 104, .2); opacity: 0; pointer-events: none; }
 /* The bullets beside the window: always all there, the current one lit. */
-.points { position: absolute; z-index: 4; left: calc(var(--rx) + var(--rw) + var(--gap)); top: var(--ry); width: var(--side); height: var(--rh); margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; justify-content: center; gap: clamp(10px, 1.8vh, 18px); }
+.points { position: absolute; z-index: 4; left: calc(var(--rx) + var(--rw) + var(--gap) - 18px); top: var(--ry); width: calc(var(--side) + 18px); height: var(--rh); margin: 0; padding: 18px; box-sizing: border-box; list-style: none; display: flex; flex-direction: column; justify-content: center; gap: clamp(10px, 1.8vh, 18px); border-radius: clamp(14px, 1.4vw, 22px); background: rgba(11, 10, 9, .9); box-shadow: inset 0 0 0 1px rgba(244, 239, 232, .07); }
 .point { --on: 0; position: relative; padding-left: 16px; font-size: clamp(13.5px, 1.08vw, 16.5px); line-height: 1.42; font-weight: 500; color: #f7f2ea; opacity: calc(.4 + var(--on) * .6); }
 .point::before { content: ""; position: absolute; left: 0; top: .2em; bottom: .2em; width: 2px; border-radius: 2px; background: var(--glow); opacity: calc(.18 + var(--on) * .82); }
 .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(244, 239, 232, .1); }
@@ -250,6 +250,6 @@ html { overscroll-behavior-x: none; }
 /* Upright screens: the window goes back to the middle and only the current bullet shows, below it. */
 @media (max-aspect-ratio: 9/10) {
   .stage { --rw: 92vw; --rx: 4vw; }
-  .points { left: var(--rx); top: calc(var(--ry) + var(--rh) + 16px); width: var(--rw); height: auto; justify-content: flex-start; display: grid; }
+  .points { left: var(--rx); top: calc(var(--ry) + var(--rh) + 12px); width: var(--rw); height: auto; padding: 12px 14px; justify-content: flex-start; display: grid; }
   .point { grid-area: 1 / 1; opacity: var(--on); }
 }
