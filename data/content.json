@@ -242,7 +242,12 @@
         "Iterative deepening",
         "NNUE"
       ],
-      "links": [],
+      "links": [
+        {
+          "label": "Play it on Lichess",
+          "url": "https://lichess.org/@/lc-bot"
+        }
+      ],
       "thumb": "chess-engine",
       "media": [
         {
