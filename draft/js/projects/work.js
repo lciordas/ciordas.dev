@@ -29,7 +29,7 @@ const ANIMATED = {
     assemble: [0.03, 0.52], title: [0.08, 0.2], wipe: [0.62, 0.68], clipAt: 0.68,
     copyAt: [[0.28, 0.6], [0.7, 1]],
   },
-  // Lined up with the first frame of the video. Its four shots run 0 to 6 s, 6 to 10.6 s, 10.6 to 17 s, and 17 to 24 s.
+  // Lined up with the first frame of the video. Its four shots run 0 to 6 s, 6 to 9.3 s, 9.3 to 15.8 s, and 15.8 to 22.8 s.
   'robot-dog': {
     model: 'dog', up: [0, 0, 1.5325], fov: 34.28, length: 560, clip: 'media/video/dog.mp4',
     views: [
@@ -38,7 +38,7 @@ const ANIMATED = {
       { p: 0.6, az: 0.3256, el: 0.3072, dist: 3.4439, tx: 0.1741, ty: -0.1379, tz: -0.0126 },
     ],
     assemble: [0.03, 0.5], title: [0.07, 0.18], wipe: [0.6, 0.66], clipAt: 0.66,
-    copyAt: [[0.2, 0.42], [0.44, 0.6], { t: [0, 10.6] }, { t: [10.6, 17.02] }, { t: [17.02, 24.03] }],
+    copyAt: [[0.2, 0.42], [0.44, 0.6], { t: [0, 9.33] }, { t: [9.33, 15.75] }, { t: [15.75, 22.76] }],
   },
 };
 
