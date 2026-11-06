@@ -36,11 +36,13 @@ const clip = (id, name, src, ss, t, vf = 'scale=960:-2') => {
   const dir = path.join(OUT, id); fs.mkdirSync(dir, { recursive: true });
   run('ffmpeg', '-v', 'error', '-y', ...(ss ? ['-ss', String(ss)] : []), ...(t ? ['-t', String(t)] : []), '-i', src, '-an', '-vf', `fps=30,${vf},pad=ceil(iw/2)*2:ceil(ih/2)*2`, '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '26', '-preset', 'slow', '-movflags', '+faststart', path.join(dir, `${name}.mp4`));
 };
-const thumb = async (id, src, { position = 'centre', flat = false } = {}) => {
+// The overview's project cards. Photos fill a square; graphs fit inside it on white so nothing is cut off.
+const thumb = async (id, src, { position = 'centre', flat = false, crop = null } = {}) => {
   fs.mkdirSync(THUMBS, { recursive: true });
   let img = sharp(src).rotate();
+  if (crop) img = sharp(await img.extract(crop).png().toBuffer());
   if (flat) img = img.flatten({ background: '#ffffff' });
-  await img.resize(192, 128, { fit: 'cover', position }).webp({ quality: 74, effort: 5 }).toFile(path.join(THUMBS, `${id}.webp`));
+  await img.resize(840, 840, flat ? { fit: 'contain', background: '#ffffff' } : { fit: 'cover', position }).webp({ quality: 72, effort: 5 }).toFile(path.join(THUMBS, `${id}.webp`));
 };
 
 // Hardware.
@@ -72,7 +74,7 @@ await still('ship-in-a-bottle', 'finished', shipRaw, { width: 1000, crop: { left
 clip('ship-in-a-bottle', 'rigging', `${OLD}/22_ship_rigging_masts.mp4`);
 clip('ship-in-a-bottle', 'inserting', `${OLD}/24_ship_inserting_into_bottle.mp4`);
 clip('ship-in-a-bottle', 'raising', `${OLD}/25_ship_raising_masts_in_bottle.mp4`);
-await thumb('ship-in-a-bottle', shipDone);
+await thumb('ship-in-a-bottle', shipRaw, { crop: { left: 470, top: 150, width: 860, height: 640 } });
 
 // Other projects: one photo each.
 const ev = await frame(`${OLD}/11_ev_closeup.mp4`, 1.4);

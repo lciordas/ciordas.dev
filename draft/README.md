@@ -7,7 +7,7 @@ Lucas's own site, in progress. So far it holds only the opening sequence and a p
 1. The name's outlines trace themselves with a soft glow (`js/trace.js`).
 2. Render windows pop open, then a block wipe reveals the 3D name (`js/render-windows.js`, `js/film-post.js`).
 3. The letters float on springs and nudge every few seconds to invite a click (`js/name.js`).
-4. Clicking cracks the name from that point and bursts it into shards (`js/name.js`, timed in `js/main.js`). A prompt under the name ("Scroll", or "Tap" on touch screens) means scrolling down, swiping up, tapping, or the down arrow breaks it from the middle.
+4. Clicking cracks the name from that point and bursts it into shards (`js/name.js`, timed in `js/main.js`). A prompt at the bottom takes one step per scroll gesture, swipe, tap, or down-arrow press: during the intro ("Scroll to skip") it jumps straight to the name, and on the name ("Scroll") it breaks it from the middle.
 
 ## The letter material
 
@@ -30,7 +30,7 @@ Run `node draft/tools/build-name.mjs` from the repo root. It needs the local `to
 
 ## Project sections
 
-After the name shatters, the overview page is underneath it: projects in two columns, then distinctions and experience. Arrow keys and Enter work as well as the mouse. Scrolling down from it walks through every project. Choosing one opens that project alone, right below the overview, so scrolling back up returns to the overview; Esc and the Overview button also go back. Project addresses look like `/draft/#robot-dog` and skip the intro.
+After the name shatters, the overview page is underneath it and fills the screen: the name with GitHub and email icons at the top left, and the projects as large picture cards in two columns, hardware and software. Distinctions, experience, and other projects are hidden for now (`showExtras` in `data/content.json`, or the Style tab in the editor). Card pictures come from `tools/build-media.mjs`. Arrow keys and Enter work as well as the mouse. Scrolling down from it walks through every project. Choosing one opens that project alone, right below the overview, so scrolling back up returns to the overview; Esc and the Overview button also go back. Project addresses look like `/draft/#robot-dog` and skip the intro.
 
 The words and the overview's look live in `data/content.json`. Edit them in the Editor tab (`/draft/edit/`): type on the preview, changes save in that browser, and Publish commits the file through GitHub using your own token.
 

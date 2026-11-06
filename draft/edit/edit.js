@@ -42,7 +42,7 @@ const range = (label, key, min, max, unit = 'px') => {
   return el('label', { className: 'range' }, el('span', { textContent: label }), out, input);
 };
 const toggle = (label, key) => {
-  const input = el('input', { type: 'checkbox', checked: c.style[key] !== false });
+  const input = el('input', { type: 'checkbox', checked: key === 'showExtras' ? c.style[key] === true : c.style[key] !== false });
   input.addEventListener('change', () => { c.style[key] = input.checked; changed(); });
   return el('label', { className: 'check' }, input, label);
 };
@@ -123,8 +123,8 @@ const TABS = {
     const color = el('input', { type: 'color', value: c.style.accent });
     color.addEventListener('input', () => { c.style.accent = color.value; changed(); });
     return [el('label', { className: 'check' }, color, 'Highlight color'),
-      range('Name size', 'titleSize', 22, 60), range('Project title size', 'rowSize', 14, 34), range('Space between rows', 'rowGap', 3, 20), range('Space between columns', 'columnGap', 20, 140), range('Page width', 'width', 800, 1500),
-      toggle('Show the line under each project', 'showTags'), toggle('Show pictures', 'showThumbs'), toggle('Show numbers', 'showNumbers')];
+      range('Name size', 'titleSize', 22, 72), range('Project title size', 'rowSize', 14, 34), range('Space between cards', 'rowGap', 0, 32), range('Space between columns', 'columnGap', 12, 120),
+      toggle('Show the line under each project', 'showTags'), toggle('Show pictures', 'showThumbs'), toggle('Show numbers', 'showNumbers'), toggle('Show distinctions, experience and other projects', 'showExtras')];
   },
 };
 const LABELS = { overview: 'Overview', projects: 'Projects', lists: 'Lists', style: 'Style' };

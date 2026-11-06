@@ -397,15 +397,15 @@
   },
   "style": {
     "accent": "#ffb98a",
-    "titleSize": 34,
-    "rowSize": 20,
-    "rowGap": 9,
-    "columnGap": 64,
-    "width": 1180,
+    "titleSize": 40,
+    "rowSize": 22,
+    "rowGap": 12,
+    "columnGap": 36,
     "showTags": true,
     "showNumbers": false,
     "shardDim": 0.5,
-    "showThumbs": true
+    "showThumbs": true,
+    "showExtras": false
   },
   "other": {
     "title": "Other projects",

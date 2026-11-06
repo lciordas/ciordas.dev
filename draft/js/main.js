@@ -18,16 +18,23 @@ const skipIntro = params.has('skip') || REDUCED || !!STYLE;
 const $ = (id) => document.getElementById(id);
 const canvas = $('gl'), enterBtn = $('enter'), portfolio = $('portfolio'), fallback = $('fallback');
 
-// The prompt under the name. Scrolling down, swiping up, tapping, or pressing the down arrow breaks the name.
-const cue = $('cue');
-cue.querySelector('.cue__label').textContent = matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Scroll';
+// The prompt at the bottom of the intro. Scrolling down, swiping up, tapping, or pressing the down arrow takes one
+// step: during the intro it skips to the name, and on the name it breaks it. One scroll gesture is one step, so
+// a trackpad's glide after a skip doesn't also break the name.
+const cue = $('cue'), label = cue.querySelector('.cue__label');
+const TOUCH = matchMedia('(pointer: coarse)').matches;
 let breakName = null;
-const showCue = (fn) => { breakName = fn; cue.hidden = false; requestAnimationFrame(() => cue.classList.add('on')); };
+const showCue = (fn, text) => { breakName = fn; label.textContent = text; cue.hidden = false; requestAnimationFrame(() => cue.classList.add('on')); };
 const hideCue = () => { breakName = null; cue.classList.remove('on'); setTimeout(() => { if (!breakName) cue.hidden = true; }, 700); };
 cue.addEventListener('click', () => breakName?.());
-addEventListener('wheel', (e) => { if (breakName && e.deltaY > 2) breakName(); }, { passive: true });
+let lastWheel = 0;
+addEventListener('wheel', (e) => {
+  const now = performance.now(), fresh = now - lastWheel > 320;
+  lastWheel = now;
+  if (breakName && fresh && e.deltaY > 0) breakName();
+}, { passive: true });
 addEventListener('keydown', (e) => {
-  if (!breakName || !['ArrowDown', 'PageDown', ' '].includes(e.key) || (e.key === ' ' && e.target.closest?.('button'))) return;
+  if (!breakName || e.repeat || !['ArrowDown', 'PageDown', ' '].includes(e.key) || (e.key === ' ' && e.target.closest?.('button'))) return;
   e.preventDefault(); breakName();
 });
 let touchY = null;
@@ -72,7 +79,7 @@ if (editMode) {
   canvas.style.display = 'none'; fallback.hidden = false;
   gsap.from(fallback.children, { opacity: 0, y: 18, duration: 1, stagger: 0.12, ease: 'power3.out' });
   Object.assign(enterBtn.style, { inset: '0', width: '100%', height: '100%' }); enterBtn.hidden = false;
-  showCue(() => enterBtn.click());
+  showCue(() => enterBtn.click(), TOUCH ? 'Tap' : 'Scroll');
   enterBtn.addEventListener('click', () => { hideCue(); enterBtn.hidden = true; gsap.to(fallback, { opacity: 0, duration: 0.5, onComplete: () => { fallback.hidden = true; showPortfolio(); } }); });
 } else {
   start(await (await fetch(`data/name-${fontKey}.json`)).json());
@@ -211,7 +218,7 @@ function start(data) {
     name.setActive(1);
     enterBtn.hidden = false;
     name.st.nudgeAt = S.time + 2.2;
-    showCue(() => shatter(0, 0));
+    showCue(() => shatter(0, 0), TOUCH ? 'Tap' : 'Scroll');
   };
   const runIntro = () => {
     // Jumps past the intro to review the portfolio directly.
@@ -226,6 +233,16 @@ function start(data) {
     trace.set(0);
     const d = { p: 0 };
     const tl = gsap.timeline({ delay: 0.3 });
+    // Skipping jumps to the name, which springs forward into place.
+    const skip = () => {
+      if (!['trace', 'windows', 'dissolve'].includes(S.phase)) return;
+      tl.kill();
+      if (S.phase === 'trace') name.settleIn();
+      S.backdrop?.dispose(); S.backdrop = null;
+      gsap.to(skyU.uGlow, { value: 1, duration: 0.7, ease: 'power2.out' });
+      ready();
+    };
+    showCue(skip, TOUCH ? 'Tap to skip' : 'Scroll to skip');
     tl.to(d, { p: 1, duration: 3.6, ease: 'none', onUpdate: () => trace.set(d.p) });
     tl.to({}, { duration: 0.28 });
     tl.add(() => {

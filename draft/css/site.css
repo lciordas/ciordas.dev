@@ -30,32 +30,46 @@ html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); 
 #fallback[hidden] { display: none; }
 
 /* Overview, behind the name */
-#portfolio { position: relative; z-index: 2; min-height: 100vh; min-height: 100svh; display: flex; align-items: center; justify-content: center; padding: clamp(24px, 4vh, 52px) clamp(20px, 5vw, 64px); }
+/* Overview: the whole screen. Name and links at the top left, projects as large picture cards below. */
+#portfolio { position: relative; z-index: 2; height: 100vh; height: 100svh; min-height: 560px; display: flex; padding: clamp(18px, 3vh, 34px) clamp(18px, 2.6vw, 42px) clamp(18px, 3vh, 34px); }
 #portfolio[hidden] { display: none; }
 body.is-editing { background: #050404; }
 body.is-editing [data-edit] { outline: 1px dashed transparent; outline-offset: 2px; cursor: text; border-radius: 2px; }
 body.is-editing [data-edit]:hover { outline-color: rgba(255, 185, 138, .55); }
 body.is-editing [data-edit]:focus { outline: 1px solid var(--ov-accent, #ffb98a); }
 .ov-reveal { opacity: 0; }
-.ov-inner { width: 100%; max-width: var(--ov-width, 1180px); display: flex; flex-direction: column; gap: clamp(20px, 3.4vh, 38px); }
-.ov-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
-.ov-name { margin: 0; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: calc(var(--ov-title) * 1.5); line-height: 1; letter-spacing: .005em; text-transform: uppercase; }
-.ov-tag { margin: 8px 0 0; font-size: 15px; color: var(--muted); }
-.ov-links { display: flex; gap: 18px; }
-.ov-links a, .plinks a { color: var(--ink); font-size: 14px; text-decoration: none; border-bottom: 1px solid rgba(244, 239, 232, .28); padding-bottom: 2px; }
-.ov-links a:hover, .ov-links a:focus-visible { color: var(--ov-accent, #ffb98a); border-color: currentColor; outline: none; }
-.ov-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--ov-col-gap); }
-.ov-col h2, .ov-list h2 { margin: 0 0 8px; padding-bottom: 8px; font: 500 12px "Hanken Grotesk", system-ui, sans-serif; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid rgba(244, 239, 232, .16); }
+.ov-inner { width: 100%; min-height: 0; display: flex; flex-direction: column; gap: clamp(14px, 2.6vh, 30px); }
+.ov-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.ov-id { display: grid; grid-template-columns: auto auto; justify-content: start; align-items: center; column-gap: clamp(14px, 1.6vw, 24px); row-gap: 4px; }
+.ov-name { margin: 0; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: var(--ov-title); line-height: 1; letter-spacing: .005em; text-transform: uppercase; }
+.ov-tag { grid-column: 1 / -1; margin: 0; font-size: 14px; color: var(--muted); }
+.ov-links { display: flex; align-items: center; gap: 4px; }
+.ov-links a { color: var(--ink); font-size: 14px; text-decoration: none; }
+.ov-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: rgba(244, 239, 232, .78); transition: color .2s ease, background-color .2s ease; }
+.ov-icon svg { width: 19px; height: 19px; display: block; }
+.ov-icon:hover, .ov-icon:focus-visible { color: var(--ov-accent, #ffb98a); background: rgba(255, 185, 138, .1); outline: none; }
+.plinks a { color: var(--ink); font-size: 14px; text-decoration: none; border-bottom: 1px solid rgba(244, 239, 232, .28); padding-bottom: 2px; }
+.ov-cols { flex: 1; min-height: 0; display: grid; gap: var(--ov-col-gap); }
+.ov-col { min-height: 0; display: flex; flex-direction: column; }
+.ov-col h2, .ov-list h2 { margin: 0 0 10px; padding-bottom: 8px; font: 500 12px "Hanken Grotesk", system-ui, sans-serif; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid rgba(244, 239, 232, .16); }
 .ov-col ul, .ov-list ul { list-style: none; margin: 0; padding: 0; }
-.row { position: relative; display: grid; grid-template-columns: 30px auto 1fr; column-gap: 10px; align-items: center; padding: var(--ov-row-gap) 10px var(--ov-row-gap) 0; color: var(--ink); text-decoration: none; border-bottom: 1px solid rgba(244, 239, 232, .08); outline: none; transition: padding-left .28s cubic-bezier(.2, .8, .2, 1), color .18s ease, background-color .18s ease; }
-.row__n { grid-row: span 2; font: 500 11px ui-monospace, Menlo, monospace; color: var(--muted); }
-.row__t { align-self: end; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: var(--ov-row); line-height: 1.12; letter-spacing: .012em; text-transform: uppercase; }
-.row__d { align-self: start; font-size: 13px; line-height: 1.3; color: var(--muted); }
-.row:hover, .row:focus { padding-left: 10px; color: var(--ov-accent, #ffb98a); background: rgba(255, 185, 138, .07); }
-.row:focus-visible { box-shadow: inset 2px 0 0 var(--ov-accent, #ffb98a); }
-.row__i { grid-row: span 2; width: 62px; height: 42px; object-fit: cover; border-radius: 6px; background: #1a1815; box-shadow: inset 0 0 0 1px rgba(244, 239, 232, .12); transition: transform .28s cubic-bezier(.2, .8, .2, 1); }
-.row:hover .row__i, .row:focus .row__i { transform: scale(1.05); }
-.no-thumbs .row__i { display: none; }
+/* Cards share rows through subgrid, so every picture in a row is the same height whatever its title's length. */
+.ov-col ul { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(var(--across), minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr) auto); gap: var(--ov-row-gap); }
+.ov-col li { grid-row: span 2; min-height: 0; display: grid; grid-template-rows: subgrid; }
+/* A project card: its picture fills the space above the title. */
+.row { position: relative; grid-row: span 2; min-width: 0; min-height: 0; display: grid; grid-template-rows: subgrid; row-gap: 10px; padding: 8px; color: var(--ink); text-decoration: none; border-radius: clamp(14px, 1.3vw, 20px); outline: none; transition: color .18s ease, background-color .18s ease, box-shadow .18s ease; }
+.row__f { min-height: 0; overflow: hidden; border-radius: clamp(10px, 1vw, 15px); background: #1a1815; box-shadow: inset 0 0 0 1px rgba(244, 239, 232, .12); }
+.row__i { width: 100%; height: 100%; display: block; object-fit: cover; transition: transform .5s cubic-bezier(.2, .8, .2, 1); }
+.row__x { display: grid; grid-template-columns: auto 1fr; column-gap: 9px; align-content: start; align-items: baseline; padding: 0 2px 2px; }
+.row__n { font: 500 11px ui-monospace, Menlo, monospace; color: var(--muted); }
+.row__t { font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: var(--ov-row); line-height: 1.05; letter-spacing: .012em; text-transform: uppercase; }
+.row__d { grid-column: 2; margin-top: 3px; font-size: 13px; line-height: 1.3; color: var(--muted); }
+.row:hover, .row:focus { color: var(--ov-accent, #ffb98a); background: rgba(255, 185, 138, .07); }
+.row:focus-visible { box-shadow: inset 0 0 0 1.5px var(--ov-accent, #ffb98a); }
+.row:hover .row__i, .row:focus .row__i { transform: scale(1.04); }
+.no-thumbs .row__f { display: none; }
+.no-thumbs .row { background: rgba(244, 239, 232, .04); }
+.no-thumbs .row__x { grid-row: 2; }
 .ov-other { margin-top: 12px; }
 .ov-other h3 { margin: 0 0 8px; font: 500 12px "Hanken Grotesk", system-ui, sans-serif; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
 .ov-other ul { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -63,17 +77,19 @@ body.is-editing [data-edit]:focus { outline: 1px solid var(--ov-accent, #ffb98a)
 .ov-other strong { display: block; margin-top: 6px; font-size: 13.5px; font-weight: 500; }
 .ov-other span { display: block; font-size: 12.5px; color: var(--muted); }
 .no-tags .row__d { display: none; }
-.no-numbers .row { grid-template-columns: auto 1fr; }
-.no-numbers.no-thumbs .row { grid-template-columns: 1fr; }
-.no-thumbs .row { grid-template-columns: 30px 1fr; }
+.no-numbers .row__x { grid-template-columns: 1fr; }
 .no-numbers .row__n { display: none; }
+.no-numbers .row__d { grid-column: 1; }
 .ov-extra { display: grid; grid-template-columns: 1fr 1fr; gap: var(--ov-col-gap); }
 .ov-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 14px; padding: 5px 0; font-size: 13.5px; line-height: 1.3; }
 .ov-list strong { font-weight: 500; }
 .ov-list span { color: var(--muted); font-size: 12.5px; }
-.ov-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 12px; letter-spacing: .04em; color: var(--muted); }
+.ov-foot { display: flex; align-items: center; gap: 16px; padding-top: 4px; font-size: 12px; letter-spacing: .04em; color: var(--muted); }
 #replay { pointer-events: auto; appearance: none; padding: 7px 13px; background: transparent; color: var(--muted); border: 1px solid rgba(244, 239, 232, .22); border-radius: 999px; font: 500 12px "Hanken Grotesk", system-ui, sans-serif; cursor: pointer; transition: color .2s ease, border-color .2s ease; }
 #replay:hover, #replay:focus-visible { color: var(--ink); border-color: rgba(255, 214, 176, .7); outline: none; }
+/* With the extra lists shown, the overview grows past one screen. */
+#portfolio:has(.ov-extra) { height: auto; min-height: 100svh; }
+#portfolio:has(.ov-extra) .ov-cols { flex: none; height: calc(100svh - 150px); }
 body.is-portfolio #gl { filter: brightness(.42) saturate(.9); }
 #veil { position: fixed; inset: 0; z-index: 50; background: #050404; opacity: 0; pointer-events: none; transition: opacity .19s ease; }
 #veil.on { opacity: 1; }
@@ -81,7 +97,15 @@ body.is-portfolio #gl { filter: brightness(.42) saturate(.9); }
 #to-overview::before { content: "\2190"; margin-right: 7px; }
 #to-overview.on { opacity: 1; pointer-events: auto; transform: none; }
 #to-overview:hover, #to-overview:focus-visible { border-color: rgba(255, 214, 176, .75); outline: none; }
-@media (max-width: 760px) { .ov-cols, .ov-extra { grid-template-columns: 1fr; gap: 24px; } .ov-head { flex-direction: column; align-items: flex-start; gap: 12px; } #portfolio { align-items: flex-start; } }
+@media (max-width: 760px) {
+  #portfolio { height: auto; min-height: 100svh; }
+  .ov-head { flex-direction: column; gap: 10px; }
+  .ov-foot span { display: none; }
+  .ov-cols, .ov-extra { grid-template-columns: 1fr !important; gap: 26px; }
+  .ov-col ul { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; }
+  .row__f { aspect-ratio: 4 / 3; }
+  .row__t { font-size: min(var(--ov-row), 5vw); }
+}
 
 /* Portfolio scrolling */
 html.can-scroll, html.can-scroll body { overflow: visible; height: auto; }
