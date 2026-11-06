@@ -51,12 +51,16 @@ body.is-editing [data-edit]:focus { outline: 1px solid var(--ov-accent, #ffb98a)
 .ov-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: rgba(244, 239, 232, .8); transition: color .2s ease, background-color .2s ease; }
 .ov-icon svg { width: 20px; height: 20px; display: block; }
 .ov-icon:hover, .ov-icon:focus-visible { color: var(--ov-accent, #ffb98a); background: rgba(255, 185, 138, .1); outline: none; }
-.ov-hero { min-height: calc(100vh - var(--bar) - var(--peek)); min-height: calc(100svh - var(--bar) - var(--peek)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(12px, 2.8vh, 32px); padding: clamp(0px, 1vh, 12px) 0 clamp(16px, 3vh, 36px); text-align: center; }
+.ov-hero { min-height: calc(100vh - var(--bar) - var(--peek)); min-height: calc(100svh - var(--bar) - var(--peek)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(10px, 2.2vh, 26px); padding: clamp(0px, 1vh, 12px) 0 clamp(16px, 3vh, 36px); text-align: center; }
 .ov-hero-name { margin: 0; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: clamp(52px, min(9.5vw, 13vh), 150px); line-height: .9; letter-spacing: .005em; text-transform: uppercase; white-space: nowrap; visibility: hidden; }
 body.is-editing .ov-hero-name { visibility: visible; }
 .ov-links--hero { margin-top: calc(clamp(12px, 2.8vh, 32px) * -.5); }
 .ov-links--hero .ov-icon { width: 44px; height: 44px; }
 .ov-links--hero .ov-icon svg { width: 23px; height: 23px; }
+/* A dark panel behind the words, so the drifting shards pass behind them instead of through them. */
+.ov-card { width: min(100%, 1180px); display: flex; flex-direction: column; align-items: center; gap: clamp(12px, 2.6vh, 28px); padding: clamp(18px, 3vh, 34px) clamp(18px, 3vw, 48px) clamp(10px, 1.6vh, 18px); border-radius: clamp(18px, 2vw, 30px); background: rgba(8, 7, 6, .94); box-shadow: inset 0 0 0 1px rgba(244, 239, 232, .08), 0 30px 80px rgba(0, 0, 0, .45); }
+.ov-card .ov-facts { border-top-color: rgba(244, 239, 232, .1); }
+.ov-card .ov-fact:last-child { border-bottom: 0; }
 .ov-bio { margin: 0; max-width: 40em; font-size: clamp(17px, min(1.75vw, 2.9vh), 28px); line-height: 1.42; color: rgba(244, 239, 232, .78); text-wrap: balance; }
 .ov-bio strong { font-weight: 600; color: var(--ink); }
 /* The logos slide past in a loop, faded out at both ends. */
@@ -138,6 +142,7 @@ body.is-portfolio #gl { filter: brightness(.42) saturate(.9); }
   .ov-links--bar .ov-icon svg { width: 17px; height: 17px; }
   #replay { padding: 6px 10px; white-space: nowrap; font-size: 11.5px; }
   .ov-fact { grid-template-columns: 1fr; gap: 8px; }
+  .ov-card { padding: 18px 16px 8px; }
   .ov-cols { grid-template-columns: 1fr !important; gap: 26px; }
   .ov-col ul { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; }
   .row__f { aspect-ratio: 4 / 3; }

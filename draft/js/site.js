@@ -73,12 +73,14 @@ export function renderOverview(root, c) {
       <section class="ov-hero ov-reveal" aria-label="About">
         <p class="ov-hero-name" aria-hidden="true">${esc(c.site.name)}</p>
         ${icons('ov-links--hero')}
+        <div class="ov-card">
         ${intro ? `<p class="ov-bio">${bio}</p>` : ''}
         ${strip}
         <div class="ov-facts">
           ${fact('experience')}
           ${research ? `<section class="ov-fact ov-fact--research"><h2 data-edit="research.title">${esc(c.research.title)}</h2><ul>${research}</ul></section>` : ''}
           ${fact('distinctions')}
+        </div>
         </div>
       </section>
       <div class="ov-projects">
