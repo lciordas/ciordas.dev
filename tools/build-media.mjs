@@ -21,7 +21,6 @@ const file = (p) => p;
 const frame = (src, t) => { const o = temp('png'), raw = temp('png'); run('ffmpeg', '-v', 'error', '-y', '-ss', String(t), '-i', src, '-frames:v', '1', raw); return sharp(raw).trim({ threshold: 18 }).toFile(o).then(() => o); };
 const heic = (p) => { const o = temp('jpg'); run('sips', '-s', 'format', 'jpeg', p, '--out', o); return o; };
 const deckImage = (page, index) => { const pre = path.join(tmp, `deck${n++}`); run('pdfimages', '-j', '-f', String(page), '-l', String(page), DECK, pre); return `${pre}-${String(index).padStart(3, '0')}.jpg`; };
-const pdfCrop = (pdf, page, fx, fy, fw, fh, dpi = 200) => { const pre = temp('x'); const W = 8.5 * dpi, H = 11 * dpi; run('pdftoppm', '-r', String(dpi), '-f', String(page), '-l', String(page), '-singlefile', '-png', '-x', String(Math.round(fx * W)), '-y', String(Math.round(fy * H)), '-W', String(Math.round(fw * W)), '-H', String(Math.round(fh * H)), pdf, pre); return `${pre}.png`; };
 
 // Outputs.
 const still = async (id, name, src, { width = 1280, trim = false, flat = false, crop = null } = {}) => {
@@ -102,13 +101,7 @@ await thumb('protein-classifier', poster);
 
 // Figures from the papers, leaving out the first pages with everyone's addresses.
 // The NeurIPS paper's cover and slides, its figures included, come from build-paper.mjs.
-
-const AO = fs.readdirSync(D).find((f) => f.startsWith('Orbit_Determination'));
-const star = pdfCrop(`${D}/${AO}`, 3, 0.04, 0.3, 0.46, 0.255), orbit = pdfCrop(`${D}/${AO}`, 9, 0.5, 0.08, 0.46, 0.18), photo = pdfCrop(`${D}/${AO}`, 4, 0.02, 0.05, 0.96, 0.2);
-await still('asteroid-orbit', 'field', star, { width: 900, trim: true, flat: true });
-await still('asteroid-orbit', 'orbit', orbit, { width: 900, trim: true, flat: true });
-await still('asteroid-orbit', 'photometry', photo, { width: 1200, trim: true, flat: true });
-await thumb('asteroid-orbit', star, { flat: true });
+// The asteroid paper's slide and overview card come from build-ssp.mjs.
 
 fs.rmSync(tmp, { recursive: true, force: true });
 const total = (d) => fs.readdirSync(d, { recursive: true }).reduce((a, f) => { const p = path.join(d, f); return a + (fs.statSync(p).isFile() ? fs.statSync(p).size : 0); }, 0);

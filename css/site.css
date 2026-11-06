@@ -200,6 +200,8 @@ html.lenis, html.lenis body { height: auto; }
 .gallery { --sw: min(calc(66.6vw - clamp(20px, 4vw, 64px) - clamp(56px, 7vw, 120px)), calc(60svh * 16 / 9)); }
 .gallery__head { flex: none; padding: clamp(66px, 10vh, 100px) var(--pad) 0; max-width: 1240px; }
 .gallery__head .detail__title { margin: 0 0 10px; font-size: clamp(30px, 3.8vw, 58px); }
+/* The SSP paper's full title is long, so it sets smaller with balanced lines. */
+#asteroid-orbit .gallery__head .detail__title { font-size: clamp(26px, 2.6vw, 44px); text-wrap: balance; }
 .gallery__head .detail__body { max-width: 920px; }
 .gallery__head .detail__body p { margin-bottom: 10px; font-size: clamp(14.5px, 1.1vw, 16.5px); }
 .gallery__head .tech { margin-bottom: 0; }

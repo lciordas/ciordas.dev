@@ -387,10 +387,10 @@
       "fullTitle": "Plan Shallow While You Learn: Reallocating Planning Compute During World-Model Adaptation"
     },
     "asteroid-orbit": {
-      "title": "Orbit of Asteroid 1991 JF1",
+      "title": "Orbit Determination and Photometry of the Mars-crossing Asteroid 6249 Jennifer (1991 JF1)",
       "tag": "Summer Science Program",
       "kind": "detail",
-      "summary": "In a team of three, determined the orbit of asteroid 1991 JF1 from original observations: imaging over three nights, plate solving for celestial coordinates, and computing orbital elements with the Method of Gauss. Results were written up as a technical paper and submitted to the Minor Planet Center.",
+      "summary": "In a team of three, determined the orbit of asteroid 6249 Jennifer from original observations: imaging over three nights, plate solving for celestial coordinates, and computing orbital elements with the Method of Gauss. Results were written up as a technical paper, with the observations prepared for submission to the Minor Planet Center. The paper can’t be shared publicly under the Summer Science Program’s policies.",
       "tech": [
         "Astrometry",
         "Method of Gauss",
@@ -400,18 +400,8 @@
       "thumb": "asteroid-orbit",
       "media": [
         {
-          "src": "media/projects/asteroid-orbit/field.webp",
-          "caption": "Calibrated observation, with the asteroid circled."
-        },
-        {
-          "src": "media/projects/asteroid-orbit/orbit.webp",
-          "caption": "Orbits of 6249 Jennifer and Earth in the ecliptic plane.",
-          "light": true
-        },
-        {
-          "src": "media/projects/asteroid-orbit/photometry.webp",
-          "caption": "Photometric calibration against reference stars.",
-          "light": true
+          "src": "media/projects/asteroid-orbit/collage.webp",
+          "caption": "Left: calibrated 60-second exposure from a Las Cumbres Observatory 0.35 m telescope, with 6249 Jennifer circled. Top right: computed orbit (green) and Earth’s (blue). Bottom right: nightly photometric fits against UCAC4 reference stars."
         }
       ],
       "fullTitle": "Orbit Determination and Photometry of the Mars-crossing Asteroid 6249 Jennifer (1991 JF1)"
