@@ -343,9 +343,10 @@
       "title": "EvoGrad",
       "tag": "Hybrid neural networks: NEAT with gradient descent",
       "kind": "detail",
-      "summary": "A neural network library that re-implements NEAT from its original paper and combines it with gradient descent. Evolution searches over network structure while gradient descent tunes the weights, producing compact, expressive networks suited to engineering and physics problems.",
+      "summary": "A neural network library that re-implements NEAT from its original paper and combines it with gradient descent: evolution searches over network structure while gradient descent tunes the weights. Drawing on Kolmogorov–Arnold Networks (KANs), it also supports learnable activation functions, Legendre-polynomial expansions trained alongside the weights, so structure, weights and activations are optimized jointly. The result is compact, expressive networks suited to engineering and physics problems.",
       "tech": [
         "NEAT",
+        "KAN",
         "Gradient descent",
         "Python"
       ],
@@ -353,18 +354,8 @@
       "thumb": "hybrid-networks",
       "media": [
         {
-          "src": "media/projects/hybrid-networks/xor.webp",
-          "caption": "Network evolved for XOR.",
-          "light": true
-        },
-        {
-          "src": "media/projects/hybrid-networks/sine.webp",
-          "caption": "Network evolved for sin(x) regression.",
-          "light": true
-        },
-        {
-          "src": "media/projects/hybrid-networks/damped-sine.webp",
-          "caption": "Network evolved for damped sine regression.",
+          "src": "media/projects/hybrid-networks/networks.webp",
+          "caption": "Networks evolved for XOR, sin(x) and a damped sine, each with at most three hidden nodes. Blue edges carry positive weights, red negative; thicker edges, larger weights.",
           "light": true
         }
       ]
