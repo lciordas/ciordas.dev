@@ -92,6 +92,11 @@ const isVideo = (src) => /\.mp4$/i.test(src);
 const LINK = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
 const capHtml = (s) => esc(s).replace(LINK, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 const capText = (s) => String(s ?? '').replace(LINK, '$1');
+// A slide with "points" (a list of short strings, **bold** allowed) shows its caption as a heading over those bullets.
+const bold = (h) => h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+const slideText = (m) => m.points?.length
+  ? `<div class="gallery__cap gallery__cap--points">${m.caption ? `<p class="gallery__lead">${capHtml(m.caption)}</p>` : ''}<ul>${m.points.map((t) => `<li>${bold(capHtml(t))}</li>`).join('')}</ul></div>`
+  : `<p class="gallery__cap">${capHtml(m.caption || '')}</p>`;
 const body = (p) => `
   <div class="detail__body">
     <p>${esc(p.summary)}</p>
@@ -120,7 +125,7 @@ const gallery = (p, head = '') => {
       </div></div>
       <div class="gallery__text">
         <span class="gallery__count"><b>01</b> / ${String(n).padStart(2, '0')}</span>
-        <div class="gallery__caps">${media.map((m) => `<p class="gallery__cap">${capHtml(m.caption || '')}</p>`).join('')}</div>
+        <div class="gallery__caps">${media.map(slideText).join('')}</div>
         ${n > 1 ? `<div class="gallery__nav">
           <button type="button" class="gallery__btn" data-go="-1" aria-label="Previous picture"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <span class="gallery__dots" aria-hidden="true">${media.map(() => '<i></i>').join('')}</span>

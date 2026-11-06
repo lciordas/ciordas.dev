@@ -58,11 +58,7 @@ clip('pid-seesaw', 'lego', `${OLD}/03_seesaw_lego_ball_balancing.mp4`, 0, 0, 'sc
 await still('pid-seesaw', 'lego-arduino', await frame(`${OLD}/05_seesaw_lego_with_arduino.mp4`, 1.5), { width: 1600 });
 clip('pid-seesaw', 'wood', `${OLD}/06_seesaw_v2_wood_poke_test.mp4`, 0, 0, 'scale=1280:-2');
 
-const microPhoto = deckImage(2, 0);
-await still('micromanipulator', 'assembly', microPhoto, { width: 900 });
-await still('micromanipulator', 'microstepping', `${D}/microstepping_comparison.png`, { width: 1400, flat: true });
-await still('micromanipulator', 'encoder', await frame(`${OLD}/39_encoder_magnet_board.mp4`, 0.8), { width: 900 });
-await still('micromanipulator', 'bench', await frame(`${OLD}/35_stepper_breadboard_pico_vertical.mp4`, 2), { width: 900 });
+// The micromanipulator's slides come from build-micro.mjs.
 
 const shipDone = await frame(`${OLD}/17_ship_finished_on_books.mp4`, 1.2);
 // The ship and most of the bottle, 16:9, cut from the untrimmed frame.

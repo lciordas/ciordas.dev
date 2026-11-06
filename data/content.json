@@ -249,7 +249,7 @@
       "title": "Micromanipulator",
       "tag": "Closed-loop stepper control, 100 nm theoretical resolution",
       "kind": "scroll",
-      "summary": "A low-cost, 3D-printed alternative to industrial micromanipulators, which cost $1,000 to $60,000. Geometric microstepping accounts for the true 45° phase spacing of the motor's coils, where the standard formula assumes 90°. A row of 17 axially magnetized magnets forms a locally rotating field that increases encoder resolution 8.5 times over a single diametric magnet. Angular error fell from about 0.08° in open loop to 0.0045° with closed-loop control, and about 0.0005° with PID control in C++, which allows a theoretical end-effector resolution of 100 nm. Physical testing of that resolution is the next step.",
+      "summary": "A low-cost, 3D-printed alternative to industrial micromanipulators, which cost $1,000 to $60,000. Geometric microstepping and a magnetic-gearing encoder bring angular error down to about 0.0005°, which allows a theoretical end-effector resolution of 100 nm. Physical testing of that resolution is the next step.",
       "captions": [
         "A low-cost, 3D-printed micromanipulator. Three NEMA 17 stepper motors turn horns that move the end effector through parallel brass rods on ball joints, in place of industrial units that cost $1,000 to $60,000.",
         "Geometric microstepping accounts for the true 45° phase spacing of the motor's coils, and a row of 17 axially magnetized magnets raises encoder resolution 8.5 times. Angular error fell from about 0.08° in open loop to 0.0005° with PID control, for a theoretical end-effector resolution of 100 nm."
@@ -267,20 +267,38 @@
       "media": [
         {
           "src": "media/projects/micromanipulator/microstepping.webp",
-          "caption": "Traditional and geometric microstepping: phase currents, field angle, and magnetic angle error.",
+          "caption": "Traditional vs. geometric microstepping",
+          "points": [
+            "Standard formula: **cos θ** and **sin θ** currents, for **90°** phase spacing.",
+            "This motor's phases actually sit **45°** apart.",
+            "Modelled: the field angle ripples up to **≈0.027 rad** off target.",
+            "Geometric formula sets currents per quadrant, e.g. **cos θ − sin θ**, **√2 · sin θ**.",
+            "The field then tracks the target: **~10⁻¹⁶ rad** error.",
+            "Removes up to **1/25 of a full step** of error, in theory."
+          ],
           "light": true
         },
         {
-          "src": "media/projects/micromanipulator/assembly.webp",
-          "caption": "Assembled manipulator."
+          "src": "media/projects/micromanipulator/magnet-field.webp",
+          "caption": "Magnetic gearing for the encoder",
+          "points": [
+            "Standard setup: one diametric magnet, **one** field turn per revolution.",
+            "Here: a row of **17** axially magnetized magnets with alternating poles.",
+            "Above the row the field rotates locally, **one full turn per magnet pair**.",
+            "The encoder sees **8.5** field turns instead of one: **8.5×** resolution."
+          ],
+          "light": true
         },
         {
-          "src": "media/projects/micromanipulator/encoder.webp",
-          "caption": "Magnetic encoder board."
-        },
-        {
-          "src": "media/projects/micromanipulator/bench.webp",
-          "caption": "Bench setup during motor control testing."
+          "src": "media/projects/micromanipulator/magnet-arc.webp",
+          "caption": "The magnet arc in closed loop",
+          "points": [
+            "**17** magnets on the motor horn pass an **MT6835** 21‑bit encoder.",
+            "Open loop: angular error about **0.08°**.",
+            "Closed loop on encoder feedback: **0.0045°**, **18×** lower.",
+            "PID control in C++: **0.0005°**, a further **~9×**.",
+            "Theoretical end-effector resolution: **100 nm**; physical testing is next."
+          ]
         }
       ]
     },

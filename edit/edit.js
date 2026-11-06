@@ -92,7 +92,14 @@ const TABS = {
     }
     if (p.media?.length) {
       out.push(el('h2', { textContent: 'Picture and video captions' }));
-      p.media.forEach((_, i) => out.push(field(`Item ${i + 1}`, `${base}.media.${i}.caption`)));
+      p.media.forEach((m, i) => {
+        out.push(field(`Item ${i + 1}`, `${base}.media.${i}.caption`));
+        if (!Array.isArray(m.points)) return;
+        // Bullets beside the picture: one per line, **double asterisks** for bold.
+        const box = el('textarea', { value: m.points.join('\n') });
+        box.addEventListener('input', () => { m.points = box.value.split('\n').map((s) => s.trim()).filter(Boolean); changed(); });
+        out.push(el('label', {}, `Item ${i + 1} bullets, one per line (**bold**)`, box));
+      });
     }
     if (p.kind === 'detail') {
       out.push(el('h2', { textContent: 'Links' }));
