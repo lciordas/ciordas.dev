@@ -29,7 +29,7 @@ const ANIMATED = {
     assemble: [0.03, 0.52], title: [0.08, 0.2], wipe: [0.62, 0.68], clipAt: 0.68,
     copyAt: [[0.28, 0.6], [0.7, 1]],
   },
-  // Lined up with the first frame of the video. Its three shots run 0 to 6 s, 6 to 12.4 s, and 12.4 to 19.4 s.
+  // Lined up with the first frame of the video. Its four shots run 0 to 6 s, 6 to 10.6 s, 10.6 to 17 s, and 17 to 24 s.
   'robot-dog': {
     model: 'dog', up: [0, 0, 1.5325], fov: 34.28, length: 560, clip: 'media/video/dog.mp4',
     views: [
@@ -38,7 +38,7 @@ const ANIMATED = {
       { p: 0.6, az: 0.3256, el: 0.3072, dist: 3.4439, tx: 0.1741, ty: -0.1379, tz: -0.0126 },
     ],
     assemble: [0.03, 0.5], title: [0.07, 0.18], wipe: [0.6, 0.66], clipAt: 0.66,
-    copyAt: [[0.2, 0.42], [0.44, 0.6], { t: [0, 6] }, { t: [6, 12.42] }, { t: [12.42, 19.43] }],
+    copyAt: [[0.2, 0.42], [0.44, 0.6], { t: [0, 10.6] }, { t: [10.6, 17.02] }, { t: [17.02, 24.03] }],
   },
 };
 
@@ -78,7 +78,7 @@ function buildAnimated(id, cfg, p, index, next, content) {
           <div class="bar" aria-hidden="true"><i></i></div>
         </div>
         <h3 class="head"><span class="index">${index}</span>${esc(p.title)}</h3>
-        ${(p.captions || []).map((c, i) => `<p class="copy copy--${i % 2 ? 'right' : 'left'}">${esc(c)}</p>`).join('')}
+        ${p.captions?.length ? `<ul class="points">${p.captions.map((c) => `<li class="point">${esc(c)}</li>`).join('')}</ul>` : ''}
         ${CUE}
       </div>
     </div>
@@ -200,7 +200,7 @@ export function mountWork(container, options = {}) {
     const q = (sel) => el.querySelector(sel);
     const item = {
       id, cfg, el, runway: q('.runway'), title: q('.title'), head: q('.head'), screen: q('.screen'), cadC: q('.cad'), video: q('.clip'), scan: q('.scan'), bar: q('.bar i'),
-      copies: [...el.querySelectorAll('.copy')], cue: q('.pcue'), cad: null, p: 0, loading: false, fit: 1, playing: false,
+      copies: [...el.querySelectorAll('.point')], cue: q('.pcue'), cad: null, p: 0, loading: false, fit: 1, playing: false,
     };
     if (!gl) item.cadC.style.display = 'none';
     items.push(item);
@@ -216,6 +216,7 @@ export function mountWork(container, options = {}) {
       it.fit = h / r.height; // camera distances are set for a window that fills the screen's height
       if (it.cad) {
         it.cad.resize(w, h, dpr);
+        it.cad.setShift(r.left + r.width / 2 - w / 2, r.top + r.height / 2 - h / 2);
         const v = it.cfg.views[0];
         it.cad.setScatter({ ...v, dist: v.dist * it.fit }, w / h);
       }
@@ -266,15 +267,14 @@ export function mountWork(container, options = {}) {
     }
     // Footage that plays by itself once the model has given way to it.
     setPlaying(it, p >= cfg.clipAt);
-    // Words.
+    // Bullets: all of them stay on screen, and the one for what's showing now lights up.
     const vt = p >= cfg.clipAt ? it.video.currentTime : -1;
     it.copies.forEach((node, i) => {
       const at = cfg.copyAt[i] || [2, 3], edge = 0.018;
       const a = at.t
         ? (vt < 0 ? 0 : smooth(at.t[0], at.t[0] + 0.3, vt + (at.t[0] === 0 ? 0.3 : 0)) * (1 - smooth(at.t[1] - 0.3, at.t[1], vt)))
         : smooth(at[0], at[0] + edge, p) * (at[1] >= 1 ? 1 : 1 - smooth(at[1] - edge, at[1], p));
-      node.style.opacity = a; node.style.transform = `translate3d(0,${(1 - a) * 14}px,0)`;
-      node.style.visibility = a > 0.001 ? 'visible' : 'hidden';
+      node.style.setProperty('--on', a.toFixed(3));
     });
     it.bar.style.transform = `scaleX(${p})`;
     it.cue.style.opacity = 1 - smooth(0.002, 0.02, p);

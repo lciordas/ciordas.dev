@@ -24,11 +24,11 @@ const CLIPS = {
   micromanipulator() {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '48.2', '-t', '5.3', '-i', MAKER, '-vf', 'fps=30,scale=1280:720', ...encode, path.join(OUT, 'micromanipulator.mp4')]);
   },
-  // The dog's three shots back to back with hard cuts: turning its body side on, swaying and tilting head on, then
-  // walking. The first two come steadied from build-frames.mjs, so run that and 'dog-walk' first.
+  // The dog's four shots back to back with hard cuts: side on, front three-quarter, head on, then walking. The
+  // first three come steadied from build-frames.mjs, so run that and 'dog-walk' first.
   dog() {
-    execFileSync('ffmpeg', ['-v', 'error', '-y', '-framerate', '30', '-i', `${FRAMES}/dog/%04d.webp`, '-framerate', '24', '-i', `${FRAMES}/dog-front/%04d.webp`, '-i', path.join(FRAMES, 'dog-walk.mp4'),
-      '-filter_complex', '[0:v]fps=30,setsar=1[a];[1:v]fps=30,setsar=1[b];[2:v]fps=30,scale=1280:720,setsar=1[c];[a][b][c]concat=n=3:v=1[o]', '-map', '[o]', ...encode, path.join(OUT, 'dog.mp4')]);
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-framerate', '30', '-i', `${FRAMES}/dog/%04d.webp`, '-framerate', '30', '-i', `${FRAMES}/dog-quarter/%04d.webp`, '-framerate', '24', '-i', `${FRAMES}/dog-front/%04d.webp`, '-i', path.join(FRAMES, 'dog-walk.mp4'),
+      '-filter_complex', '[0:v]fps=30,setsar=1[a];[1:v]fps=30,setsar=1[q];[2:v]fps=30,setsar=1[b];[3:v]fps=30,scale=1280:720,setsar=1[c];[a][q][b][c]concat=n=4:v=1[o]', '-map', '[o]', ...encode.map((v) => (v === '24' ? '27' : v)), path.join(OUT, 'dog.mp4')]); // a little lighter, being the longest
   },
   // The dog already mid-stride on the mat, held in the middle of the frame.
   async 'dog-walk'() {

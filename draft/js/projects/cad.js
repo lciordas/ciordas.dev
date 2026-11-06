@@ -41,6 +41,7 @@ export function mountCad(canvas, model, options = {}) {
   const material = new THREE.MeshStandardMaterial({ color, roughness: 0.62, metalness: 0.02, envMapIntensity: 0.3, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1, transparent: true });
   const lineMat = new THREE.LineBasicMaterial({ color: edge, transparent: true, opacity: 0.62 });
   const camera = new THREE.PerspectiveCamera(options.fov ?? 26, 1, 0.05, 60);
+  let size = [1, 1], shift = [0, 0];
   const target = new THREE.Vector3();
   const root = new THREE.Group(); root.rotation.set(up[0], up[1], up[2]); scene.add(root);
   root.updateMatrixWorld(true);
@@ -71,7 +72,14 @@ export function mountCad(canvas, model, options = {}) {
   });
   const api = {
     renderer, camera, scene, root, parts, material, lineMat, target,
-    resize(w, h, dpr) { renderer.setPixelRatio(dpr); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); },
+    resize(w, h, dpr) { renderer.setPixelRatio(dpr); renderer.setSize(w, h, false); camera.aspect = w / h; size = [w, h]; api.setShift(...shift); },
+    // Moves the picture across the screen without changing the view, so the model lines up with a window
+    // that isn't in the middle.
+    setShift(dx = 0, dy = 0) {
+      shift = [dx, dy];
+      if (dx || dy) camera.setViewOffset(size[0], size[1], -dx, -dy, size[0], size[1]); else camera.clearViewOffset();
+      camera.updateProjectionMatrix();
+    },
     // Works out where each part floats when scattered, so they fill this view at any screen shape.
     setScatter(view, aspect) {
       api.setView(view.az, view.el, view.dist, view.tx, view.ty, view.tz);

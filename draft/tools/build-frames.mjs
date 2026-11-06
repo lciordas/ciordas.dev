@@ -12,6 +12,8 @@ const sharp = require('sharp');
 const HOME = os.homedir();
 const CLIPS = {
   dog: { src: `${HOME}/Downloads/robot dog photos icloud/IMG_2665.MOV`, ss: 14.8, t: 6, vf: 'fps=30', lock: { margin: 64 } },
+  // Front three-quarter, close: the body rolling and pitching over planted feet.
+  'dog-quarter': { src: `${HOME}/Downloads/maker portfolio b-roll/quadruped gyrating.MOV`, ss: 0.2, t: 4.6, vf: 'fps=30', lock: { margin: 140 } },
   // Head on: one full sway, then the tilts. The phone was turned on its side partway through, so it needs turning back.
   'dog-front': { src: `${HOME}/Downloads/maker portfolio b-roll/quadrupedgyratingfrontview.MOV`, ss: 23.1, t: 6.4, pre: 'transpose=2', vf: 'transpose=2,fps=24', trackFps: 30, lock: { margin: 48 } },
 };
