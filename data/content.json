@@ -401,7 +401,7 @@
       "title": "Tennis Statistics Library",
       "tag": "Bayesian updates, Monte Carlo, live trading",
       "kind": "detail",
-      "summary": "A library that simulates tennis matches from simple inputs, updated during play with Bayesian statistics. Monte Carlo simulation produces point importance and win probability. Tested in live trading at the US Open: positions are sized by point importance, so exposure rises ahead of the points most likely to swing the match.",
+      "summary": "A library that simulates tennis matches from simple inputs, updated during play with Bayesian statistics. Monte Carlo simulation produces point importance and win probability. Tested in live trading at the 2026 US Open: positions are sized by point importance, so exposure rises ahead of the points most likely to swing the match.",
       "tech": [
         "Bayesian statistics",
         "Monte Carlo",
@@ -504,7 +504,7 @@
       "title": "Orbit Determination and Photometry of the Mars-crossing Asteroid 6249 Jennifer (1991 JF1)",
       "tag": "Summer Science Program",
       "kind": "detail",
-      "summary": "In a team of three, determined the orbit of asteroid 6249 Jennifer from original observations: imaging over three nights, plate solving for celestial coordinates, and computing orbital elements with the Method of Gauss. Results were written up as a technical paper, with the observations prepared for submission to the Minor Planet Center. The paper can’t be shared publicly under the Summer Science Program’s policies.",
+      "summary": "In a team of three, determined the orbit of asteroid 6249 Jennifer from original observations: imaging over three nights, plate solving for celestial coordinates, and computing orbital elements with the Method of Gauss. Results were written up as a technical paper, with the observations submitted to the Minor Planet Center. The paper can’t be shared publicly under the Summer Science Program’s policies.",
       "tech": [
         "Astrometry",
         "Method of Gauss",

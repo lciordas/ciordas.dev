@@ -58,7 +58,7 @@ body.is-editing .ov-hero-name { visibility: visible; }
 .ov-links--hero .ov-icon { width: 44px; height: 44px; }
 .ov-links--hero .ov-icon svg { width: 23px; height: 23px; }
 /* A dark panel behind the words, so the drifting shards pass behind them instead of through them. */
-.ov-card { width: min(100%, 1180px); display: flex; flex-direction: column; align-items: center; gap: clamp(10px, 2vh, 22px); padding: clamp(14px, 2.4vh, 28px) clamp(18px, 3vw, 48px) clamp(6px, 1vh, 12px); border-radius: clamp(18px, 2vw, 30px); background: rgba(8, 7, 6, .94); box-shadow: inset 0 0 0 1px rgba(244, 239, 232, .08), 0 30px 80px rgba(0, 0, 0, .45); }
+.ov-card { width: min(100%, 1400px); display: flex; flex-direction: column; align-items: center; gap: clamp(10px, 2vh, 22px); padding: clamp(14px, 2.4vh, 28px) clamp(18px, 3vw, 48px) clamp(6px, 1vh, 12px); border-radius: clamp(18px, 2vw, 30px); background: rgba(8, 7, 6, .94); box-shadow: inset 0 0 0 1px rgba(244, 239, 232, .08), 0 30px 80px rgba(0, 0, 0, .45); }
 .ov-card .ov-facts { border-top-color: rgba(244, 239, 232, .1); }
 .ov-card .ov-fact:last-child { border-bottom: 0; }
 .ov-bio { margin: 0; max-width: 50em; font-size: clamp(16px, min(1.55vw, 2.6vh), 24px); line-height: 1.42; color: rgba(244, 239, 232, .78); text-wrap: balance; }
@@ -72,7 +72,7 @@ body.is-editing .ov-hero-name { visibility: visible; }
 @keyframes ov-slide { from { transform: translateX(0); } to { transform: translateX(calc(-50% - clamp(40px, 5vw, 80px) / 2)); } }
 @media (prefers-reduced-motion: reduce) { .ov-marquee ul { animation: none; } }
 /* Experience, research and honors, each on its own line. */
-.ov-facts { width: min(100%, 1100px); display: grid; text-align: left; border-top: 1px solid rgba(244, 239, 232, .12); }
+.ov-facts { width: min(100%, 1300px); display: grid; text-align: left; border-top: 1px solid rgba(244, 239, 232, .12); }
 .ov-fact { display: grid; grid-template-columns: clamp(100px, 11vw, 160px) 1fr; align-items: center; gap: 20px; padding: clamp(6px, 1.25vh, 13px) 0; border-bottom: 1px solid rgba(244, 239, 232, .12); }
 .ov-fact h2 { margin: 0; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: clamp(16px, min(1.4vw, 2.4vh), 22px); line-height: 1; letter-spacing: .08em; text-transform: uppercase; color: var(--ov-accent, #ffb98a); }
 .ov-fact ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px clamp(20px, 3vw, 48px); }
