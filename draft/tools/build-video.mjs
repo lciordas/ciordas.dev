@@ -14,11 +14,11 @@ const MAKER = `${HOME}/Downloads/maker_portfolio_v1.mp4`, ICLOUD = `${HOME}/Down
 const encode = ['-an', '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '24', '-preset', 'slow', '-movflags', '+faststart'];
 const CLIPS = {
   // The raw recordings, converted from HDR to standard video by macOS: the hand placing the ball and the ball
-  // settling, then a cut, with the ball in the same spot, to the pen knocking it twice and the beam bringing it back each time.
+  // settling, then a cut, with the ball in the same spot, to the pen knocking it three times and the beam bringing it back each time.
   // The first frame is the one the model is lined up with.
   seesaw() {
     const sdr = (name) => { const o = path.join(FRAMES, `${name}-sdr.mov`); if (!fs.existsSync(o)) execFileSync('avconvert', ['-s', `${HOME}/Downloads/${name}.MOV`, '-p', 'Preset1920x1080', '-o', o, '--replace']); return o; };
-    execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '3.604', '-t', '3.7', '-i', sdr('IMG_1275'), '-ss', '10.0', '-t', '5.6', '-i', sdr('IMG_1256'), '-filter_complex', '[0:v]setpts=PTS-STARTPTS,fps=30,scale=1280:720[a];[1:v]setpts=PTS-STARTPTS,fps=30,scale=1280:720[b];[a][b]concat=n=2:v=1[o]', '-map', '[o]', ...encode, path.join(OUT, 'seesaw.mp4')]);
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '3.604', '-t', '3.7', '-i', sdr('IMG_1275'), '-ss', '10.0', '-t', '10.4', '-i', sdr('IMG_1256'), '-filter_complex', '[0:v]setpts=PTS-STARTPTS,fps=30,scale=1280:720[a];[1:v]setpts=PTS-STARTPTS,fps=30,scale=1280:720[b];[a][b]concat=n=2:v=1[o]', '-map', '[o]', ...encode, path.join(OUT, 'seesaw.mp4')]);
   },
   // The micromanipulator on the desk, its end effector moved by hand. The model lines up with the first frame.
   micromanipulator() {

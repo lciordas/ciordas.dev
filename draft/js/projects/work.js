@@ -94,8 +94,9 @@ const body = (p) => `
     ${p.tech?.length ? `<ul class="tech">${p.tech.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
     ${p.links?.length ? `<p class="plinks">${p.links.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join('')}</p>` : ''}
   </div>`;
-// Photos and clips in a row that slides sideways as the page scrolls down. Each one stops in the middle for a
-// while, with its own text underneath, before the next slides in.
+// Photos and clips in a row on the left two thirds of the screen, with their text on the right. Scrolling down
+// slides the row across; each picture holds still for a while before the next slides in. Scrolling sideways,
+// the left and right arrow keys, the buttons, or clicking the next picture move one picture at a time.
 const SLIDE_VH = 85;
 const gallery = (p) => {
   const media = p.media || [], n = media.length;
@@ -103,18 +104,23 @@ const gallery = (p) => {
   return `
   <div class="gallery" style="height:calc(${(n - 1) * SLIDE_VH}vh + 100vh)">
     <div class="gallery__stage">
-      <div class="gallery__track">${media.map((m, i) => `
+      <div class="gallery__view"><div class="gallery__track">${media.map((m, i) => `
         <figure class="slide${m.light ? ' slide--light' : ''}">
           <div class="slide__frame">${isVideo(m.src)
             ? `<video data-src="${esc(m.src)}" muted playsinline loop preload="none" aria-label="${esc(m.caption || p.title)}"></video>`
             : `<img data-src="${esc(m.src)}" alt="${esc(m.caption || p.title)}" decoding="async">`}</div>
         </figure>`).join('')}
-      </div>
+      </div></div>
       <div class="gallery__text">
         <span class="gallery__count"><b>01</b> / ${String(n).padStart(2, '0')}</span>
         <div class="gallery__caps">${media.map((m) => `<p class="gallery__cap">${esc(m.caption || '')}</p>`).join('')}</div>
+        ${n > 1 ? `<div class="gallery__nav">
+          <button type="button" class="gallery__btn" data-go="-1" aria-label="Previous picture"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <span class="gallery__dots" aria-hidden="true">${media.map(() => '<i></i>').join('')}</span>
+          <button type="button" class="gallery__btn" data-go="1" aria-label="Next picture"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>` : ''}
       </div>
-      ${n > 1 ? `<div class="gallery__dots" aria-hidden="true">${media.map(() => '<i></i>').join('')}</div>${CUE}` : ''}
+      ${n > 1 ? CUE : ''}
     </div>
   </div>`;
 };
@@ -267,6 +273,45 @@ export function mountWork(container, options = {}) {
   let lenis = null;
   if (!REDUCED && window.Lenis) lenis = new window.Lenis({ lerp: 0.085, wheelMultiplier: 0.9, smoothWheel: true });
   const jump = (y) => { if (lenis) lenis.scrollTo(y, { immediate: true, force: true }); else window.scrollTo(0, y); };
+
+  // Moving a gallery one picture sideways scrolls the page to where that picture holds still.
+  const galleryAt = () => galleries.find((g) => { if (g.el.closest('.project').hidden) return false; const r = g.el.getBoundingClientRect(); return r.top <= 1 && r.bottom >= innerHeight - 1; });
+  const goTo = (g, i) => {
+    const n = g.slides.length; i = Math.max(0, Math.min(n - 1, i));
+    const top = g.el.getBoundingClientRect().top + window.scrollY, y = top + (n > 1 ? i / (n - 1) : 0) * (g.el.offsetHeight - innerHeight);
+    if (lenis) lenis.scrollTo(y, { duration: 0.9 }); else window.scrollTo({ top: y, behavior: REDUCED ? 'auto' : 'smooth' });
+  };
+  galleries.forEach((g) => {
+    g.el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-go]');
+      if (b) { goTo(g, g.active + +b.dataset.go); return; }
+      const s = e.target.closest('.slide'), i = g.slides.indexOf(s);
+      if (s && i !== g.active) goTo(g, i);
+    });
+  });
+  let sideAt = 0;
+  addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 2) return;
+    const g = galleryAt();
+    if (!g) return;
+    e.preventDefault();
+    const now = performance.now(), fresh = now - sideAt > 260; sideAt = now;
+    if (fresh) goTo(g, g.active + Math.sign(e.deltaX));
+  }, { passive: false });
+  addEventListener('keydown', (e) => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(e.key) || e.metaKey || e.ctrlKey || e.altKey) return;
+    const g = galleryAt();
+    if (!g) return;
+    e.preventDefault(); goTo(g, g.active + (e.key === 'ArrowRight' ? 1 : -1));
+  });
+  let touch = null;
+  addEventListener('touchstart', (e) => { touch = [e.touches[0].clientX, e.touches[0].clientY]; }, { passive: true });
+  addEventListener('touchend', (e) => {
+    if (!touch) return;
+    const dx = e.changedTouches[0].clientX - touch[0], dy = e.changedTouches[0].clientY - touch[1]; touch = null;
+    const g = Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5 ? galleryAt() : null;
+    if (g) goTo(g, g.active - Math.sign(dx));
+  }, { passive: true });
 
   const heroEls = options.fade || [];
   let last = performance.now(), focusId = null, time = 0;
