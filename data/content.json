@@ -392,7 +392,7 @@
       "media": [
         {
           "src": "media/projects/hybrid-networks/cartpole.mp4",
-          "caption": "Gymnasium's CartPole, solved by EvoGrad's NEAT alone. The network reads the cart's position and velocity and the pole's angle and angular velocity, and pushes the cart left or right. From the same start, the best random network drops the pole in 11 steps; four generations on, the best holds it for the full 500 steps, as it does from all 100 test starts."
+          "caption": "Gymnasium's CartPole, solved by EvoGrad's NEAT: the fittest network of each generation of one run, all from the same start. Each reads the cart's position and velocity and the pole's angle and angular velocity, and pushes the cart left or right. Evolution adds connections, then a hidden node; by generation 4 the network balances the pole for the full 500 steps from all 100 test starts."
         },
         {
           "src": "media/projects/hybrid-networks/networks.webp",
