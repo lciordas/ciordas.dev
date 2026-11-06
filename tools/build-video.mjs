@@ -30,6 +30,13 @@ const CLIPS = {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-framerate', '30', '-i', `${FRAMES}/dog/%04d.webp`, '-framerate', '30', '-i', `${FRAMES}/dog-quarter/%04d.webp`, '-framerate', '24', '-i', `${FRAMES}/dog-front/%04d.webp`, '-i', path.join(FRAMES, 'dog-walk.mp4'),
       '-filter_complex', '[0:v]fps=30,setsar=1[a];[1:v]fps=30,setsar=1[q];[2:v]fps=30,setsar=1[b];[3:v]fps=30,scale=1280:720,setsar=1[c];[a][q][b][c]concat=n=4:v=1[o]', '-map', '[o]', ...encode.map((v) => (v === '24' ? '27' : v)), path.join(OUT, 'dog.mp4')]); // a little lighter, being the longest
   },
+  // The chess engine's own window from the screen recording: the board and its status line ("thinking..."), from the
+  // first move to the engine's last reply before the recording ends, played at 1.6x so the pauses stay short.
+  chess() {
+    const src = `${HOME}/Downloads/maker portfolio b-roll/chess engine gui screen recording.mov`, out = path.join(here, '../media/projects/chess-engine/game.mp4');
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '1.0', '-t', '32.6', '-i', src, '-vf', 'crop=1600:1664:876:274,setpts=(PTS-STARTPTS)/1.6,fps=30,scale=-2:1080:flags=lanczos', ...encode.map((v) => (v === '24' ? '27' : v)), out]);
+    return out;
+  },
   // The dog already mid-stride on the mat, held in the middle of the frame.
   async 'dog-walk'() {
     const src = `${HOME}/Downloads/maker portfolio b-roll/quadruped walking.MOV`, ss = 6.5, t = 7, box = { x: 0.45, y: 0.2, w: 0.34, h: 0.32 };
@@ -54,7 +61,6 @@ fs.mkdirSync(OUT, { recursive: true }); fs.mkdirSync(FRAMES, { recursive: true }
 const only = process.argv[2];
 for (const [name, build] of Object.entries(CLIPS)) {
   if (only && only !== name) continue;
-  await build();
-  const made = [OUT, FRAMES].map((d) => path.join(d, `${name}.mp4`)).find((f) => fs.existsSync(f));
+  const made = (await build()) ?? [OUT, FRAMES].map((d) => path.join(d, `${name}.mp4`)).find((f) => fs.existsSync(f));
   console.log(name, (fs.statSync(made).size / 1e6).toFixed(1), 'MB');
 }

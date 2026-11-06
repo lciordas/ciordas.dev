@@ -78,9 +78,7 @@ await still('other', 'cannon', cannon, { width: 640 });
 
 // Software.
 const board = await frame(`${OLD}/46_chess_board_game.mp4`, 2.5);
-clip('chess-engine', 'game', `${OLD}/46_chess_board_game.mp4`);
-await still('chess-engine', 'minimax', await frame(`${OLD}/45_chess_minimax_diagram.mp4`, 0.5), { width: 1000 });
-await still('chess-engine', 'code', await frame(`${OLD}/44_chess_code_editor.mp4`, 1.5), { width: 1200 });
+// The chess engine's clip and slides come from build-video.mjs and build-chess.mjs.
 await thumb('chess-engine', board);
 
 const EG = `${D}/evograd_networks`;

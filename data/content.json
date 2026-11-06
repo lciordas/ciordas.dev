@@ -327,15 +327,15 @@
       "media": [
         {
           "src": "media/projects/chess-engine/game.mp4",
-          "caption": "The engine playing a game."
+          "caption": "The engine playing a game as Black."
         },
         {
-          "src": "media/projects/chess-engine/minimax.webp",
-          "caption": "Minimax search over a game tree."
+          "src": "media/projects/chess-engine/bitboards.webp",
+          "caption": "Bitboards: the position as twelve 64-bit integers, so moves for every piece of a type come from a few shifts and masks. [Chess Programming Wiki](https://www.chessprogramming.org/Bitboards)"
         },
         {
-          "src": "media/projects/chess-engine/code.webp",
-          "caption": "Engine source."
+          "src": "media/projects/chess-engine/nnue.webp",
+          "caption": "NNUE: a neural network scores the position, and each move updates only the few inputs it changes. [Chess Programming Wiki](https://www.chessprogramming.org/NNUE)"
         }
       ]
     },
