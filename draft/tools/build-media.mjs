@@ -71,9 +71,7 @@ const shipDone = await frame(`${OLD}/17_ship_finished_on_books.mp4`, 1.2);
 // The ship and most of the bottle, 16:9, cut from the untrimmed frame.
 const shipRaw = temp('png'); run('ffmpeg', '-v', 'error', '-y', '-ss', '1.2', '-i', `${OLD}/17_ship_finished_on_books.mp4`, '-frames:v', '1', shipRaw);
 await still('ship-in-a-bottle', 'finished', shipRaw, { width: 1000, crop: { left: 330, top: 130, width: 1150, height: 646 } });
-clip('ship-in-a-bottle', 'rigging', `${OLD}/22_ship_rigging_masts.mp4`);
-clip('ship-in-a-bottle', 'inserting', `${OLD}/24_ship_inserting_into_bottle.mp4`);
-clip('ship-in-a-bottle', 'raising', `${OLD}/25_ship_raising_masts_in_bottle.mp4`);
+// The ship's build video comes from build-ship.mjs.
 await thumb('ship-in-a-bottle', shipRaw, { crop: { left: 410, top: 0, width: 1000, height: 1000 } });
 
 // Other projects: one photo each.

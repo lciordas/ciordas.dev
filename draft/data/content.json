@@ -210,20 +210,12 @@
       "thumb": "ship-in-a-bottle",
       "media": [
         {
+          "src": "media/projects/ship-in-a-bottle/build.mp4",
+          "caption": "The build: shaping and carving the hull, painting, rigging the masts and sails, then passing the folded ship through the neck and raising it inside the bottle."
+        },
+        {
           "src": "media/projects/ship-in-a-bottle/finished.webp",
           "caption": "Finished ship in its bottle."
-        },
-        {
-          "src": "media/projects/ship-in-a-bottle/rigging.mp4",
-          "caption": "Rigging the masts."
-        },
-        {
-          "src": "media/projects/ship-in-a-bottle/inserting.mp4",
-          "caption": "Passing the hull through the neck."
-        },
-        {
-          "src": "media/projects/ship-in-a-bottle/raising.mp4",
-          "caption": "Raising the masts inside the bottle."
         }
       ]
     },
