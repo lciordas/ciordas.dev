@@ -17,7 +17,7 @@
       }
     ],
     "hint": "Arrow keys to move, Enter to open, or scroll",
-    "intro": "I'm Lucas. I'm a senior at Regis High School who takes classes at Columbia and did research with the Summer Science Program in Europe. I build hardware and robots. This summer I interned at AI Native Services, a 10-person, a16z-backed stealth startup valued at $125M.",
+    "intro": "I'm Lucas. I'm a senior at **Regis High School** who takes classes at **Columbia** and did research for the **Summer Science Program** and **NeurIPS**. I build **hardware and robots**. This summer I interned at an **a16z-backed** AI-Native Services startup, **~10 people**, valued at **$125M**, still in **stealth**.",
     "logos": [
       {
         "name": "Regis High School",
@@ -36,7 +36,7 @@
         "src": "media/logos/neurips.webp"
       },
       {
-        "name": "AI Native Services, a stealth startup",
+        "name": "Stealth startup",
         "src": "media/logos/stealth.webp"
       }
     ]
@@ -82,7 +82,7 @@
       "items": [
         {
           "title": "Software Engineering Intern",
-          "detail": "AI Native Services, a16z-backed stealth startup · Summer 2026"
+          "detail": "AI-Native Services · **a16z-backed** stealth startup, **~10 people**, valued at **$125M** · Summer 2026"
         }
       ]
     }

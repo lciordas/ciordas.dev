@@ -2,6 +2,8 @@
 import { REDUCED } from './_util.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// Words wrapped in **double asterisks** in the content file are set in bold.
+const rich = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 const safeUrl = (u) => (/^(https?:|mailto:)/i.test(u || '') ? u : '#');
 
 // Style values from the content file become CSS variables, so the editor can change them live.
@@ -46,36 +48,39 @@ export function renderOverview(root, c) {
   const across = c.columns.map((col) => Math.max(1, Math.ceil(col.items.filter((id) => c.projects[id]).length / 2)));
   const extras = c.style?.showExtras === true;
   const other = c.other?.items?.length ? `<div class="ov-other"><h3 data-edit="other.title">${esc(c.other.title)}</h3><ul>${c.other.items.map((it, i) => `<li><img src="${esc(it.image)}" alt="${esc(it.title)}" loading="lazy" decoding="async"><strong data-edit="other.items.${i}.title">${esc(it.title)}</strong><span data-edit="other.items.${i}.detail">${esc(it.detail)}</span></li>`).join('')}</ul></div>` : '';
-  // The intro's first sentence is set in bold.
+  // The intro's first sentence is set in bold, along with any **marked** words.
   const intro = String(c.site.intro || ''), cut = intro.indexOf('. ') + 1;
-  const bio = cut > 0 ? `<strong>${esc(intro.slice(0, cut))}</strong>${esc(intro.slice(cut))}` : esc(intro);
+  const bio = cut > 0 ? `<strong>${rich(intro.slice(0, cut))}</strong>${rich(intro.slice(cut))}` : rich(intro);
+  const icons = (cls) => `<nav class="ov-links ${cls}" aria-label="Links">${(c.site.links || []).map(link).join('')}</nav>`;
   const research = (c.research?.items || []).filter((id) => c.projects[id]).map((id) => {
     const p = c.projects[id];
-    return `<li><a class="rrow" href="#${id}" data-project="${id}">${p.thumb ? `<img src="media/thumbs/${esc(p.thumb)}.webp" alt="" decoding="async">` : ''}<span><strong data-edit="projects.${id}.title">${esc(p.title)}</strong><em data-edit="projects.${id}.tag">${esc(p.tag)}</em></span></a></li>`;
+    return `<li><a class="rrow" href="#${id}" data-project="${id}">${p.thumb ? `<img src="media/thumbs/${esc(p.thumb)}.webp" alt="" decoding="async">` : ''}<span><strong>${esc(p.title)}</strong><em>${esc(p.tag)}</em></span></a></li>`;
   }).join('');
-  const plain = (key) => {
+  const fact = (key) => {
     const l = c.lists?.[key];
     if (!l?.items?.length) return '';
-    return `<section class="ov-sec"><h2 data-edit="lists.${key}.title">${esc(l.title)}</h2><ul>${l.items.map((it, i) => `<li><strong data-edit="lists.${key}.items.${i}.title">${esc(it.title)}</strong><span data-edit="lists.${key}.items.${i}.detail">${esc(it.detail)}</span></li>`).join('')}</ul></section>`;
+    return `<section class="ov-fact"><h2 data-edit="lists.${key}.title">${esc(l.title)}</h2><ul>${l.items.map((it) => `<li><strong>${rich(it.title)}</strong><span>${rich(it.detail)}</span></li>`).join('')}</ul></section>`;
   };
+  // The logos twice over, so the row can slide along without a gap.
+  const logos = c.site.logos || [];
+  const strip = logos.length ? `<div class="ov-marquee" aria-label="${esc(logos.map((l) => l.name).join(', '))}"><ul>${[...logos, ...logos].map((l, i) => `<li${i >= logos.length ? ' aria-hidden="true"' : ''}><img src="${esc(l.src)}" alt="${i >= logos.length ? '' : esc(l.name)}" title="${esc(l.name)}" decoding="async"></li>`).join('')}</ul></div>` : '';
   root.innerHTML = `
     <div class="ov-inner">
-      <header class="ov-head ov-reveal">
-        <div class="ov-id">
-          <p class="ov-name" data-edit="site.name">${esc(c.site.name)}</p>
-          <nav class="ov-links" aria-label="Links">${(c.site.links || []).map(link).join('')}</nav>
-        </div>
+      <header class="ov-bar">
+        <div class="ov-brand"><p class="ov-name" data-edit="site.name">${esc(c.site.name)}</p>${icons('ov-links--bar')}</div>
         <div class="ov-foot"><span data-edit="site.hint">${esc(c.site.hint)}</span><button id="replay" type="button">Replay intro</button></div>
       </header>
-      ${intro ? `<section class="ov-intro ov-reveal" aria-label="About">
-        <p class="ov-bio" data-edit="site.intro">${bio}</p>
-        ${c.site.logos?.length ? `<ul class="ov-logos">${c.site.logos.map((l) => `<li><img src="${esc(l.src)}" alt="${esc(l.name)}" title="${esc(l.name)}" decoding="async"></li>`).join('')}</ul>` : ''}
-      </section>` : ''}
-      <div class="ov-about ov-reveal">
-        ${plain('experience')}
-        ${research ? `<section class="ov-sec ov-sec--research"><h2 data-edit="research.title">${esc(c.research.title)}</h2><ul>${research}</ul></section>` : ''}
-        ${plain('distinctions')}
-      </div>
+      <section class="ov-hero ov-reveal" aria-label="About">
+        <p class="ov-hero-name" aria-hidden="true">${esc(c.site.name)}</p>
+        ${icons('ov-links--hero')}
+        ${intro ? `<p class="ov-bio">${bio}</p>` : ''}
+        ${strip}
+        <div class="ov-facts">
+          ${fact('experience')}
+          ${research ? `<section class="ov-fact ov-fact--research"><h2 data-edit="research.title">${esc(c.research.title)}</h2><ul>${research}</ul></section>` : ''}
+          ${fact('distinctions')}
+        </div>
+      </section>
       <div class="ov-projects">
         <div class="ov-cols" style="grid-template-columns:${across.map((n) => `${n}fr`).join(' ')}">
           ${c.columns.map((col, k) => `<section class="ov-col ov-reveal" style="--across:${across[k]}"><h2 data-edit="columns.${k}.title" data-count="${String(col.items.filter((id) => c.projects[id]).length).padStart(2, '0')}">${esc(col.title)}</h2><ul>${col.items.map(row).join('')}</ul></section>`).join('')}
@@ -91,6 +96,25 @@ export function mountSite({ root, work, content, onReplay }) {
   const veil = document.createElement('div'); veil.id = 'veil'; document.body.appendChild(veil);
   const back = document.createElement('a'); back.id = 'to-overview'; back.href = '#'; back.textContent = 'Overview'; back.setAttribute('aria-label', 'Back to overview'); document.body.appendChild(back);
 
+  // The name starts large over the top of the page and settles into the bar's top-left corner as the page scrolls.
+  const bar = root.querySelector('.ov-bar'), small = root.querySelector('.ov-name'), big = root.querySelector('.ov-hero-name');
+  const clamp01 = (v) => Math.min(1, Math.max(0, v));
+  const fly = () => {
+    if (!bar || !big || root.hidden) return;
+    const k0 = clamp01(window.scrollY / (innerHeight * 0.3)), k = k0 * k0 * (3 - 2 * k0);
+    // It glides from where the large name sits at the top of the page, rather than scrolling up with it.
+    const br = bar.getBoundingClientRect(), b = big.getBoundingClientRect(), top0 = b.top + window.scrollY;
+    const ax = br.left + small.offsetLeft, ay = br.top + small.offsetTop, s = b.width / Math.max(1, small.offsetWidth);
+    small.style.transform = k >= 1 ? '' : `translate3d(${((b.left - ax) * (1 - k)).toFixed(1)}px,${((top0 - ay) * (1 - k)).toFixed(1)}px,0) scale(${(1 + (s - 1) * (1 - k)).toFixed(4)})`;
+    bar.style.setProperty('--k', k.toFixed(3));
+    bar.classList.toggle('is-docked', k > 0.6);
+  };
+  addEventListener('scroll', fly, { passive: true });
+  addEventListener('resize', fly);
+  document.fonts?.ready.then(fly);
+  requestAnimationFrame(fly);
+  // The overview fades in, so the name follows it until that's done.
+  const settle = performance.now(); const follow = () => { fly(); if (performance.now() - settle < 1600) requestAnimationFrame(follow); }; follow();
   const rows = () => [...root.querySelectorAll('.row, .rrow')];
   // The overview runs from the top of the page to the bottom of the project cards.
   const atOverview = () => window.scrollY < root.offsetHeight - innerHeight * 0.5;

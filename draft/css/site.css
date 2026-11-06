@@ -30,47 +30,61 @@ html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); 
 #fallback[hidden] { display: none; }
 
 /* Overview, behind the name */
-/* Overview: the whole screen. Name and links at the top left, projects as large picture cards below. */
-#portfolio { position: relative; z-index: 2; display: flex; padding: clamp(18px, 3vh, 34px) clamp(18px, 2.6vw, 42px) 0; }
+/* Overview. The first screen is about Lucas: the name large at the top, the intro, the logos, and experience,
+   research and honors, with the projects peeking up from the bottom. As the page scrolls, the name settles into a
+   bar at the top left and the projects fill the screen below it. */
+#portfolio { --pad: clamp(18px, 2.6vw, 42px); --bar: 64px; --peek: 18svh; position: relative; z-index: 2; display: flex; padding: 0 var(--pad); }
 #portfolio[hidden] { display: none; }
 body.is-editing { background: #050404; }
 body.is-editing [data-edit] { outline: 1px dashed transparent; outline-offset: 2px; cursor: text; border-radius: 2px; }
 body.is-editing [data-edit]:hover { outline-color: rgba(255, 185, 138, .55); }
 body.is-editing [data-edit]:focus { outline: 1px solid var(--ov-accent, #ffb98a); }
 .ov-reveal { opacity: 0; }
-.ov-inner { width: 100%; min-height: 0; display: flex; flex-direction: column; gap: clamp(14px, 2.4vh, 26px); }
-/* A short intro under the name, with the places it mentions. */
-.ov-intro { display: flex; align-items: center; justify-content: space-between; gap: clamp(20px, 3vw, 56px); padding: clamp(12px, 1.8vh, 18px) 0; border-top: 1px solid rgba(244, 239, 232, .14); border-bottom: 1px solid rgba(244, 239, 232, .14); }
-.ov-bio { margin: 0; max-width: 62em; font-size: clamp(14.5px, 1.12vw, 17px); line-height: 1.5; color: rgba(244, 239, 232, .82); }
-.ov-bio strong { font-weight: 500; color: var(--ink); }
-.ov-logos { flex: none; display: flex; align-items: center; gap: clamp(18px, 2vw, 30px); margin: 0; padding: 0; list-style: none; }
-.ov-logos img { display: block; height: clamp(22px, 2.3vw, 32px); width: auto; opacity: .72; transition: opacity .2s ease; }
-.ov-logos li:hover img { opacity: 1; }
-/* Experience, research and honors side by side, kept short. */
-.ov-about { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr) minmax(0, 1fr); gap: var(--ov-col-gap); }
-.ov-sec h2 { margin: 0 0 8px; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: clamp(15px, 1.15vw, 18px); line-height: 1; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.ov-sec ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.ov-sec li { display: flex; flex-direction: column; font-size: 14px; line-height: 1.35; }
-.ov-sec li > strong { font-weight: 500; }
-.ov-sec li > span { font-size: 13px; color: var(--muted); }
-.ov-sec--research ul { grid-template-columns: 1fr 1fr; gap: 10px; }
-.rrow { display: flex; align-items: center; gap: 12px; padding: 6px; margin: -6px; border-radius: 12px; color: var(--ink); text-decoration: none; outline: none; transition: background-color .18s ease, color .18s ease, box-shadow .18s ease; }
-.rrow img { flex: none; width: 64px; height: 48px; object-fit: cover; border-radius: 8px; background: #1a1815; }
-.rrow span { display: flex; flex-direction: column; min-width: 0; }
-.rrow strong { font-weight: 500; font-size: 14px; line-height: 1.3; }
-.rrow em { font-style: normal; font-size: 12.5px; color: var(--muted); }
-.rrow:hover, .rrow:focus { color: var(--ov-accent, #ffb98a); background: rgba(255, 185, 138, .07); }
-.rrow:focus-visible { box-shadow: inset 0 0 0 1.5px var(--ov-accent, #ffb98a); }
-/* The projects fill one screen of their own. */
-.ov-projects { height: 100vh; height: 100svh; min-height: 520px; display: flex; flex-direction: column; padding: clamp(10px, 1.6vh, 18px) 0 clamp(18px, 3vh, 34px); }
-.ov-head { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-.ov-id { display: grid; grid-template-columns: auto auto; justify-content: start; align-items: center; column-gap: clamp(14px, 1.6vw, 24px); row-gap: 4px; }
-.ov-name { margin: 0; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: var(--ov-title); line-height: 1; letter-spacing: .005em; text-transform: uppercase; }
+.ov-inner { width: 100%; min-height: 0; display: flex; flex-direction: column; }
+.ov-bar { --k: 0; position: sticky; top: 0; z-index: 6; height: var(--bar); margin: 0 calc(var(--pad) * -1); padding: 0 var(--pad); display: flex; align-items: center; justify-content: space-between; gap: 24px; background: rgba(5, 4, 4, calc(var(--k) * .88)); box-shadow: 0 1px 0 rgba(244, 239, 232, calc(var(--k) * .1)); -webkit-backdrop-filter: blur(calc(var(--k) * 10px)); backdrop-filter: blur(calc(var(--k) * 10px)); }
+.ov-brand { display: flex; align-items: center; gap: clamp(12px, 1.4vw, 20px); }
+.ov-name { margin: 0; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: 30px; line-height: 1; letter-spacing: .005em; text-transform: uppercase; white-space: nowrap; transform-origin: 0 0; will-change: transform; }
 .ov-links { display: flex; align-items: center; gap: 4px; }
 .ov-links a { color: var(--ink); font-size: 14px; text-decoration: none; }
-.ov-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: rgba(244, 239, 232, .78); transition: color .2s ease, background-color .2s ease; }
-.ov-icon svg { width: 19px; height: 19px; display: block; }
+.ov-links--bar { opacity: var(--k); pointer-events: none; }
+.ov-bar.is-docked .ov-links--bar { pointer-events: auto; }
+.ov-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: rgba(244, 239, 232, .8); transition: color .2s ease, background-color .2s ease; }
+.ov-icon svg { width: 20px; height: 20px; display: block; }
 .ov-icon:hover, .ov-icon:focus-visible { color: var(--ov-accent, #ffb98a); background: rgba(255, 185, 138, .1); outline: none; }
+.ov-hero { min-height: calc(100vh - var(--bar) - var(--peek)); min-height: calc(100svh - var(--bar) - var(--peek)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(12px, 2.8vh, 32px); padding: clamp(0px, 1vh, 12px) 0 clamp(16px, 3vh, 36px); text-align: center; }
+.ov-hero-name { margin: 0; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: clamp(52px, min(9.5vw, 13vh), 150px); line-height: .9; letter-spacing: .005em; text-transform: uppercase; white-space: nowrap; visibility: hidden; }
+body.is-editing .ov-hero-name { visibility: visible; }
+.ov-links--hero { margin-top: calc(clamp(12px, 2.8vh, 32px) * -.5); }
+.ov-links--hero .ov-icon { width: 44px; height: 44px; }
+.ov-links--hero .ov-icon svg { width: 23px; height: 23px; }
+.ov-bio { margin: 0; max-width: 40em; font-size: clamp(17px, min(1.75vw, 2.9vh), 28px); line-height: 1.42; color: rgba(244, 239, 232, .78); text-wrap: balance; }
+.ov-bio strong { font-weight: 600; color: var(--ink); }
+/* The logos slide past in a loop, faded out at both ends. */
+.ov-marquee { width: min(100%, 1100px); overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+.ov-marquee ul { display: flex; align-items: center; gap: clamp(40px, 5vw, 80px); width: max-content; margin: 0; padding: 4px 0; list-style: none; animation: ov-slide 34s linear infinite; }
+.ov-marquee li { flex: none; }
+.ov-marquee img { display: block; height: clamp(28px, min(3.2vw, 4.8vh), 46px); width: auto; }
+.ov-marquee:hover ul { animation-play-state: paused; }
+@keyframes ov-slide { from { transform: translateX(0); } to { transform: translateX(calc(-50% - clamp(40px, 5vw, 80px) / 2)); } }
+@media (prefers-reduced-motion: reduce) { .ov-marquee ul { animation: none; } }
+/* Experience, research and honors, each on its own line. */
+.ov-facts { width: min(100%, 1100px); display: grid; text-align: left; border-top: 1px solid rgba(244, 239, 232, .12); }
+.ov-fact { display: grid; grid-template-columns: clamp(110px, 12vw, 180px) 1fr; align-items: center; gap: 20px; padding: clamp(8px, 1.6vh, 16px) 0; border-bottom: 1px solid rgba(244, 239, 232, .12); }
+.ov-fact h2 { margin: 0; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: clamp(16px, min(1.4vw, 2.4vh), 22px); line-height: 1; letter-spacing: .08em; text-transform: uppercase; color: var(--ov-accent, #ffb98a); }
+.ov-fact ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px clamp(20px, 3vw, 48px); }
+.ov-fact li { font-size: clamp(15px, min(1.3vw, 2.2vh), 20px); line-height: 1.35; }
+.ov-fact li > strong { font-weight: 600; margin-right: .6em; }
+.ov-fact li > span { color: var(--muted); }
+.ov-fact li > span strong { font-weight: 600; color: var(--ink); }
+.rrow { display: flex; align-items: center; gap: 14px; padding: 6px 10px 6px 6px; margin: -6px 0 -6px -6px; border-radius: 12px; color: var(--ink); text-decoration: none; outline: none; transition: background-color .18s ease, color .18s ease, box-shadow .18s ease; }
+.rrow img { flex: none; width: clamp(56px, 5vw, 76px); aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: #1a1815; }
+.rrow span { display: flex; flex-direction: column; min-width: 0; }
+.rrow strong { font-weight: 600; font-size: clamp(15px, min(1.3vw, 2.2vh), 20px); line-height: 1.25; }
+.rrow em { font-style: normal; font-size: clamp(13px, 1vw, 15px); color: var(--muted); }
+.rrow:hover, .rrow:focus { color: var(--ov-accent, #ffb98a); background: rgba(255, 185, 138, .07); }
+.rrow:focus-visible { box-shadow: inset 0 0 0 1.5px var(--ov-accent, #ffb98a); }
+/* The projects fill one screen of their own, under the bar. */
+.ov-projects { height: 100vh; height: 100svh; min-height: 520px; display: flex; flex-direction: column; padding: calc(var(--bar) + 4px) 0 clamp(18px, 3vh, 34px); }
 .plinks a { color: var(--ink); font-size: 14px; text-decoration: none; border-bottom: 1px solid rgba(244, 239, 232, .28); padding-bottom: 2px; }
 .ov-cols { flex: 1; min-height: 0; display: grid; gap: var(--ov-col-gap); }
 /* Hardware and software each sit on their own panel, so the split between them is plain. */
@@ -116,17 +130,19 @@ body.is-portfolio #gl { filter: brightness(.42) saturate(.9); }
 #to-overview.on { opacity: 1; pointer-events: auto; transform: none; }
 #to-overview:hover, #to-overview:focus-visible { border-color: rgba(255, 214, 176, .75); outline: none; }
 @media (max-width: 760px) {
-  .ov-head { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .ov-intro { flex-direction: column; align-items: flex-start; }
-  .ov-logos { flex-wrap: wrap; }
-  .ov-about { grid-template-columns: 1fr; gap: 18px; }
-  .ov-sec--research ul { grid-template-columns: 1fr; }
-  .ov-projects { height: auto; min-height: 0; }
+  #portfolio { --peek: 0px; --bar: 56px; }
   .ov-foot span { display: none; }
+  .ov-name { font-size: 22px; }
+  .ov-brand { gap: 6px; }
+  .ov-links--bar .ov-icon { width: 30px; height: 30px; }
+  .ov-links--bar .ov-icon svg { width: 17px; height: 17px; }
+  #replay { padding: 6px 10px; white-space: nowrap; font-size: 11.5px; }
+  .ov-fact { grid-template-columns: 1fr; gap: 8px; }
   .ov-cols { grid-template-columns: 1fr !important; gap: 26px; }
   .ov-col ul { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; }
   .row__f { aspect-ratio: 4 / 3; }
   .row__t { font-size: min(var(--ov-row), 5vw); }
+  .ov-projects { height: auto; min-height: 0; }
 }
 
 /* Portfolio scrolling */
