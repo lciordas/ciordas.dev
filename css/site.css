@@ -241,6 +241,24 @@ html { overscroll-behavior-x: none; }
 /* Short phones keep the words smaller, so the picture keeps its room. */
 @media (max-aspect-ratio: 9/10) and (max-height: 700px) { .gallery__cap { font-size: 15px; line-height: 1.35; } }
 
+/* The media stream under a built project's video: photos and clips drifting sideways in a loose collage, the
+   smaller ones further back. Sizes and places are set by work.js; only transforms change while scrolling. */
+.stream { position: relative; height: 300vh; }
+.stream__stage { --pad: clamp(20px, 4vw, 64px); position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; display: flex; flex-direction: column; }
+.stream__band { position: relative; flex: 1; min-height: 0; margin: clamp(18px, 4vh, 44px) 0 clamp(22px, 5vh, 56px); }
+.stream__band::before, .stream__band::after { content: ""; position: absolute; z-index: 5; top: -60px; bottom: -60px; width: clamp(24px, 5vw, 110px); pointer-events: none; }
+.stream__band::before { left: 0; background: linear-gradient(90deg, #0b0a09, rgba(11, 10, 9, 0)); }
+.stream__band::after { right: 0; background: linear-gradient(270deg, #0b0a09, rgba(11, 10, 9, 0)); }
+.stream__item { position: absolute; left: 0; top: 0; margin: 0; overflow: hidden; border-radius: clamp(10px, 1.1vw, 18px); background: #171513; will-change: transform; backface-visibility: hidden; }
+.stream__item::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(244, 239, 232, .13); pointer-events: none; }
+.stream__item img, .stream__item video { width: 100%; height: 100%; display: block; object-fit: cover; }
+.stream__item--light { background: #f3f1ed; }
+.stream__item--s { z-index: 1; box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
+.stream__item--s::after { background: rgba(11, 10, 9, .26); }
+.stream__item--m { z-index: 2; box-shadow: 0 16px 44px rgba(0, 0, 0, .55); }
+.stream__item--l { z-index: 3; box-shadow: 0 26px 70px rgba(0, 0, 0, .62); }
+@media (max-aspect-ratio: 9/10) { .stream .gallery__head { padding-top: 64px; } .stream .gallery__head .detail__body p { font-size: 14px; } }
+
 /* The scroll prompt at the start of a project's animation and of its gallery. */
 .pcue { position: absolute; z-index: 5; left: 50%; bottom: calc(clamp(14px, 3vh, 30px) + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; gap: 8px; transform: translateX(-50%); color: rgba(244, 239, 232, .7); font: 500 11px "Hanken Grotesk", system-ui, sans-serif; letter-spacing: .32em; text-indent: .32em; text-transform: uppercase; pointer-events: none; }
 .pcue svg { width: 12px; height: 19px; animation: cue-bob 1.9s cubic-bezier(.45, 0, .3, 1) infinite; }

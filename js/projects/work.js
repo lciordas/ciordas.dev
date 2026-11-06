@@ -82,7 +82,7 @@ function buildAnimated(id, cfg, p, index, next, content) {
         ${CUE}
       </div>
     </div>
-    ${p.media?.length ? gallery(p, body(p)) : ''}
+    ${p.stream?.length ? stream(p, body(p)) : p.media?.length ? gallery(p, body(p)) : ''}
     ${endLinks(next, content)}`;
   return s;
 }
@@ -132,6 +132,79 @@ const gallery = (p, head = '') => {
     </div>
   </div>`;
 };
+
+// A stream of photos and clips under a built project's video, with no words: a loose collage that drifts from
+// left to right as the page scrolls down. Each picture is large, medium or small, and the smaller ones sit further
+// back and move more slowly, so the pictures slide over one another.
+const DEPTH = { l: 1, m: 0.8, s: 0.62 };
+const stream = (p, head = '') => `
+  <div class="stream">
+    <div class="stream__stage">
+      ${head ? `<div class="gallery__head">${head}</div>` : ''}
+      <div class="stream__band" role="group" aria-label="${esc(p.title)}: photos and clips">${p.stream.map((m) => {
+        const size = DEPTH[m.size] ? m.size : 's', ar = m.ar || (isVideo(m.src) ? 16 / 9 : 4 / 3);
+        return `
+        <figure class="stream__item stream__item--${size}${m.light ? ' stream__item--light' : ''}" data-size="${size}" data-ar="${ar}">${isVideo(m.src)
+          ? `<video data-src="${esc(m.src)}#t=0.001" muted playsinline loop preload="none" aria-hidden="true"></video>`
+          : `<img data-src="${esc(m.src)}" alt="" decoding="async">`}</figure>`;
+      }).join('')}
+      </div>
+    </div>
+  </div>`;
+
+function mountStream(el) {
+  const band = el.querySelector('.stream__band');
+  const s = {
+    el, items: [...band.children].map((f, i) => ({ f, i, size: f.dataset.size, k: DEPTH[f.dataset.size], ar: +f.dataset.ar, media: f.firstElementChild, shown: true })),
+    loaded: false, vw: 0, c0: 0, c1: 0, cam: NaN,
+  };
+  s.videos = s.items.filter((it) => it.media.tagName === 'VIDEO');
+  s.load = () => { if (s.loaded) return; s.loaded = true; s.items.forEach(({ media: m }) => { m.src = m.dataset.src; if (m.tagName === 'VIDEO') m.preload = 'metadata'; }); };
+  // Sizes come from the band's height, held to a share of its width. The pictures take turns between two rows (three
+  // on a phone), each row about end to end, and the rows overlap a little in the middle. The section is as long as
+  // the front pictures' journey across.
+  s.measure = () => {
+    const hb = band.clientHeight, vw = band.clientWidth;
+    if (hb < 1) return;
+    const narrow = vw < 760, rows = narrow ? 3 : 2, tall = narrow ? { l: 0.4, m: 0.34, s: 0.28 } : { l: 0.6, m: 0.5, s: 0.4 }, wide = narrow ? { l: 0.84, m: 0.68, s: 0.54 } : { l: 0.36, m: 0.28, s: 0.21 };
+    const nudge = [0.04, -0.03, 0.06, 0, -0.05, 0.02], tilt = [-1.6, 1.2, -0.6, 1.8, -1.1, 0.7, -1.9, 0.4];
+    let x = 0;
+    s.items.forEach((it, i) => {
+      let h = hb * tall[it.size], w = h * it.ar;
+      if (w > vw * wide[it.size]) { w = vw * wide[it.size]; h = w / it.ar; }
+      const lane = clamp((i % rows) / (rows - 1) + nudge[i % nudge.length]);
+      if (i) x += (s.items[i - 1].w + w) / 2 * (narrow ? 0.4 : 0.6);
+      Object.assign(it, { w, h, x, y: (hb - h) * lane, r: tilt[i % tilt.length] });
+      it.f.style.width = `${w.toFixed(1)}px`; it.f.style.height = `${h.toFixed(1)}px`;
+    });
+    const m = Math.min(48, vw * 0.04), a = s.items[0], b = s.items[s.items.length - 1];
+    s.vw = vw;
+    s.c0 = a.x + (vw / 2 - a.w / 2 - m) / a.k;
+    s.c1 = Math.max(s.c0 + 1, b.x - (vw / 2 - b.w / 2 - m) / b.k);
+    el.style.height = `${Math.round(s.c1 - s.c0 + innerHeight)}px`;
+    s.cam = NaN;
+  };
+  s.apply = (p, on) => {
+    const cam = s.c0 + clamp(p) * (s.c1 - s.c0), vw = s.vw;
+    if (!(Math.abs(cam - s.cam) < 0.05)) {
+      s.cam = cam;
+      s.items.forEach((it) => {
+        const left = vw / 2 + it.k * (cam - it.x) - it.w / 2, show = left < vw + 60 && left + it.w > -60;
+        it.left = left;
+        if (show !== it.shown) { it.shown = show; it.f.style.visibility = show ? 'visible' : 'hidden'; }
+        if (show) it.f.style.transform = `translate3d(${left.toFixed(1)}px,${it.y.toFixed(1)}px,0) rotate(${it.r}deg)`;
+      });
+    }
+    // Only the few clips nearest the middle play; the rest wait.
+    const playing = on && !REDUCED ? s.videos.filter((it) => it.shown && it.left > -it.w * 0.35 && it.left + it.w < vw + it.w * 0.35)
+      .sort((u, v) => Math.abs(u.left + u.w / 2 - vw / 2) - Math.abs(v.left + v.w / 2 - vw / 2)).slice(0, vw < 760 ? 2 : 3) : [];
+    s.videos.forEach((it) => {
+      const m = it.media, play = playing.includes(it);
+      if (play && m.paused) m.play().catch(() => {}); else if (!play && !m.paused) m.pause();
+    });
+  };
+  return s;
+}
 
 function buildDetail(id, p, index, next, content) {
   const s = document.createElement('section');
@@ -211,6 +284,7 @@ export function mountWork(container, options = {}) {
   });
   const foot = document.createElement('div'); foot.className = 'after after--end'; foot.innerHTML = '<a class="after__back" href="#">Back to overview</a>'; container.appendChild(foot);
   const galleries = [...container.querySelectorAll('.gallery')].map(mountGallery);
+  const streams = [...container.querySelectorAll('.stream')].map(mountStream);
 
   const size = () => {
     const w = innerWidth, h = innerHeight, dpr = Math.min(devicePixelRatio || 1, w < 768 ? 1.5 : 2);
@@ -228,6 +302,7 @@ export function mountWork(container, options = {}) {
       }
     });
     galleries.forEach((g) => g.measure());
+    streams.forEach((s) => s.measure());
   };
   const ensure = (it) => {
     if (it.loading) return; it.loading = true;
@@ -309,6 +384,13 @@ export function mountWork(container, options = {}) {
   let sideAt = 0;
   addEventListener('wheel', (e) => {
     if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 2) return;
+    // Swiping sideways over a stream moves it the way the fingers go, by scrolling the page.
+    const st = streams.find((x) => { if (x.el.closest('.project').hidden) return false; const r = x.el.getBoundingClientRect(); return r.top <= 1 && r.bottom >= innerHeight - 1; });
+    if (st) {
+      e.preventDefault();
+      if (lenis) lenis.scrollTo(lenis.targetScroll - e.deltaX); else window.scrollBy(0, -e.deltaX);
+      return;
+    }
     const g = galleryAt();
     if (!g) return;
     e.preventDefault();
@@ -357,6 +439,15 @@ export function mountWork(container, options = {}) {
       if (on) g.apply(clamp(-r.top / Math.max(1, r.height - H)), true);
       else if (g.on) g.apply(r.top >= H ? 0 : 1, false);
       g.on = on;
+    });
+    streams.forEach((s) => {
+      if (s.el.closest('.project').hidden) return;
+      const r = s.el.getBoundingClientRect();
+      if (r.top < H * 2.5 && r.bottom > -H) s.load();
+      const on = r.top < H && r.bottom > 0;
+      if (on) s.apply(-r.top / Math.max(1, r.height - H), true);
+      else if (s.on) s.apply(r.top >= H ? 0 : 1, false);
+      s.on = on;
     });
   };
   size();
