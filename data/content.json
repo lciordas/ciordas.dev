@@ -391,6 +391,10 @@
       "thumb": "hybrid-networks",
       "media": [
         {
+          "src": "media/projects/hybrid-networks/cartpole.mp4",
+          "caption": "Gymnasium's CartPole, solved by EvoGrad's NEAT alone. The network reads the cart's position and velocity and the pole's angle and angular velocity, and pushes the cart left or right. From the same start, the best random network drops the pole in 11 steps; four generations on, the best holds it for the full 500 steps, as it does from all 100 test starts."
+        },
+        {
           "src": "media/projects/hybrid-networks/networks.webp",
           "caption": "Networks evolved for XOR, sin(x) and a damped sine, each with at most three hidden nodes. Blue edges carry positive weights, red negative; thicker edges, larger weights.",
           "light": true
