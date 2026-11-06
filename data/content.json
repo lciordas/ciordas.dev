@@ -482,6 +482,15 @@
           "caption": "Gymnasium's CartPole, solved by EvoGrad's NEAT: the fittest network of each generation of one run, all from the same start. Each reads the cart's position and velocity and the pole's angle and angular velocity, and pushes the cart left or right. Evolution adds connections, then a hidden node; by generation 4 the network balances the pole for the full 500 steps from all 100 test starts."
         },
         {
+          "src": "media/projects/hybrid-networks/modes.webp",
+          "caption": "One target, a damped sine, fitted by EvoGrad's regression example three ways, with the same settings and seed:",
+          "points": [
+            "**Evolution only:** after 300 generations the best network is still a step, with a mean squared error of 0.009.",
+            "**Plus gradient descent** on every network's weights each generation: under the 0.0002 threshold in 15 generations.",
+            "**Plus learnable activations**, Legendre expansions trained with the weights: an error of 0.000017 after one generation, from one hidden node."
+          ]
+        },
+        {
           "src": "media/projects/hybrid-networks/networks.webp",
           "caption": "Networks evolved for XOR, sin(x) and a damped sine, each with at most three hidden nodes. Blue edges carry positive weights, red negative; thicker edges, larger weights.",
           "light": true
