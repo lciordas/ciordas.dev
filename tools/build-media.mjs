@@ -83,7 +83,22 @@ await thumb('hybrid-networks', `${EG}/xor_network.png`, { flat: true });
 
 const T = `${D}/tennis_`;
 // The tennis library's clip comes from build-tennis.py.
-for (const [name, f] of [['match-importance', 'point_importance_importance_during_one_match'], ['distribution', 'point_importance_importance_distribution_all_scores_bo5'], ['serve', 'point_importance_serve_win_prob_vs_importance_logistic']]) await still('tennis-simulation', name, `${T}${f}.png`, { width: 2400, flat: true });
+// Its three graphs share one slide: the match across the top, the distribution and the serve curve side by side below,
+// each trimmed to its edges and fitted into a 16:9 white panel.
+{
+  const W = 3200, H = 1800, M = 56, G = 48;
+  const cut = (f) => sharp(`${T}point_importance_${f}.png`).flatten({ background: '#ffffff' }).trim({ threshold: 10 }).png().toBuffer({ resolveWithObject: true });
+  const [top, left, right] = await Promise.all(['importance_during_one_match', 'importance_distribution_all_scores_bo5', 'serve_win_prob_vs_importance_logistic'].map(cut));
+  const bw = Math.floor((W - 2 * M - G) / 2), bh = Math.round(bw * left.info.height / left.info.width);
+  const th = H - 2 * M - G - bh, tw = Math.round(th * top.info.width / top.info.height);
+  const fit = (c, w, h) => sharp(c.data).resize(w, h, { fit: 'contain', background: '#ffffff', kernel: 'lanczos3' }).png().toBuffer();
+  const panel = await sharp({ create: { width: W, height: H, channels: 3, background: '#ffffff' } }).composite([
+    { input: await fit(top, tw, th), left: Math.round((W - tw) / 2), top: M },
+    { input: await fit(left, bw, bh), left: M, top: H - M - bh },
+    { input: await fit(right, bw, bh), left: W - M - bw, top: H - M - bh },
+  ]).png().toBuffer();
+  await sharp(panel).webp({ nearLossless: true, quality: 60, effort: 6 }).toFile(path.join(OUT, 'tennis-simulation/charts.webp'));
+}
 // The tennis library's card comes from build-thumbs.mjs.
 
 const poster = await frame(`${OLD}/49_svm_poster_closeup.mp4`, 1.2);

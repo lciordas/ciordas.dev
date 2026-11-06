@@ -425,18 +425,13 @@
           "caption": "One simulated match, point by point: win probability with Bayesian serve estimates against fixed priors, and the importance of each point."
         },
         {
-          "src": "media/projects/tennis-simulation/match-importance.webp",
-          "caption": "Point importance during one match; points above 0.1 marked by outcome.",
-          "light": true
-        },
-        {
-          "src": "media/projects/tennis-simulation/distribution.webp",
-          "caption": "Distribution of point importance across all possible scores, best of 5 sets.",
-          "light": true
-        },
-        {
-          "src": "media/projects/tennis-simulation/serve.webp",
-          "caption": "Serve win probability against point importance: logistic fit compared with the modelled curve.",
+          "src": "media/projects/tennis-simulation/charts.webp",
+          "caption": "Point importance: one match, every score, and the serve.",
+          "points": [
+            "**One match:** importance of each point; those above 0.1 marked by outcome, serving or receiving.",
+            "**All scores, best of 5 sets:** most points fall below 0.05; the largest reach 0.25.",
+            "**Serve:** win probability on serve falls as importance rises; the logistic fit tracks the model to about 0.5, then falls more slowly."
+          ],
           "light": true
         }
       ]
