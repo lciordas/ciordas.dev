@@ -82,7 +82,7 @@ function buildAnimated(id, cfg, p, index, next, content) {
         ${CUE}
       </div>
     </div>
-    ${p.media?.length ? `<div class="detail detail--after">${body(p)}</div>${gallery(p)}` : ''}
+    ${p.media?.length ? gallery(p, body(p)) : ''}
     ${endLinks(next, content)}`;
   return s;
 }
@@ -98,12 +98,15 @@ const body = (p) => `
 // slides the row across; each picture holds still for a while before the next slides in. Scrolling sideways,
 // the left and right arrow keys, the buttons, or clicking the next picture move one picture at a time.
 const SLIDE_VH = 85;
-const gallery = (p) => {
+// The project's heading and words sit at the top of the same screen, so the whole thing fits one screen exactly.
+const gallery = (p, head = '') => {
   const media = p.media || [], n = media.length;
   if (!n) return '';
   return `
   <div class="gallery" style="height:calc(${(n - 1) * SLIDE_VH}vh + 100vh)">
     <div class="gallery__stage">
+      ${head ? `<div class="gallery__head">${head}</div>` : ''}
+      <div class="gallery__main">
       <div class="gallery__view"><div class="gallery__track">${media.map((m, i) => `
         <figure class="slide${m.light ? ' slide--light' : ''}">
           <div class="slide__frame">${isVideo(m.src)
@@ -120,6 +123,7 @@ const gallery = (p) => {
           <button type="button" class="gallery__btn" data-go="1" aria-label="Next picture"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>` : ''}
       </div>
+      </div>
       ${n > 1 ? CUE : ''}
     </div>
   </div>`;
@@ -128,12 +132,9 @@ const gallery = (p) => {
 function buildDetail(id, p, index, next, content) {
   const s = document.createElement('section');
   s.className = 'project project--detail'; s.id = id; s.dataset.project = id; s.setAttribute('aria-label', p.title);
+  const head = `<h3 class="detail__title"><span class="index">${index}</span>${esc(p.title)}</h3>${body(p)}`;
   s.innerHTML = `
-    <div class="detail detail--head">
-      <h3 class="detail__title"><span class="index">${index}</span>${esc(p.title)}</h3>
-      ${body(p)}
-    </div>
-    ${gallery(p)}
+    ${p.media?.length ? gallery(p, head) : `<div class="detail detail--head">${head}</div>`}
     ${endLinks(next, content)}`;
   return s;
 }
@@ -149,7 +150,16 @@ function mountGallery(el) {
   const q = (sel) => [...el.querySelectorAll(sel)];
   const g = { el, cue: el.querySelector('.pcue'), track: el.querySelector('.gallery__track'), slides: q('.slide'), caps: q('.gallery__cap'), dots: q('.gallery__dots i'), count: el.querySelector('.gallery__count b'), media: q('.slide__frame > *'), step: 0, loaded: false, active: -1, pos: -1 };
   g.load = () => { if (g.loaded) return; g.loaded = true; g.media.forEach((m) => { m.src = m.dataset.src; if (m.tagName === 'VIDEO') m.preload = 'metadata'; }); };
-  g.measure = () => { const a = g.slides[0], b = g.slides[1]; g.step = b ? b.offsetLeft - a.offsetLeft : 0; g.pos = -1; };
+  // Pictures take the room the heading leaves: as wide as the left two thirds allow, as tall as the screen allows.
+  g.measure = () => {
+    const main = el.querySelector('.gallery__main'), view = el.querySelector('.gallery__view');
+    const stacked = getComputedStyle(main).gridTemplateColumns.split(' ').length < 2;
+    const pad = parseFloat(getComputedStyle(g.track).paddingLeft) || 0;
+    const wide = view.clientWidth - pad - (stacked ? pad : Math.min(120, Math.max(56, innerWidth * 0.07)));
+    const tall = (stacked ? main.clientHeight - el.querySelector('.gallery__text').offsetHeight - 30 : main.clientHeight - 40) * 16 / 9;
+    el.style.setProperty('--sw', `${Math.max(160, Math.min(wide, tall)).toFixed(0)}px`);
+    const a = g.slides[0], b = g.slides[1]; g.step = b ? b.offsetLeft - a.offsetLeft : 0; g.pos = -1;
+  };
   g.apply = (p, on) => {
     const n = g.slides.length, pos = slidePos(p, n);
     if (g.cue) g.cue.style.opacity = 1 - smooth(0.004, 0.05, p);
@@ -178,7 +188,8 @@ function mountGallery(el) {
 export function mountWork(container, options = {}) {
   const { content } = options;
   const gl = hasWebGL();
-  const order = content.columns.flatMap((c) => c.items).filter((id) => content.projects[id]);
+  // Projects first, then research, each listed once.
+  const order = [...new Set([...content.columns.flatMap((c) => c.items), ...(content.research?.items || [])])].filter((id) => content.projects[id]);
   const items = [], sections = [];
   order.forEach((id, i) => {
     const p = content.projects[id], next = order[i + 1], index = String(i + 1).padStart(2, '0');

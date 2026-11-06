@@ -8,11 +8,38 @@
         "url": "https://github.com/lciordas"
       },
       {
+        "label": "LinkedIn",
+        "url": "https://www.linkedin.com/in/lucas-ciordas-2b1669342/"
+      },
+      {
         "label": "Email",
         "url": "mailto:lciordas27@regis.org"
       }
     ],
-    "hint": "Arrow keys to move, Enter to open, or scroll"
+    "hint": "Arrow keys to move, Enter to open, or scroll",
+    "intro": "I'm Lucas. I'm a senior at Regis High School who takes classes at Columbia and did research with the Summer Science Program in Europe. I build hardware and robots. This summer I interned at AI Native Services, a 10-person, a16z-backed stealth startup valued at $125M.",
+    "logos": [
+      {
+        "name": "Regis High School",
+        "src": "media/logos/regis.webp"
+      },
+      {
+        "name": "Columbia University",
+        "src": "media/logos/columbia.webp"
+      },
+      {
+        "name": "Summer Science Program",
+        "src": "media/logos/ssp.webp"
+      },
+      {
+        "name": "NeurIPS",
+        "src": "media/logos/neurips.webp"
+      },
+      {
+        "name": "AI Native Services, a stealth startup",
+        "src": "media/logos/stealth.webp"
+      }
+    ]
   },
   "columns": [
     {
@@ -32,20 +59,14 @@
         "chess-engine",
         "hybrid-networks",
         "tennis-simulation",
-        "protein-classifier",
-        "world-models",
-        "asteroid-orbit"
+        "protein-classifier"
       ]
     }
   ],
   "lists": {
     "distinctions": {
-      "title": "Distinctions",
+      "title": "Honors",
       "items": [
-        {
-          "title": "NeurIPS 2026 workshop paper",
-          "detail": "Continual World Models, presenting in Sydney"
-        },
         {
           "title": "Xerox Award for Innovation",
           "detail": "University of Rochester"
@@ -61,15 +82,7 @@
       "items": [
         {
           "title": "Software Engineering Intern",
-          "detail": "AINS, AI-native facilities management. Summer 2026"
-        },
-        {
-          "title": "Summer Science Program",
-          "detail": "Astrophysics research, Summer 2026"
-        },
-        {
-          "title": "Engineering Club Leader",
-          "detail": "Regis High School"
+          "detail": "AI Native Services, a16z-backed stealth startup · Summer 2026"
         }
       ]
     }
@@ -339,7 +352,7 @@
       "title": "Plan Shallow While You Learn",
       "tag": "NeurIPS 2026 workshop paper",
       "kind": "detail",
-      "summary": "Plan Shallow While You Learn: Reallocating Planning Compute During World-Model Adaptation. Co-authored paper accepted to the Continual World Models workshop at NeurIPS 2026 in Sydney. It shows that while a world model adapts to changed physics, planning compute should favor breadth over depth to maximize returns.",
+      "summary": "Co-authored paper accepted to the Continual World Models workshop at NeurIPS 2026 in Sydney. It shows that while a world model adapts to changed physics, planning compute should favor breadth over depth to maximize returns.",
       "tech": [
         "Reinforcement learning",
         "World models",
@@ -433,6 +446,13 @@
         "detail": "Handheld, with a salvaged spark igniter",
         "image": "media/projects/other/cannon.webp"
       }
+    ]
+  },
+  "research": {
+    "title": "Research",
+    "items": [
+      "world-models",
+      "asteroid-orbit"
     ]
   }
 }

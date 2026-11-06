@@ -52,7 +52,7 @@ const moveIn = (arr, i, d) => { const j = i + d; if (j < 0 || j >= arr.length) r
 const TABS = {
   overview() {
     const out = [el('p', { className: 'note', textContent: 'Order and contents of the overview. The scroll order of the project pages follows these lists.' }),
-      el('h2', { textContent: 'Heading' }), field('Name', 'site.name'), field('Tagline', 'site.tagline'), field('Hint at the bottom', 'site.hint')];
+      el('h2', { textContent: 'Heading' }), field('Name', 'site.name'), field('Intro under the name (the first sentence is bold)', 'site.intro', { long: true }), field('Hint at the top right', 'site.hint')];
     c.columns.forEach((col, k) => {
       out.push(el('h2', { textContent: `Column ${k + 1}` }), field('Column title', `columns.${k}.title`));
       col.items.forEach((id, i) => out.push(el('div', { className: 'item' },
@@ -62,6 +62,14 @@ const TABS = {
         mini('⇄', 'Move to the other column', () => { col.items.splice(i, 1); c.columns[(k + 1) % c.columns.length].items.push(id); changed(true); }),
         mini('Edit', 'Edit this project', () => { picked = id; tab = 'projects'; render(); }))));
     });
+    if (c.research) {
+      out.push(el('h2', { textContent: 'Research' }), field('Section title', 'research.title'));
+      c.research.items.forEach((id, i) => out.push(el('div', { className: 'item' },
+        el('span', { textContent: c.projects[id]?.title || id }),
+        mini('↑', 'Move up', () => moveIn(c.research.items, i, -1), i === 0),
+        mini('↓', 'Move down', () => moveIn(c.research.items, i, 1), i === c.research.items.length - 1),
+        mini('Edit', 'Edit this project', () => { picked = id; tab = 'projects'; render(); }))));
+    }
     out.push(el('h2', { textContent: 'Links' }));
     (c.site.links || []).forEach((l, i) => out.push(el('div', { className: 'card' }, field('Label', `site.links.${i}.label`), field('Address', `site.links.${i}.url`, { url: true }), el('div', { className: 'row-btns' }, mini('Remove', 'Remove link', () => { c.site.links.splice(i, 1); changed(true); })))));
     out.push(mini('Add link', 'Add link', () => { c.site.links.push({ label: 'New link', url: 'https://' }); changed(true); }));
