@@ -94,7 +94,8 @@ export function mountRenderWindows(renderer, options = {}) {
   return {
     items, layout,
     // elapsed = seconds since the first panel appeared. target = where to draw.
-    render(elapsed, target, beautyTexture, backdrop) {
+    // panels: false draws only the backdrop, so the name dissolves straight in from the traced outline.
+    render(elapsed, target, beautyTexture, backdrop, { panels = true } = {}) {
       renderer.setRenderTarget(target);
       renderer.setClearColor(0x030303, 1);
       renderer.setScissorTest(false);
@@ -105,7 +106,7 @@ export function mountRenderWindows(renderer, options = {}) {
         quad.material.map = backdrop; quad.material.transparent = false; quad.material.needsUpdate = true;
         renderer.render(orthoS, ortho);
       }
-      items.forEach((it) => {
+      if (panels) items.forEach((it) => {
         // Each window expands from its centre along the measured curve.
         it.open = openCurve(elapsed - it.t);
         const W = it.W * it.open, H = it.H * it.open;

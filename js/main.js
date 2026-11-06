@@ -261,15 +261,13 @@ function start(data) {
       const c = trace.snapshot();
       S.backdrop = new THREE.CanvasTexture(c); S.backdrop.colorSpace = THREE.NoColorSpace; S.backdrop.minFilter = THREE.LinearFilter; S.backdrop.generateMipmaps = false;
       trace.hide();
-      S.phase = 'windows'; S.windowsAt = S.time;
+      S.phase = 'dissolve'; S.windowsAt = S.time;
       post.uniforms.uDissolve.value = 0;
-      // The letters are already swaying when the first window opens onto them.
+      // The traced outline breaks up in blocks onto the letters, already swaying.
       name.settleIn();
       name.st.nudgeAt = Infinity;
       name.setActive(1);
     });
-    tl.to({}, { duration: 2.15 });
-    tl.add(() => { S.phase = 'dissolve'; });
     tl.fromTo(post.uniforms.uDissolve, { value: 0 }, { value: 1, duration: 1.05, ease: 'none' });
     tl.to(skyU.uGlow, { value: 1, duration: 1.4, ease: 'power2.out' }, '-=1.05');
     tl.add(() => { S.backdrop?.dispose(); S.backdrop = null; ready(); });
@@ -322,7 +320,7 @@ function start(data) {
     renderer.setClearColor(0x000000, 1); renderer.clear();
     renderer.render(scene, camera);
     post.bloomPass();
-    if (S.phase === 'windows' || S.phase === 'dissolve') windows.render(t - S.windowsAt, post.stage, post.main.texture, S.backdrop);
+    if (S.phase === 'windows' || S.phase === 'dissolve') windows.render(t - S.windowsAt, post.stage, post.main.texture, S.backdrop, { panels: false });
     post.present(t);
   };
   window.__draft = { S, name, post, trace, windows, fps: () => window.__fps };

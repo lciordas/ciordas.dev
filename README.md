@@ -7,7 +7,7 @@ Lucas's own site, in progress. So far it holds only the opening sequence and a p
 ## The intro
 
 1. The name's outlines trace themselves with a soft glow (`js/trace.js`).
-2. Render windows pop open, then a block wipe reveals the 3D name (`js/render-windows.js`, `js/film-post.js`).
+2. A block wipe turns the traced outline into the 3D name (`js/film-post.js`; the render-window panels in `js/render-windows.js` are switched off).
 3. The letters float on springs and nudge every few seconds to invite a click (`js/name.js`).
 4. Clicking cracks the name from that point and bursts it into shards (`js/name.js`, timed in `js/main.js`). A prompt at the bottom takes one step per scroll gesture, swipe, tap, or down-arrow press: during the intro ("Scroll to skip") it jumps straight to the name, and on the name ("Scroll") it breaks it from the middle.
 
