@@ -138,9 +138,9 @@ const gallery = (p, head = '') => {
   </div>`;
 };
 
-// A stream of photos and clips under a built project's video, with no words: a loose collage that drifts from
-// left to right as the page scrolls down. Each picture is large, medium or small, and the smaller ones sit further
-// back and move more slowly, so the pictures slide over one another.
+// A stream of photos and clips under a built project's video, or after a project's gallery, with no words: a loose
+// collage that drifts from left to right as the page scrolls down. Each picture is large, medium or small, and the
+// smaller ones sit further back and move more slowly, so the pictures slide over one another.
 const DEPTH = { l: 1, m: 0.8, s: 0.62 };
 const stream = (p, head = '') => `
   <div class="stream">
@@ -217,6 +217,7 @@ function buildDetail(id, p, index, next, content) {
   const head = `<h3 class="detail__title"><span class="index">${index}</span>${esc(p.title)}</h3>${body(p)}`;
   s.innerHTML = `
     ${p.media?.length ? gallery(p, head) : `<div class="detail detail--head">${head}</div>`}
+    ${p.stream?.length ? stream(p) : ''}
     ${endLinks(next, content)}`;
   return s;
 }

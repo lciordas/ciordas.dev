@@ -1,5 +1,6 @@
-// The extra photos and short loops for the media stream under the robot dog's and the seesaw's videos, into
-// media/projects/<id>. The pictures and clips the projects already had come from build-media.mjs.
+// The extra photos and short loops for the media stream under the robot dog's and the seesaw's videos, and under
+// the ship in a bottle's gallery (stills and loops from its build video), into media/projects/<id>. The pictures
+// and clips the projects already had come from build-media.mjs.
 // Run from the repo root: node tools/build-stream.mjs [project id]
 // iPhone .MOV footage is HDR, so it goes through macOS's converter to standard video first (kept in toolkit/frames).
 // A clip with `lock` follows the background and cancels the camera's movement, as in build-frames.mjs.
@@ -11,7 +12,7 @@ import { trackCamera } from './track.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp');
-const D = `${os.homedir()}/Downloads`, OLD = `${D}/old_clips`, BROLL = `${D}/maker portfolio b-roll`, DOG = `${D}/robot dog photos icloud`;
+const D = `${os.homedir()}/Downloads`, SHIP = `${D}/YTDown.com_YouTube_Media_3DkmBDOjDKI_Building-a-Ship-in-a-Bottle-From-Scratch_001_720p.mp4`, OLD = `${D}/old_clips`, BROLL = `${D}/maker portfolio b-roll`, DOG = `${D}/robot dog photos icloud`;
 const OUT = path.join(here, '../media/projects'), FRAMES = path.join(here, '../toolkit/frames');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'stream-'));
 const run = (...a) => execFileSync(a[0], a.slice(1), { stdio: ['ignore', 'ignore', 'pipe'], maxBuffer: 2 ** 31 });
@@ -25,13 +26,27 @@ const sdr = (src) => {
   return o;
 };
 const frame = (src, t, trim = false) => { const o = temp('png'), raw = temp('png'); run('ffmpeg', '-v', 'error', '-y', '-ss', String(t), '-i', src, '-frames:v', '1', raw); return trim ? sharp(raw).trim({ threshold: 18 }).toFile(o).then(() => o) : raw; };
+// The sharpest frame within `span` seconds either side of t: the ship's video has blended, combed frames between
+// sharp ones, so a frame taken at an exact time can come out doubled. Sharpness is the variance of the sideways second
+// difference at half size, which the combing's horizontal lines don't raise.
+const sharpest = async (src, t, span = 0.25) => {
+  const dir = fs.mkdtempSync(path.join(tmp, 's-'));
+  run('ffmpeg', '-v', 'error', '-y', '-ss', String(Math.max(0, t - span)), '-t', String(span * 2), '-i', src, '-an', path.join(dir, '%03d.png'));
+  let best = null;
+  for (const f of fs.readdirSync(dir).sort()) {
+    const { data, info } = await sharp(path.join(dir, f)).resize({ width: 640 }).greyscale().raw().toBuffer({ resolveWithObject: true });
+    const { channels: [c] } = await sharp(data, { raw: { width: info.width, height: info.height, channels: 1 } }).convolve({ width: 3, height: 3, kernel: [0, 0, 0, 1, -2, 1, 0, 0, 0], offset: 128 }).stats();
+    if (!best || c.stdev > best.v) best = { v: c.stdev, f: path.join(dir, f) };
+  }
+  return best.f;
+};
 const heic = (p) => { const o = temp('jpg'); run('sips', '-s', 'format', 'jpeg', p, '--out', o); return o; };
 
-const still = async (id, name, src, { width = 1100, crop = null } = {}) => {
+const still = async (id, name, src, { width = 1100, crop = null, quality = 74 } = {}) => {
   const dir = path.join(OUT, id); fs.mkdirSync(dir, { recursive: true });
   let img = sharp(await src).rotate();
   if (crop) img = sharp(await img.extract(crop).png().toBuffer());
-  const info = await img.resize({ width, withoutEnlargement: true }).webp({ quality: 74, effort: 5 }).toFile(path.join(dir, `${name}.webp`));
+  const info = await img.resize({ width, withoutEnlargement: true }).webp({ quality, effort: 5 }).toFile(path.join(dir, `${name}.webp`));
   console.log(`${id}/${name}.webp`, `${info.width}x${info.height}`, (info.size / 1e3).toFixed(0), 'KB');
 };
 // Short muted loops, 720p. `crop` is a fraction of the frame [x, y, w, h], for a closer view. With `lock`, the
@@ -83,6 +98,30 @@ const PROJECTS = {
     for (const [name, img] of [['beam', 'IMG_1290.HEIC'], ['beam-low', 'IMG_1299.HEIC'], ['beam-warm', 'IMG_1300.heic']]) await still('pid-seesaw', name, heic(`${D}/${img}`), { width: 1000 });
     // Close on the ball: knocked and brought back to the middle.
     await clip('pid-seesaw', 'pokes', path.join(FRAMES, 'IMG_1256-sdr.mov'), 20.5, 6.5, { crop: [0.08, 0.12, 0.82, 0.82] });
+  },
+  // Stills from the 720p build video, each the sharpest frame near its time, cropped in source pixels and kept at
+  // their own size. None shows the video's on-screen words.
+  async 'ship-in-a-bottle'() {
+    for (const [name, t, crop] of [
+      ['carve', 32.1, null], // carving the keel, the rotary tool waiting
+      ['halves', 54.1, { left: 180, top: 0, width: 880, height: 720 }], // the hull split in two to fit the neck, pegged
+      ['chisel', 86.1, { left: 180, top: 60, width: 1000, height: 660 }], // chiselling the recessed deck in the vise
+      ['stain', 109.7, { left: 120, top: 40, width: 1080, height: 680 }], // staining the deck
+      ['cabin', 192.7, { left: 380, top: 140, width: 460, height: 580 }], // painting the cabin's windows, next to a brush
+      ['railing', 231.5, { left: 60, top: 0, width: 1080, height: 720 }], // the wire railing on, anchor and hatch by the vise
+      ['masts-fit', 266.0, null], // test fitting the masts, lifeboat and cabin
+      ['hull', 302.5, { left: 280, top: 60, width: 1000, height: 420 }], // the finished hull, side on
+      ['hinges', 375.9, { left: 300, top: 130, width: 560, height: 590 }], // the hinged masts that fold flat
+      ['rigged', 564.6, { left: 340, top: 10, width: 920, height: 600 }], // rigged, before the sails
+      ['sails', 584.9, { left: 180, top: 60, width: 760, height: 660 }], // the coffee-dyed sails going on
+      ['lit', 628.4, { left: 250, top: 90, width: 820, height: 630 }], // the finished ship held up in lamplight
+      ['stand', 644.0, { left: 200, top: 0, width: 1080, height: 720 }], // drilling the stand
+      ['hull-in', 711.1, { left: 0, top: 0, width: 1180, height: 620 }], // the hull's lower half set on its stand inside
+      ['folded', 792.4, { left: 60, top: 0, width: 1000, height: 720 }], // through the neck, sails folded flat
+      ['final', 836.3, { left: 100, top: 0, width: 1100, height: 720 }], // masts raised inside the bottle
+    ]) await still('ship-in-a-bottle', name, sharpest(SHIP, t), { crop, width: 1280, quality: 85 });
+    // Bending the wire hinges that let the masts fold. Still camera.
+    await clip('ship-in-a-bottle', 'hinge', SHIP, 401.2, 3.5, { crop: [0.15, 0, 0.7, 1], width: 896 });
   },
 };
 fs.mkdirSync(FRAMES, { recursive: true });

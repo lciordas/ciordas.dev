@@ -322,6 +322,93 @@
           "src": "media/projects/ship-in-a-bottle/finished.webp",
           "caption": "Finished ship in its bottle."
         }
+      ],
+      "stream": [
+        {
+          "src": "media/projects/ship-in-a-bottle/carve.webp",
+          "size": "l",
+          "ar": 1.78
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/halves.webp",
+          "size": "s",
+          "ar": 1.22
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/chisel.webp",
+          "size": "m",
+          "ar": 1.52
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/stain.webp",
+          "size": "l",
+          "ar": 1.59
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/cabin.webp",
+          "size": "s",
+          "ar": 0.79
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/railing.webp",
+          "size": "m",
+          "ar": 1.5
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/masts-fit.webp",
+          "size": "l",
+          "ar": 1.78
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/hull.webp",
+          "size": "m",
+          "ar": 2.38
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/hinges.webp",
+          "size": "s",
+          "ar": 0.95
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/hinge.mp4",
+          "size": "l",
+          "ar": 1.24
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/rigged.webp",
+          "size": "m",
+          "ar": 1.53
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/sails.webp",
+          "size": "s",
+          "ar": 1.15
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/lit.webp",
+          "size": "l",
+          "ar": 1.3
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/stand.webp",
+          "size": "s",
+          "ar": 1.5
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/hull-in.webp",
+          "size": "m",
+          "ar": 1.9
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/folded.webp",
+          "size": "s",
+          "ar": 1.39
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/final.webp",
+          "size": "l",
+          "ar": 1.53
+        }
       ]
     },
     "chess-engine": {
@@ -478,15 +565,15 @@
       "thumb": "world-models",
       "media": [
         {
-          "src": "media/projects/world-models/title.webp",
+          "src": "media/projects/world-models/title.svg",
           "caption": "NeurIPS 2026 · Sydney, December 12. Photo: Benh Lieu Song, CC BY-SA 4.0."
         },
         {
-          "src": "media/projects/world-models/programme.webp",
+          "src": "media/projects/world-models/programme.svg",
           "caption": "The workshop’s accepted papers include work co-authored by Yann LeCun and Fei-Fei Li. [See for yourself!](https://neurips.cc/virtual/2026/loc/sydney/workshop/137499)"
         },
         {
-          "src": "media/projects/world-models/figures.webp",
+          "src": "media/projects/world-models/figures.svg",
           "caption": "Drag compresses the optimal imagination depth from H=12 to H=6 (Fig. 1). Moving the same budget from depth to refinement iterations gains +2.4 to +11.2 return across the drag tiers (Fig. 2) and leads the deep default in all six deployment panels (Fig. 3).",
           "light": true
         }

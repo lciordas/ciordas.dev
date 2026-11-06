@@ -259,6 +259,7 @@ html { overscroll-behavior-x: none; }
 .stream { position: relative; height: 300vh; }
 .stream__stage { --pad: clamp(20px, 4vw, 64px); position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; display: flex; flex-direction: column; }
 .stream__band { position: relative; flex: 1; min-height: 0; margin: clamp(18px, 4vh, 44px) 0 clamp(22px, 5vh, 56px); }
+.stream__band:first-child { margin-top: clamp(64px, 9vh, 96px); } /* no heading above it: clear the overview button */
 .stream__band::before, .stream__band::after { content: ""; position: absolute; z-index: 5; top: -60px; bottom: -60px; width: clamp(24px, 5vw, 110px); pointer-events: none; }
 .stream__band::before { left: 0; background: linear-gradient(90deg, #0b0a09, rgba(11, 10, 9, 0)); }
 .stream__band::after { right: 0; background: linear-gradient(270deg, #0b0a09, rgba(11, 10, 9, 0)); }
