@@ -18,6 +18,26 @@ const skipIntro = params.has('skip') || REDUCED || !!STYLE;
 const $ = (id) => document.getElementById(id);
 const canvas = $('gl'), enterBtn = $('enter'), portfolio = $('portfolio'), fallback = $('fallback');
 
+// The prompt under the name. Scrolling down, swiping up, tapping, or pressing the down arrow breaks the name.
+const cue = $('cue');
+cue.querySelector('.cue__label').textContent = matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Scroll';
+let breakName = null;
+const showCue = (fn) => { breakName = fn; cue.hidden = false; requestAnimationFrame(() => cue.classList.add('on')); };
+const hideCue = () => { breakName = null; cue.classList.remove('on'); setTimeout(() => { if (!breakName) cue.hidden = true; }, 700); };
+cue.addEventListener('click', () => breakName?.());
+addEventListener('wheel', (e) => { if (breakName && e.deltaY > 2) breakName(); }, { passive: true });
+addEventListener('keydown', (e) => {
+  if (!breakName || !['ArrowDown', 'PageDown', ' '].includes(e.key) || (e.key === ' ' && e.target.closest?.('button'))) return;
+  e.preventDefault(); breakName();
+});
+let touchY = null;
+addEventListener('touchstart', (e) => { touchY = e.touches[0].clientY; }, { passive: true });
+addEventListener('touchend', (e) => {
+  if (!breakName || touchY === null) return;
+  const dy = touchY - e.changedTouches[0].clientY; touchY = null;
+  if (dy > 24 || (Math.abs(dy) < 10 && !e.target.closest?.('#enter, #cue'))) breakName();
+}, { passive: true });
+
 let onHero = null;
 let content = null;
 const loadContent = async () => {
@@ -52,7 +72,8 @@ if (editMode) {
   canvas.style.display = 'none'; fallback.hidden = false;
   gsap.from(fallback.children, { opacity: 0, y: 18, duration: 1, stagger: 0.12, ease: 'power3.out' });
   Object.assign(enterBtn.style, { inset: '0', width: '100%', height: '100%' }); enterBtn.hidden = false;
-  enterBtn.addEventListener('click', () => { enterBtn.hidden = true; gsap.to(fallback, { opacity: 0, duration: 0.5, onComplete: () => { fallback.hidden = true; showPortfolio(); } }); });
+  showCue(() => enterBtn.click());
+  enterBtn.addEventListener('click', () => { hideCue(); enterBtn.hidden = true; gsap.to(fallback, { opacity: 0, duration: 0.5, onComplete: () => { fallback.hidden = true; showPortfolio(); } }); });
 } else {
   start(await (await fetch(`data/name-${fontKey}.json`)).json());
 }
@@ -142,6 +163,7 @@ function start(data) {
   const shatter = (x, y) => {
     if (S.phase !== 'ready') return;
     S.phase = 'shatter';
+    hideCue();
     enterBtn.hidden = true; S.hotT = 0; name.setHover(false);
     if (REDUCED) {
       gsap.to(name.uniforms.uFade, { value: 0, duration: 0.01 });
@@ -189,6 +211,7 @@ function start(data) {
     name.setActive(1);
     enterBtn.hidden = false;
     name.st.nudgeAt = S.time + 2.2;
+    showCue(() => shatter(0, 0));
   };
   const runIntro = () => {
     // Jumps past the intro to review the portfolio directly.

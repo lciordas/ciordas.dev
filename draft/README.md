@@ -7,7 +7,7 @@ Lucas's own site, in progress. So far it holds only the opening sequence and a p
 1. The name's outlines trace themselves with a soft glow (`js/trace.js`).
 2. Render windows pop open, then a block wipe reveals the 3D name (`js/render-windows.js`, `js/film-post.js`).
 3. The letters float on springs and nudge every few seconds to invite a click (`js/name.js`).
-4. Clicking cracks the name from that point and bursts it into shards (`js/name.js`, timed in `js/main.js`).
+4. Clicking cracks the name from that point and bursts it into shards (`js/name.js`, timed in `js/main.js`). A prompt under the name ("Scroll", or "Tap" on touch screens) means scrolling down, swiping up, tapping, or the down arrow breaks it from the middle.
 
 ## The letter material
 
@@ -34,7 +34,9 @@ After the name shatters, the overview page is underneath it: projects in two col
 
 The words and the overview's look live in `data/content.json`. Edit them in the Editor tab (`/draft/edit/`): type on the preview, changes save in that browser, and Publish commits the file through GitHub using your own token.
 
-Animated projects sit in a rounded window with room around it for text. CAD parts float at random across the whole screen, then assemble in the window as you scroll. A light line wipes from CAD to footage, which either moves with the scroll or plays as a video. Their timing and camera angles are in `ANIMATED` in `js/projects/work.js`, the window's size is `--rw` in `css/site.css`. Models bake from the STEP files with `tools/build-cad.mjs`, including the assembled seesaw and the dog's standing pose. The micromanipulator bakes straight from its FreeCAD files (`tools/freecad-assembly.py` reads the assembly; FreeCAD itself isn't needed), and its camera is lined up with the clip's first frame. A project with pictures or graphs shows them below its animation. Scroll footage comes from `tools/build-frames.mjs`, videos from `tools/build-video.mjs`. Project photos, graphs, short clips, and list pictures come from `tools/build-media.mjs`.
+Animated projects sit in a rounded window with room around it for text. CAD parts float at random across the whole screen, then assemble in the window as you scroll. A light line wipes from CAD to footage, which either moves with the scroll or plays as a video. Their timing and camera angles are in `ANIMATED` in `js/projects/work.js`, the window's size is `--rw` in `css/site.css`. Models bake from the STEP files with `tools/build-cad.mjs`, including the assembled seesaw and the dog's standing pose. The micromanipulator bakes straight from its FreeCAD files (`tools/freecad-assembly.py` reads the assembly; FreeCAD itself isn't needed), and its camera is lined up with the clip's first frame. On the dog, each clip cuts straight to the next with no transition, and scroll footage moves at an even pace so it is in motion from its first frame. The seesaw video cuts between its two shots where the ball and beam sit in the same place. Scroll footage comes from `tools/build-frames.mjs`, videos from `tools/build-video.mjs`. Project photos, graphs, short clips, and list pictures come from `tools/build-media.mjs`.
+
+Pictures and clips for a project (`media` in `data/content.json`) sit in a sideways gallery: scrolling down slides the row across one picture at a time, each holding in the middle with its caption underneath. It sits below an animated project's demo, and is the whole page for projects without one. A clip in it plays while it holds. The gallery's size is `--sw` in `css/site.css`, and the scroll each picture takes is `SLIDE_VH` in `js/projects/work.js`.
 
 - Add `?to=overview` to the address to skip the intro.
 - `node draft/tools/build-frames.mjs` re-extracts the video frames, with clip times at the top of the file.

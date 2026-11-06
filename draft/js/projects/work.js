@@ -36,7 +36,8 @@ const ANIMATED = {
       { p: 0.18, az: 0.75, el: 0.2, dist: 3.4, tx: 0, ty: 0, tz: 0 },
       { p: 0.22, az: 0.3256, el: 0.3072, dist: 3.4439, tx: 0.1741, ty: -0.1379, tz: -0.0126 },
     ],
-    assemble: [0.012, 0.18], title: [0.025, 0.07], wipe: [0.22, 0.238], scrub: [0.24, 0.55], frames2Fade: [0.55, 0.565], scrub2: [0.565, 0.86], clipFade: [0.86, 0.875], clipAt: 0.868,
+    // Each clip cuts straight to the next, already in motion.
+    assemble: [0.012, 0.18], title: [0.025, 0.07], wipe: [0.22, 0.238], scrub: [0.238, 0.555], cut2: 0.555, scrub2: [0.555, 0.86], cutClip: 0.86, clipAt: 0.86,
     copyAt: [[0.1, 0.21], [0.25, 0.39], [0.41, 0.545], [0.575, 0.85], [0.885, 1]],
   },
 };
@@ -79,46 +80,90 @@ function buildAnimated(id, cfg, p, index, next, content) {
         ${(p.captions || []).map((c, i) => `<p class="copy copy--${i % 2 ? 'right' : 'left'}">${esc(c)}</p>`).join('')}
       </div>
     </div>
-    ${p.media?.length ? `
-    <div class="detail detail--after">
-      <div class="detail__body">
-        <p>${esc(p.summary)}</p>
-        ${p.tech?.length ? `<ul class="tech">${p.tech.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
-      </div>
-      <div class="detail__grid">${p.media.map((m) => figure(m, p.title)).join('')}</div>
-    </div>` : ''}
+    ${p.media?.length ? `<div class="detail detail--after">${body(p)}</div>${gallery(p)}` : ''}
     ${endLinks(next, content)}`;
   return s;
 }
 
 const isVideo = (src) => /\.mp4$/i.test(src);
-const figure = (m, alt, cls = '') => `
-  <figure class="fig ${cls}${m.light ? ' fig--light' : ''}">
-    <div class="fig__frame">${isVideo(m.src)
-      ? `<video src="${esc(m.src)}" muted playsinline loop preload="none" aria-label="${esc(m.caption || alt)}"></video>`
-      : `<img src="${esc(m.src)}" alt="${esc(m.caption || alt)}" loading="lazy" decoding="async">`}</div>
-    ${m.caption ? `<figcaption>${esc(m.caption)}</figcaption>` : ''}
-  </figure>`;
+const body = (p) => `
+  <div class="detail__body">
+    <p>${esc(p.summary)}</p>
+    ${p.tech?.length ? `<ul class="tech">${p.tech.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+    ${p.links?.length ? `<p class="plinks">${p.links.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join('')}</p>` : ''}
+  </div>`;
+// Photos and clips in a row that slides sideways as the page scrolls down. Each one stops in the middle for a
+// while, with its own text underneath, before the next slides in.
+const SLIDE_VH = 85;
+const gallery = (p) => {
+  const media = p.media || [], n = media.length;
+  if (!n) return '';
+  return `
+  <div class="gallery" style="height:calc(${(n - 1) * SLIDE_VH}vh + 100vh)">
+    <div class="gallery__stage">
+      <div class="gallery__track">${media.map((m, i) => `
+        <figure class="slide${m.light ? ' slide--light' : ''}">
+          <div class="slide__frame">${isVideo(m.src)
+            ? `<video data-src="${esc(m.src)}" muted playsinline loop preload="none" aria-label="${esc(m.caption || p.title)}"></video>`
+            : `<img data-src="${esc(m.src)}" alt="${esc(m.caption || p.title)}" decoding="async">`}</div>
+        </figure>`).join('')}
+      </div>
+      <div class="gallery__text">
+        <span class="gallery__count"><b>01</b> / ${String(n).padStart(2, '0')}</span>
+        <div class="gallery__caps">${media.map((m) => `<p class="gallery__cap">${esc(m.caption || '')}</p>`).join('')}</div>
+      </div>
+      ${n > 1 ? `<div class="gallery__dots" aria-hidden="true">${media.map(() => '<i></i>').join('')}</div>` : ''}
+    </div>
+  </div>`;
+};
 
 function buildDetail(id, p, index, next, content) {
   const s = document.createElement('section');
   s.className = 'project project--detail'; s.id = id; s.dataset.project = id; s.setAttribute('aria-label', p.title);
-  const [hero, ...rest] = p.media || [];
   s.innerHTML = `
-    <div class="detail">
+    <div class="detail detail--head">
       <h3 class="detail__title"><span class="index">${index}</span>${esc(p.title)}</h3>
-      <div class="detail__top">
-        ${hero ? figure(hero, p.title, 'fig--hero') : ''}
-        <div class="detail__body">
-          <p>${esc(p.summary)}</p>
-          ${p.tech?.length ? `<ul class="tech">${p.tech.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
-          ${p.links?.length ? `<p class="plinks">${p.links.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join('')}</p>` : ''}
-        </div>
-      </div>
-      ${rest.length ? `<div class="detail__grid">${rest.map((m) => figure(m, p.title)).join('')}</div>` : ''}
+      ${body(p)}
     </div>
+    ${gallery(p)}
     ${endLinks(next, content)}`;
   return s;
+}
+
+// Where the row sits for a scroll position from 0 to 1: each slide holds still, then eases across to the next.
+const HOLD = 0.3;
+function slidePos(p, n) {
+  if (n < 2) return 0;
+  const u = clamp(p) * (n - 1), i = Math.min(n - 2, Math.floor(u)), t = clamp((u - i - HOLD) / (1 - 2 * HOLD));
+  return i + (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+}
+function mountGallery(el) {
+  const q = (sel) => [...el.querySelectorAll(sel)];
+  const g = { el, track: el.querySelector('.gallery__track'), slides: q('.slide'), caps: q('.gallery__cap'), dots: q('.gallery__dots i'), count: el.querySelector('.gallery__count b'), media: q('.slide__frame > *'), step: 0, loaded: false, active: -1, pos: -1 };
+  g.load = () => { if (g.loaded) return; g.loaded = true; g.media.forEach((m) => { m.src = m.dataset.src; if (m.tagName === 'VIDEO') m.preload = 'metadata'; }); };
+  g.measure = () => { const a = g.slides[0], b = g.slides[1]; g.step = b ? b.offsetLeft - a.offsetLeft : 0; g.pos = -1; };
+  g.apply = (p, on) => {
+    const n = g.slides.length, pos = slidePos(p, n);
+    if (Math.abs(pos - g.pos) > 0.0001) {
+      g.pos = pos;
+      g.track.style.transform = `translate3d(${(-pos * g.step).toFixed(1)}px,0,0)`;
+      g.slides.forEach((s, i) => { const d = Math.min(1, Math.abs(i - pos)); s.style.transform = `scale(${1 - d * 0.1})`; s.style.opacity = 1 - d * 0.62; });
+      g.caps.forEach((c, i) => { const a = clamp(1 - Math.abs(i - pos) * 2.4); c.style.opacity = a; c.style.transform = `translate3d(0,${((i - pos) * 10).toFixed(1)}px,0)`; c.style.visibility = a > 0.001 ? 'visible' : 'hidden'; });
+    }
+    const active = Math.round(pos);
+    if (active !== g.active) {
+      g.active = active;
+      g.count.textContent = String(active + 1).padStart(2, '0');
+      g.dots.forEach((d, i) => d.classList.toggle('on', i === active));
+    }
+    // A clip plays while it holds in the middle and waits while the row is moving.
+    g.media.forEach((m, i) => {
+      if (m.tagName !== 'VIDEO') return;
+      const play = on && Math.abs(i - pos) < 0.01 && !REDUCED;
+      if (play && m.paused) m.play().catch(() => {}); else if (!play && !m.paused) m.pause();
+    });
+  };
+  return g;
 }
 
 export function mountWork(container, options = {}) {
@@ -141,9 +186,7 @@ export function mountWork(container, options = {}) {
     items.push(item);
   });
   const foot = document.createElement('div'); foot.className = 'after after--end'; foot.innerHTML = '<a class="after__back" href="#">Back to overview</a>'; container.appendChild(foot);
-
-  const clips = new IntersectionObserver((seen) => seen.forEach((e) => { if (REDUCED) return; if (e.isIntersecting) e.target.play().catch(() => {}); else e.target.pause(); }), { threshold: 0.2 });
-  container.querySelectorAll('.fig video').forEach((v) => clips.observe(v));
+  const galleries = [...container.querySelectorAll('.gallery')].map(mountGallery);
 
   const size = () => {
     const w = innerWidth, h = innerHeight, dpr = Math.min(devicePixelRatio || 1, w < 768 ? 1.5 : 2);
@@ -160,6 +203,7 @@ export function mountWork(container, options = {}) {
       }
       it.forceDraw = true; it.forceDraw2 = true;
     });
+    galleries.forEach((g) => g.measure());
   };
   const ensure = (it) => {
     if (it.loading) return; it.loading = true;
@@ -205,22 +249,22 @@ export function mountWork(container, options = {}) {
         it.cad.render();
       }
     }
-    // Footage moved by the scroll.
+    // Footage moved by the scroll, at an even pace so it is moving from its first frame to its last.
     if (cfg.scrub && it.seq?.total) {
-      const k = smooth(cfg.scrub[0], cfg.scrub[1], p);
+      const k = clamp((p - cfg.scrub[0]) / (cfg.scrub[1] - cfg.scrub[0]));
       if (it.forceDraw) { it.seq.draw(Math.round(k * (it.seq.total - 1)), true); it.forceDraw = false; } else it.seq.seek(k * 0.9999);
     }
     if (cfg.scrub2 && it.seq2?.total) {
-      const f = smooth(cfg.frames2Fade[0], cfg.frames2Fade[1], p);
-      it.frames2C.style.opacity = f; it.frames2C.style.visibility = f > 0 ? 'visible' : 'hidden';
-      const k = smooth(cfg.scrub2[0], cfg.scrub2[1], p);
+      const on = p >= cfg.cut2;
+      it.frames2C.style.opacity = on ? 1 : 0; it.frames2C.style.visibility = on ? 'visible' : 'hidden';
+      const k = clamp((p - cfg.scrub2[0]) / (cfg.scrub2[1] - cfg.scrub2[0]));
       if (it.forceDraw2) { it.seq2.draw(Math.round(k * (it.seq2.total - 1)), true); it.forceDraw2 = false; } else it.seq2.seek(k * 0.9999);
     }
-    // Footage that plays by itself.
+    // Footage that plays by itself. Its first frame is already mid-stride, so it is moving from the cut.
     if (it.video) {
-      if (cfg.clipFade) {
-        const f = smooth(cfg.clipFade[0], cfg.clipFade[1], p);
-        it.video.style.opacity = f; it.video.style.visibility = f > 0 ? 'visible' : 'hidden';
+      if (cfg.cutClip) {
+        const on = p >= cfg.cutClip;
+        it.video.style.opacity = on ? 1 : 0; it.video.style.visibility = on ? 'visible' : 'hidden';
       }
       setPlaying(it, p >= cfg.clipAt);
     }
@@ -257,6 +301,15 @@ export function mountWork(container, options = {}) {
       it.p += (target - it.p) * (1 - Math.exp(-(REDUCED ? 60 : 11) * dt));
       if (Math.abs(target - it.p) < 0.00005) it.p = target;
       if (visible) apply(it, it.p, time); else setPlaying(it, false);
+    });
+    galleries.forEach((g) => {
+      if (g.el.closest('.project').hidden) return;
+      const r = g.el.getBoundingClientRect();
+      if (r.top < H * 2.5 && r.bottom > -H) g.load();
+      const on = r.top < H && r.bottom > 0;
+      if (on) g.apply(clamp(-r.top / Math.max(1, r.height - H)), true);
+      else if (g.on) g.apply(r.top >= H ? 0 : 1, false);
+      g.on = on;
     });
   };
   size();

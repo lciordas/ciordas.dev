@@ -12,8 +12,8 @@ const sharp = require('sharp');
 const HOME = os.homedir();
 const CLIPS = {
   dog: { src: `${HOME}/Downloads/robot dog photos icloud/IMG_2665.MOV`, ss: 14.8, t: 6, vf: 'fps=30', lock: { margin: 64 } },
-  // The phone was turned on its side partway through this clip, so it needs turning back.
-  'dog-front': { src: `${HOME}/Downloads/IMG_2648.MOV`, ss: 20.4, t: 7.5, pre: 'transpose=2', vf: 'transpose=2,fps=24', trackFps: 30, lock: { margin: 48 } },
+  // Head on: one full sway, then the tilts. The phone was turned on its side partway through, so it needs turning back.
+  'dog-front': { src: `${HOME}/Downloads/maker portfolio b-roll/quadrupedgyratingfrontview.MOV`, ss: 23.1, t: 6.4, pre: 'transpose=2', vf: 'transpose=2,fps=24', trackFps: 30, lock: { margin: 48 } },
 };
 const WIDTH = 1280, QUALITY = 72;
 

@@ -1,7 +1,7 @@
 // name: the 3D letters. They share one veined stone surface, float on small springs,
 // crack from the point they are clicked, and burst into shards that settle into a slow ring.
 import * as THREE from 'three';
-import { GLSL_NOISE, rng, clamp, smooth } from './_util.js';
+import { GLSL_NOISE, rng, smooth } from './_util.js';
 import { SPAN, VOL_DEPTH } from './bake.js';
 
 export const DEPTH = 0.13;
@@ -292,18 +292,8 @@ export function mountName(scene, data, palU, baked) {
     };
   });
 
-  // Small chips thrown when the name breaks.
-  const chipN = 110;
-  const chips = new THREE.InstancedMesh(new THREE.TetrahedronGeometry(1, 0), new THREE.ShaderMaterial({
-    uniforms: { p_shard: palU.p_shard },
-    vertexShader: 'varying vec3 vN; void main(){ vN=normalMatrix*normalize(position); gl_Position=projectionMatrix*modelViewMatrix*instanceMatrix*vec4(position,1.); }',
-    fragmentShader: 'varying vec3 vN; uniform vec3 p_shard; void main(){ float l=clamp(dot(normalize(vN),vec3(.2,.6,.75)),0.,1.); gl_FragColor=vec4(p_shard*(.28+.8*l),1.); }',
-  }), chipN);
-  chips.frustumCulled = false; chips.visible = false; scene.add(chips);
-  const chipS = Array.from({ length: chipN }, () => ({ p: new THREE.Vector3(), v: new THREE.Vector3(), a: R() * 6, axis: new THREE.Vector3(R() - 0.5, R() - 0.5, R() - 0.5).normalize(), s: 0.012 + R() * 0.035, life: 0, max: 1 }));
-
   const st = { phase: 'float', mx: 0, my: 0, hover: 0, hoverT: 0, active: 0, burstAt: 0, time: 0, nudgeAt: 3.2, mouseOn: false, ptr: new THREE.Vector2(), click: new THREE.Vector2(), view: { w: 7.4, h: 4.6 } };
-  const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), v3 = new THREE.Vector3(), e3 = new THREE.Euler(), q5 = new THREE.Quaternion();
+  const v3 = new THREE.Vector3(), q5 = new THREE.Quaternion();
 
   const showShards = () => {
     letters.forEach((L) => { L.whole.visible = false; L.cracks.visible = false; L.list.forEach((s) => { s.mesh.visible = true; }); });
@@ -316,7 +306,6 @@ export function mountName(scene, data, palU, baked) {
       uniforms.uMode.value = Math.max(0, m);
       letters.forEach((L) => { L.whole.visible = m !== -1; L.wire.visible = m === -1; });
       halo.visible = m === 0;
-      chips.visible = false;
     },
     // Rest pose for the entrance: letters sit back in depth and spring forward.
     settleIn() { letters.forEach((L, i) => { L.p.z = -0.5; L.p.y = -0.08; L.s = 0.97; L.kick = st.time + i * 0.03; }); },
@@ -336,7 +325,9 @@ export function mountName(scene, data, palU, baked) {
       const { w, h } = st.view;
       const sorted = [...shards].sort((a, b) => b.area - a.area);
       const keepN = Math.min(sorted.length, Math.max(26, Math.round(sorted.length * 0.36)));
-      sorted.forEach((s, i) => { s.keep = i < keepN; s.order = i; });
+      // The smallest crumbs are left out, so only real pieces of the letters fly.
+      const crumbN = Math.round(sorted.length * 0.3);
+      sorted.forEach((s, i) => { s.keep = i < keepN; s.order = i; s.crumb = i >= sorted.length - crumbN; });
       const spots = sorted.slice(0, keepN);
       const portrait = w < h;
       spots.forEach((s, i) => {
@@ -360,13 +351,7 @@ export function mountName(scene, data, palU, baked) {
         s.age = 0; s.scale = 1;
       });
       showShards();
-      chips.visible = true;
-      chipS.forEach((c) => {
-        const a = R() * 6.28, r = R() * 1.6;
-        c.p.set(st.click.x + Math.cos(a) * r, st.click.y + Math.sin(a) * r * 0.8, DEPTH / 2);
-        c.v.set(Math.cos(a) * (1.2 + R() * 3.4), Math.sin(a) * (1.2 + R() * 3.4) + 0.5, 0.5 + R() * 2.8);
-        c.max = c.life = 0.9 + R() * 1.2;
-      });
+      shards.forEach((s) => { if (s.crumb) { s.scale = 0; s.mesh.visible = false; } });
     },
     update(dt, t) {
       st.time = t;
@@ -421,6 +406,7 @@ export function mountName(scene, data, palU, baked) {
         const portrait = w < h;
         const rx = w * (portrait ? 0.47 : 0.45), ry = h * (portrait ? 0.43 : 0.43);
         shards.forEach((s) => {
+          if (s.crumb) return;
           s.age += dt;
           if (s.age < s.delay) return;
           const a = s.age - s.delay;
@@ -445,16 +431,6 @@ export function mountName(scene, data, palU, baked) {
           s.mesh.scale.setScalar(Math.max(0.0001, s.scale));
           s.mesh.visible = s.scale > 0.002;
         });
-        chipS.forEach((c, i) => {
-          if (c.life > 0) {
-            c.life -= dt; c.v.y -= dt * 2.4; c.v.multiplyScalar(1 - dt * 0.5);
-            c.p.addScaledVector(c.v, dt); c.a += dt * 6;
-            q4.setFromAxisAngle(c.axis, c.a);
-            m4.compose(c.p, q4, v3.setScalar(c.s * clamp(c.life / c.max * 3) * 1.6));
-          } else m4.makeScale(0, 0, 0);
-          chips.setMatrixAt(i, m4);
-        });
-        chips.instanceMatrix.needsUpdate = true;
       }
     },
   };

@@ -87,7 +87,38 @@
         "From the front quarter, the roll, pitch, and yaw of the body are easier to see.",
         "Walking gait, with the camera tracking the robot across the mat."
       ],
-      "thumb": "robot-dog"
+      "thumb": "robot-dog",
+      "media": [
+        {
+          "src": "media/projects/robot-dog/sketches.webp",
+          "caption": "Early leg sketches."
+        },
+        {
+          "src": "media/projects/robot-dog/legs.webp",
+          "caption": "Leg designs considered before the final version.",
+          "light": true
+        },
+        {
+          "src": "media/projects/robot-dog/leg-test.mp4",
+          "caption": "Testing a single leg prototype."
+        },
+        {
+          "src": "media/projects/robot-dog/prototype.mp4",
+          "caption": "An earlier prototype."
+        },
+        {
+          "src": "media/projects/robot-dog/front.webp",
+          "caption": "The finished quadruped, head on."
+        },
+        {
+          "src": "media/projects/robot-dog/side.webp",
+          "caption": "Side view."
+        },
+        {
+          "src": "media/projects/robot-dog/quarter.webp",
+          "caption": "Front quarter view."
+        }
+      ]
     },
     "pid-seesaw": {
       "title": "PID Seesaw",
@@ -98,7 +129,21 @@
         "Ball-balancing beam. An infrared distance sensor measures the ball's position, and a servo drives the beam through a linkage.",
         "A PID controller holds the ball at center and rejects disturbances. The second revision upgraded the hardware and corrected the control law: setting the servo angle to the controller output, rather than adding the output to the angle, removed an unintended integrator and the lag it caused."
       ],
-      "thumb": "pid-seesaw"
+      "thumb": "pid-seesaw",
+      "media": [
+        {
+          "src": "media/projects/pid-seesaw/lego.mp4",
+          "caption": "The first version, built from LEGO."
+        },
+        {
+          "src": "media/projects/pid-seesaw/lego-arduino.webp",
+          "caption": "The LEGO version wired to an Arduino."
+        },
+        {
+          "src": "media/projects/pid-seesaw/wood.mp4",
+          "caption": "The wooden version recovering after the ball is pushed."
+        }
+      ]
     },
     "micromanipulator": {
       "title": "Micromanipulator",

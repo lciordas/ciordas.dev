@@ -24,9 +24,10 @@ const deckImage = (page, index) => { const pre = path.join(tmp, `deck${n++}`); r
 const pdfCrop = (pdf, page, fx, fy, fw, fh, dpi = 200) => { const pre = temp('x'); const W = 8.5 * dpi, H = 11 * dpi; run('pdftoppm', '-r', String(dpi), '-f', String(page), '-l', String(page), '-singlefile', '-png', '-x', String(Math.round(fx * W)), '-y', String(Math.round(fy * H)), '-W', String(Math.round(fw * W)), '-H', String(Math.round(fh * H)), pdf, pre); return `${pre}.png`; };
 
 // Outputs.
-const still = async (id, name, src, { width = 1280, trim = false, flat = false } = {}) => {
+const still = async (id, name, src, { width = 1280, trim = false, flat = false, crop = null } = {}) => {
   const dir = path.join(OUT, id); fs.mkdirSync(dir, { recursive: true });
   let img = sharp(src).rotate();
+  if (crop) img = sharp(await img.extract(crop).png().toBuffer());
   if (flat) img = img.flatten({ background: '#ffffff' });
   if (trim) img = sharp(await img.png().toBuffer()).trim({ threshold: 12 });
   await img.resize({ width, withoutEnlargement: true }).webp({ quality: 76, effort: 5 }).toFile(path.join(dir, `${name}.webp`));
@@ -46,6 +47,16 @@ const thumb = async (id, src, { position = 'centre', flat = false } = {}) => {
 const dogPic = heic(`${BROLL}/quadrued pic2.HEIC`);
 await thumb('robot-dog', dogPic);
 await thumb('pid-seesaw', await frame(MAKER, 24.2));
+await still('robot-dog', 'side', dogPic, { width: 1600 });
+await still('robot-dog', 'front', heic(`${BROLL}/quadrupedpic1.HEIC`), { width: 1600 });
+await still('robot-dog', 'quarter', heic(`${BROLL}/quadrued pic3.HEIC`), { width: 1600 });
+await still('robot-dog', 'legs', await frame(`${OLD}/14_dog_leg_designs_graphic.mp4`, 2), { width: 1600 });
+await still('robot-dog', 'sketches', await frame(`${OLD}/12_dog_leg_sketches.mp4`, 1), { width: 1600 });
+clip('robot-dog', 'leg-test', `${OLD}/15_dog_leg_prototype_test.mp4`, 0, 0, 'scale=1280:-2');
+clip('robot-dog', 'prototype', `${OLD}/16_dog_robot_moving.mp4`, 0, 0, 'scale=1280:-2');
+clip('pid-seesaw', 'lego', `${OLD}/03_seesaw_lego_ball_balancing.mp4`, 0, 0, 'scale=1280:-2');
+await still('pid-seesaw', 'lego-arduino', await frame(`${OLD}/05_seesaw_lego_with_arduino.mp4`, 1.5), { width: 1600 });
+clip('pid-seesaw', 'wood', `${OLD}/06_seesaw_v2_wood_poke_test.mp4`, 0, 0, 'scale=1280:-2');
 
 const microPhoto = deckImage(2, 0);
 await still('micromanipulator', 'assembly', microPhoto, { width: 900 });
@@ -55,7 +66,9 @@ await still('micromanipulator', 'bench', await frame(`${OLD}/35_stepper_breadboa
 await thumb('micromanipulator', microPhoto);
 
 const shipDone = await frame(`${OLD}/17_ship_finished_on_books.mp4`, 1.2);
-await still('ship-in-a-bottle', 'finished', shipDone, { width: 1000 });
+// Close on the ship itself, 16:9, cut from the untrimmed frame.
+const shipRaw = temp('png'); run('ffmpeg', '-v', 'error', '-y', '-ss', '1.2', '-i', `${OLD}/17_ship_finished_on_books.mp4`, '-frames:v', '1', shipRaw);
+await still('ship-in-a-bottle', 'finished', shipRaw, { width: 1000, crop: { left: 400, top: 190, width: 1000, height: 562 } });
 clip('ship-in-a-bottle', 'rigging', `${OLD}/22_ship_rigging_masts.mp4`);
 clip('ship-in-a-bottle', 'inserting', `${OLD}/24_ship_inserting_into_bottle.mp4`);
 clip('ship-in-a-bottle', 'raising', `${OLD}/25_ship_raising_masts_in_bottle.mp4`);

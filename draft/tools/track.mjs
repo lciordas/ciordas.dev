@@ -38,8 +38,8 @@ export function trackCamera(file, ss, t, pre = '') {
   return out.map(([x, y]) => [x / W, y / H]);
 }
 // Where a moving subject goes, starting from a box around it. Compares against a few earlier frames to limit drift.
-export function trackSubject(file, ss, t, box) {
-  const { raw, n } = grab(file, ss, t);
+export function trackSubject(file, ss, t, box, pre = '') {
+  const { raw, n } = grab(file, ss, t, pre);
   const frame = (f) => raw.subarray(f * W * H, (f + 1) * W * H);
   const pw = Math.round(box.w * W), ph = Math.round(box.h * H);
   let x = box.x * W, y = box.y * H;
