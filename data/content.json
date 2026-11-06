@@ -350,7 +350,12 @@
         "Gradient descent",
         "Python"
       ],
-      "links": [],
+      "links": [
+        {
+          "label": "GitHub",
+          "url": "https://github.com/lciordas/evograd"
+        }
+      ],
       "thumb": "hybrid-networks",
       "media": [
         {
@@ -371,7 +376,12 @@
         "Live trading",
         "Python"
       ],
-      "links": [],
+      "links": [
+        {
+          "label": "GitHub",
+          "url": "https://github.com/lciordas/tennis-lab"
+        }
+      ],
       "thumb": "tennis-simulation",
       "media": [
         {
