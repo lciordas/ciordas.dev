@@ -56,7 +56,7 @@ for (let i = 0; i < w * h; i++) {
   sky[i] = Math.round(255 * Math.max(0, Math.min(1, (v - SKY) / (248 - SKY))) ** 1.3);
 }
 // The exposure enlarged by k, cut to a width×height window whose top-left is at (x0, y0) in the enlarged frame.
-const RING = '#ffb98a';
+const RING = '#ea0909';   // the same red as the original circle
 const exposure = async (k, x0, y0, width, height) => {
   const big = await sharp(sky, { raw: { width: w, height: h, channels: 1 } }).resize(Math.round(w * k), Math.round(h * k), { kernel: 'lanczos3', fit: 'fill' })
     .sharpen({ sigma: 1, m1: 0, m2: 0.5 }).extract({ left: x0, top: y0, width, height }).toColourspace('srgb').png().toBuffer();
