@@ -84,7 +84,7 @@
         "Quadrupedal robot, designed in CAD with a small team. Several leg geometries were modeled before settling on a simple linkage.",
         "Inverse kinematics maps the three degrees of freedom in each leg to full six-degree-of-freedom control of the body.",
         "The same solver commands the body through arbitrary poses while the feet stay planted.",
-        "From the front quarter, the roll, pitch, and yaw of the body are easier to see.",
+        "Head on, the roll and side-to-side sway of the body are easier to see.",
         "Walking gait, with the camera tracking the robot across the mat."
       ],
       "thumb": "robot-dog",

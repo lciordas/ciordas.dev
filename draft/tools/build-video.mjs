@@ -9,7 +9,7 @@ import { trackCamera, trackSubject, lowpass } from './track.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../../toolkit/x.js'));
 const sharp = require('sharp');
-const HOME = os.homedir(), OUT = path.join(here, '../media/video');
+const HOME = os.homedir(), OUT = path.join(here, '../media/video'), FRAMES = path.join(here, '../../toolkit/frames');
 const MAKER = `${HOME}/Downloads/maker_portfolio_v1.mp4`, ICLOUD = `${HOME}/Downloads/iCloud Photos`;
 const encode = ['-an', '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '24', '-preset', 'slow', '-movflags', '+faststart'];
 const CLIPS = {
@@ -21,6 +21,12 @@ const CLIPS = {
   // The micromanipulator on the desk, its end effector moved by hand. The model lines up with the first frame.
   micromanipulator() {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '48.2', '-t', '5.3', '-i', MAKER, '-vf', 'fps=30,scale=1280:720', ...encode, path.join(OUT, 'micromanipulator.mp4')]);
+  },
+  // The dog's three shots back to back with hard cuts: turning its body side on, swaying and tilting head on, then
+  // walking. The first two come steadied from build-frames.mjs, so run that and 'dog-walk' first.
+  dog() {
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-framerate', '30', '-i', `${FRAMES}/dog/%04d.webp`, '-framerate', '24', '-i', `${FRAMES}/dog-front/%04d.webp`, '-i', path.join(FRAMES, 'dog-walk.mp4'),
+      '-filter_complex', '[0:v]fps=30,setsar=1[a];[1:v]fps=30,setsar=1[b];[2:v]fps=30,scale=1280:720,setsar=1[c];[a][b][c]concat=n=3:v=1[o]', '-map', '[o]', ...encode, path.join(OUT, 'dog.mp4')]);
   },
   // The dog already mid-stride on the mat, held in the middle of the frame.
   async 'dog-walk'() {
@@ -38,14 +44,15 @@ const CLIPS = {
       const left = Math.max(0, Math.min(srcW - cw, Math.round(fx - cw / 2))), top = Math.max(0, Math.min(srcH - ch, Math.round(fy - ch * 0.36)));
       await sharp(path.join(tmp, files[i])).extract({ left, top, width: cw, height: ch }).resize({ width: 1280 }).png({ compressionLevel: 1 }).toFile(path.join(out, files[i]));
     }
-    execFileSync('ffmpeg', ['-v', 'error', '-y', '-framerate', '30', '-i', path.join(out, '%04d.png'), ...encode, path.join(OUT, 'dog-walk.mp4')]);
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-framerate', '30', '-i', path.join(out, '%04d.png'), ...encode, path.join(FRAMES, 'dog-walk.mp4')]);
     fs.rmSync(tmp, { recursive: true, force: true }); fs.rmSync(out, { recursive: true, force: true });
   },
 };
-fs.mkdirSync(OUT, { recursive: true });
+fs.mkdirSync(OUT, { recursive: true }); fs.mkdirSync(FRAMES, { recursive: true });
 const only = process.argv[2];
 for (const [name, build] of Object.entries(CLIPS)) {
   if (only && only !== name) continue;
   await build();
-  console.log(name, (fs.statSync(path.join(OUT, `${name}.mp4`)).size / 1e6).toFixed(1), 'MB');
+  const made = [OUT, FRAMES].map((d) => path.join(d, `${name}.mp4`)).find((f) => fs.existsSync(f));
+  console.log(name, (fs.statSync(made).size / 1e6).toFixed(1), 'MB');
 }

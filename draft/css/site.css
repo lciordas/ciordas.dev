@@ -50,8 +50,11 @@ body.is-editing [data-edit]:focus { outline: 1px solid var(--ov-accent, #ffb98a)
 .ov-icon:hover, .ov-icon:focus-visible { color: var(--ov-accent, #ffb98a); background: rgba(255, 185, 138, .1); outline: none; }
 .plinks a { color: var(--ink); font-size: 14px; text-decoration: none; border-bottom: 1px solid rgba(244, 239, 232, .28); padding-bottom: 2px; }
 .ov-cols { flex: 1; min-height: 0; display: grid; gap: var(--ov-col-gap); }
-.ov-col { min-height: 0; display: flex; flex-direction: column; }
-.ov-col h2, .ov-list h2 { margin: 0 0 10px; padding-bottom: 8px; font: 500 12px "Hanken Grotesk", system-ui, sans-serif; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid rgba(244, 239, 232, .16); }
+/* Hardware and software each sit on their own panel, so the split between them is plain. */
+.ov-col { min-height: 0; display: flex; flex-direction: column; padding: clamp(10px, 1.4vh, 16px) clamp(8px, .8vw, 12px) clamp(6px, 1vh, 10px); border-radius: clamp(16px, 1.6vw, 26px); background: rgba(19, 17, 15, .9); box-shadow: inset 0 0 0 1px rgba(244, 239, 232, .12); }
+.ov-col h2 { display: flex; align-items: baseline; gap: 10px; margin: 0 8px 8px; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: clamp(18px, 1.5vw, 24px); line-height: 1; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
+.ov-col h2::after { content: attr(data-count); font: 500 11px ui-monospace, Menlo, monospace; letter-spacing: .08em; color: var(--muted); }
+.ov-list h2 { margin: 0 0 10px; padding-bottom: 8px; font: 500 12px "Hanken Grotesk", system-ui, sans-serif; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid rgba(244, 239, 232, .16); }
 .ov-col ul, .ov-list ul { list-style: none; margin: 0; padding: 0; }
 /* Cards share rows through subgrid, so every picture in a row is the same height whatever its title's length. */
 .ov-col ul { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(var(--across), minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr) auto); gap: var(--ov-row-gap); }
@@ -123,8 +126,7 @@ html.lenis, html.lenis body { height: auto; }
 .window { z-index: 1; background: radial-gradient(ellipse 80% 80% at 50% 50%, #27231f 0%, #171513 70%, #121110 100%); }
 .screen { z-index: 3; pointer-events: none; }
 .screen::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(244, 239, 232, .14); }
-.frames--2 { opacity: 0; }
-.frames, .clip { position: absolute; inset: 0; width: 100%; height: 100%; display: block; visibility: hidden; object-fit: cover; }
+.clip { position: absolute; inset: 0; width: 100%; height: 100%; display: block; visibility: hidden; object-fit: cover; }
 .title { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; will-change: opacity; }
 .title .index { font-size: 13px; letter-spacing: .24em; color: var(--muted); }
 .title .big { margin-top: 6px; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: calc(var(--rw) * .19); line-height: .92; text-transform: uppercase; color: #f4efe8; opacity: .13; letter-spacing: -.005em; }
@@ -164,6 +166,11 @@ html.lenis, html.lenis body { height: auto; }
 .gallery__dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(244, 239, 232, .22); transition: background-color .25s ease, transform .25s ease; }
 .gallery__dots i.on { background: var(--glow); transform: scale(1.25); }
 @media (max-aspect-ratio: 9/10) { .gallery__stage { --sw: 90vw; } .gallery__text { grid-template-columns: 1fr; row-gap: 8px; } }
+
+/* The scroll prompt at the start of a project's animation and of its gallery. */
+.pcue { position: absolute; z-index: 5; left: 50%; bottom: calc(clamp(14px, 3vh, 30px) + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; gap: 8px; transform: translateX(-50%); color: rgba(244, 239, 232, .7); font: 500 11px "Hanken Grotesk", system-ui, sans-serif; letter-spacing: .32em; text-indent: .32em; text-transform: uppercase; pointer-events: none; }
+.pcue svg { width: 12px; height: 19px; animation: cue-bob 1.9s cubic-bezier(.45, 0, .3, 1) infinite; }
+@media (prefers-reduced-motion: reduce) { .pcue svg { animation: none; } }
 
 /* Ways out at the end of a project */
 .after { display: none; align-items: center; justify-content: space-between; gap: 18px; max-width: 1180px; margin: 0 auto; padding: 34px clamp(20px, 5vw, 64px) 60px; }

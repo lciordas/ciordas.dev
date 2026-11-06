@@ -18,31 +18,42 @@ const skipIntro = params.has('skip') || REDUCED || !!STYLE;
 const $ = (id) => document.getElementById(id);
 const canvas = $('gl'), enterBtn = $('enter'), portfolio = $('portfolio'), fallback = $('fallback');
 
-// The prompt at the bottom of the intro. Scrolling down, swiping up, tapping, or pressing the down arrow takes one
-// step: during the intro it skips to the name, and on the name it breaks it. One scroll gesture is one step, so
-// a trackpad's glide after a skip doesn't also break the name.
+// Getting past the intro quickly. Scrolling, swiping, clicking, tapping, Enter, Space, or the down arrow each take
+// one step: during the intro it skips to the name, on the name it breaks it, and while it breaks it speeds the
+// break up. Steps are a moment apart, so scrolling straight through lands on the overview in about a second.
 const cue = $('cue'), label = cue.querySelector('.cue__label');
 const TOUCH = matchMedia('(pointer: coarse)').matches;
-let breakName = null;
-const showCue = (fn, text) => { breakName = fn; label.textContent = text; cue.hidden = false; requestAnimationFrame(() => cue.classList.add('on')); };
-const hideCue = () => { breakName = null; cue.classList.remove('on'); setTimeout(() => { if (!breakName) cue.hidden = true; }, 700); };
-cue.addEventListener('click', () => breakName?.());
-let lastWheel = 0;
+let advance = null, lastStep = -1e9, lastWheel = 0, holdScroll = false;
+const step = () => {
+  const now = performance.now();
+  if (!advance || now - lastStep < 300) return;
+  lastStep = now; advance();
+};
+const showCue = (fn, text) => { advance = fn; label.textContent = text; cue.hidden = false; requestAnimationFrame(() => cue.classList.add('on')); };
+const hideCue = () => { cue.classList.remove('on'); setTimeout(() => { if (!cue.classList.contains('on')) cue.hidden = true; }, 700); };
+// Once the overview is up, the rest of a scroll that skipped there is held back so it doesn't carry on into the projects.
+const arrived = () => { advance = null; holdScroll = performance.now() - lastStep < 1200; };
 addEventListener('wheel', (e) => {
-  const now = performance.now(), fresh = now - lastWheel > 320;
+  const now = performance.now(), gap = now - lastWheel;
   lastWheel = now;
-  if (breakName && fresh && e.deltaY > 0) breakName();
-}, { passive: true });
+  if (holdScroll) {
+    if (gap > 260) holdScroll = false;
+    else { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  }
+  if (e.deltaY > 0) step();
+}, { passive: false, capture: true });
 addEventListener('keydown', (e) => {
-  if (!breakName || e.repeat || !['ArrowDown', 'PageDown', ' '].includes(e.key) || (e.key === ' ' && e.target.closest?.('button'))) return;
-  e.preventDefault(); breakName();
+  if (!advance || !['ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key) || ((e.key === ' ' || e.key === 'Enter') && e.target.closest?.('button'))) return;
+  e.preventDefault(); step();
 });
+// The name's own button breaks it from the point clicked; a click anywhere else takes a step.
+addEventListener('click', (e) => { if (advance && !e.target.closest?.('#enter, a, button:not(#cue)')) step(); });
 let touchY = null;
 addEventListener('touchstart', (e) => { touchY = e.touches[0].clientY; }, { passive: true });
 addEventListener('touchend', (e) => {
-  if (!breakName || touchY === null) return;
+  if (touchY === null) return;
   const dy = touchY - e.changedTouches[0].clientY; touchY = null;
-  if (dy > 24 || (Math.abs(dy) < 10 && !e.target.closest?.('#enter, #cue'))) breakName();
+  if (dy > 24) step();
 }, { passive: true });
 
 let onHero = null;
@@ -80,7 +91,7 @@ if (editMode) {
   gsap.from(fallback.children, { opacity: 0, y: 18, duration: 1, stagger: 0.12, ease: 'power3.out' });
   Object.assign(enterBtn.style, { inset: '0', width: '100%', height: '100%' }); enterBtn.hidden = false;
   showCue(() => enterBtn.click(), TOUCH ? 'Tap' : 'Scroll');
-  enterBtn.addEventListener('click', () => { hideCue(); enterBtn.hidden = true; gsap.to(fallback, { opacity: 0, duration: 0.5, onComplete: () => { fallback.hidden = true; showPortfolio(); } }); });
+  enterBtn.addEventListener('click', () => { hideCue(); arrived(); enterBtn.hidden = true; gsap.to(fallback, { opacity: 0, duration: 0.5, onComplete: () => { fallback.hidden = true; showPortfolio(); } }); });
 } else {
   start(await (await fetch(`data/name-${fontKey}.json`)).json());
 }
@@ -174,7 +185,7 @@ function start(data) {
     enterBtn.hidden = true; S.hotT = 0; name.setHover(false);
     if (REDUCED) {
       gsap.to(name.uniforms.uFade, { value: 0, duration: 0.01 });
-      name.root.visible = false; showPortfolio(); S.phase = 'portfolio';
+      name.root.visible = false; showPortfolio(); S.phase = 'portfolio'; arrived();
       return;
     }
     name.crack(x, y);
@@ -202,7 +213,8 @@ function start(data) {
     tl.fromTo(post.uniforms.uBloom, { value: 0.2 }, { value: 1.5, duration: 0.1 }, 0.62);
     tl.to(post.uniforms.uBloom, { value: 0.2, duration: 1, ease: 'power2.out' }, 0.72);
     tl.to(name.uniforms.uMatte, { value: 0.42, duration: 1.2, ease: 'power2.out' }, 0.62);
-    tl.add(() => { showPortfolio(); S.phase = 'portfolio'; }, 1.5);
+    tl.add(() => { showPortfolio(); S.phase = 'portfolio'; arrived(); }, 1.5);
+    advance = () => tl.timeScale(4);
   };
   enterBtn.addEventListener('click', (e) => {
     // Keyboard presses report no position, so they break from the middle of the name.

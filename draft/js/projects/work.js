@@ -1,10 +1,10 @@
 // work: the project pages. Scattered CAD parts fly in and assemble inside a rounded window, a light line wipes
 // from CAD to footage, then the footage moves with the scroll or plays as video. Words come from data/content.json.
-import { mountSequence } from './sequence.js';
 import { mountCad, loadModel } from './cad.js';
 import { hasWebGL, REDUCED } from '../_util.js';
 
-// How each animated project behaves. Beats are positions from 0 to 1 through the section's scroll length.
+// How each animated project behaves. Beats are positions from 0 to 1 through the section's scroll length. A caption
+// shows either over a stretch of scroll, [from, to], or over a stretch of the video's own time, { t: [from, to] }.
 const ANIMATED = {
   'pid-seesaw': {
     model: 'seesaw', length: 460, clip: 'media/video/seesaw.mp4',
@@ -29,16 +29,16 @@ const ANIMATED = {
     assemble: [0.03, 0.52], title: [0.08, 0.2], wipe: [0.62, 0.68], clipAt: 0.68,
     copyAt: [[0.28, 0.6], [0.7, 1]],
   },
+  // Lined up with the first frame of the video. Its three shots run 0 to 6 s, 6 to 12.4 s, and 12.4 to 19.4 s.
   'robot-dog': {
-    model: 'dog', up: [0, 0, 1.5325], fov: 34.28, length: 1500, frames: 'media/dog', frames2: 'media/dog-front', clip: 'media/video/dog-walk.mp4',
+    model: 'dog', up: [0, 0, 1.5325], fov: 34.28, length: 560, clip: 'media/video/dog.mp4',
     views: [
       { p: 0, az: 1.7, el: 0.42, dist: 3.7, tx: 0, ty: 0, tz: 0 },
-      { p: 0.18, az: 0.75, el: 0.2, dist: 3.4, tx: 0, ty: 0, tz: 0 },
-      { p: 0.22, az: 0.3256, el: 0.3072, dist: 3.4439, tx: 0.1741, ty: -0.1379, tz: -0.0126 },
+      { p: 0.5, az: 0.75, el: 0.2, dist: 3.4, tx: 0, ty: 0, tz: 0 },
+      { p: 0.6, az: 0.3256, el: 0.3072, dist: 3.4439, tx: 0.1741, ty: -0.1379, tz: -0.0126 },
     ],
-    // Each clip cuts straight to the next, already in motion.
-    assemble: [0.012, 0.18], title: [0.025, 0.07], wipe: [0.22, 0.238], scrub: [0.238, 0.555], cut2: 0.555, scrub2: [0.555, 0.86], cutClip: 0.86, clipAt: 0.86,
-    copyAt: [[0.1, 0.21], [0.25, 0.39], [0.41, 0.545], [0.575, 0.85], [0.885, 1]],
+    assemble: [0.03, 0.5], title: [0.07, 0.18], wipe: [0.6, 0.66], clipAt: 0.66,
+    copyAt: [[0.2, 0.42], [0.44, 0.6], { t: [0, 6] }, { t: [6, 12.42] }, { t: [12.42, 19.43] }],
   },
 };
 
@@ -55,6 +55,9 @@ function viewAt(views, p) {
   return out;
 }
 
+// A prompt at the start of each project's scrolling part, so it's clear the page plays as you scroll.
+const CUE = '<div class="pcue" aria-hidden="true"><span>Scroll</span><svg viewBox="0 0 14 22"><path d="M7 1v19M1 14l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+
 const endLinks = (next, content) => `
   <div class="after">
     <a class="after__back" href="#">Back to overview</a>
@@ -70,14 +73,13 @@ function buildAnimated(id, cfg, p, index, next, content) {
         <div class="window" aria-hidden="true"><div class="title"><span class="index">${index}</span><span class="big">${esc(p.title)}</span></div></div>
         <canvas class="cad" aria-hidden="true"></canvas>
         <div class="screen">
-          ${cfg.frames ? `<canvas class="frames" role="img" aria-label="${esc(p.title)} in motion"></canvas>` : ''}
-          ${cfg.frames2 ? `<canvas class="frames frames--2" role="img" aria-label="${esc(p.title)} from the front quarter"></canvas>` : ''}
           ${cfg.clip ? `<video class="clip" muted playsinline loop preload="none" aria-label="${esc(p.title)} video"></video>` : ''}
           <i class="scan" aria-hidden="true"></i>
           <div class="bar" aria-hidden="true"><i></i></div>
         </div>
         <h3 class="head"><span class="index">${index}</span>${esc(p.title)}</h3>
         ${(p.captions || []).map((c, i) => `<p class="copy copy--${i % 2 ? 'right' : 'left'}">${esc(c)}</p>`).join('')}
+        ${CUE}
       </div>
     </div>
     ${p.media?.length ? `<div class="detail detail--after">${body(p)}</div>${gallery(p)}` : ''}
@@ -112,7 +114,7 @@ const gallery = (p) => {
         <span class="gallery__count"><b>01</b> / ${String(n).padStart(2, '0')}</span>
         <div class="gallery__caps">${media.map((m) => `<p class="gallery__cap">${esc(m.caption || '')}</p>`).join('')}</div>
       </div>
-      ${n > 1 ? `<div class="gallery__dots" aria-hidden="true">${media.map(() => '<i></i>').join('')}</div>` : ''}
+      ${n > 1 ? `<div class="gallery__dots" aria-hidden="true">${media.map(() => '<i></i>').join('')}</div>${CUE}` : ''}
     </div>
   </div>`;
 };
@@ -139,11 +141,12 @@ function slidePos(p, n) {
 }
 function mountGallery(el) {
   const q = (sel) => [...el.querySelectorAll(sel)];
-  const g = { el, track: el.querySelector('.gallery__track'), slides: q('.slide'), caps: q('.gallery__cap'), dots: q('.gallery__dots i'), count: el.querySelector('.gallery__count b'), media: q('.slide__frame > *'), step: 0, loaded: false, active: -1, pos: -1 };
+  const g = { el, cue: el.querySelector('.pcue'), track: el.querySelector('.gallery__track'), slides: q('.slide'), caps: q('.gallery__cap'), dots: q('.gallery__dots i'), count: el.querySelector('.gallery__count b'), media: q('.slide__frame > *'), step: 0, loaded: false, active: -1, pos: -1 };
   g.load = () => { if (g.loaded) return; g.loaded = true; g.media.forEach((m) => { m.src = m.dataset.src; if (m.tagName === 'VIDEO') m.preload = 'metadata'; }); };
   g.measure = () => { const a = g.slides[0], b = g.slides[1]; g.step = b ? b.offsetLeft - a.offsetLeft : 0; g.pos = -1; };
   g.apply = (p, on) => {
     const n = g.slides.length, pos = slidePos(p, n);
+    if (g.cue) g.cue.style.opacity = 1 - smooth(0.004, 0.05, p);
     if (Math.abs(pos - g.pos) > 0.0001) {
       g.pos = pos;
       g.track.style.transform = `translate3d(${(-pos * g.step).toFixed(1)}px,0,0)`;
@@ -179,8 +182,8 @@ export function mountWork(container, options = {}) {
     container.appendChild(el); sections.push(el);
     const q = (sel) => el.querySelector(sel);
     const item = {
-      id, cfg, el, runway: q('.runway'), title: q('.title'), head: q('.head'), screen: q('.screen'), cadC: q('.cad'), framesC: q('.frames'), video: q('.clip'), scan: q('.scan'), bar: q('.bar i'),
-      copies: [...el.querySelectorAll('.copy')], seq: cfg.frames ? mountSequence(q('.frames'), cfg.frames) : null, seq2: cfg.frames2 ? mountSequence(q('.frames--2'), cfg.frames2) : null, frames2C: q('.frames--2'), cad: null, p: 0, loading: false, fit: 1, playing: false,
+      id, cfg, el, runway: q('.runway'), title: q('.title'), head: q('.head'), screen: q('.screen'), cadC: q('.cad'), video: q('.clip'), scan: q('.scan'), bar: q('.bar i'),
+      copies: [...el.querySelectorAll('.copy')], cue: q('.pcue'), cad: null, p: 0, loading: false, fit: 1, playing: false,
     };
     if (!gl) item.cadC.style.display = 'none';
     items.push(item);
@@ -193,22 +196,17 @@ export function mountWork(container, options = {}) {
     items.forEach((it) => {
       const r = it.screen.getBoundingClientRect();
       if (r.height < 1) return;
-      it.seq?.resize(r.width, r.height, Math.min(dpr, 1.5));
-      it.seq2?.resize(r.width, r.height, Math.min(dpr, 1.5));
       it.fit = h / r.height; // camera distances are set for a window that fills the screen's height
       if (it.cad) {
         it.cad.resize(w, h, dpr);
         const v = it.cfg.views[0];
         it.cad.setScatter({ ...v, dist: v.dist * it.fit }, w / h);
       }
-      it.forceDraw = true; it.forceDraw2 = true;
     });
     galleries.forEach((g) => g.measure());
   };
   const ensure = (it) => {
     if (it.loading) return; it.loading = true;
-    it.seq?.start();
-    if (it.seq2) setTimeout(() => it.seq2.start(), 1500); // after the first clip has a head start
     if (it.video) { it.video.src = it.cfg.clip; it.video.preload = 'auto'; it.video.load(); }
     if (gl) loadModel(it.cfg.model).then((m) => {
       it.cad = mountCad(it.cadC, m, { up: it.cfg.up, fov: it.cfg.fov });
@@ -232,9 +230,9 @@ export function mountWork(container, options = {}) {
     it.title.style.visibility = tOut > 0.001 ? 'visible' : 'hidden';
     it.head.style.opacity = smooth(cfg.title[1] - 0.02, cfg.title[1] + 0.02, p);
     // Light line from CAD into the footage.
-    const wipe = smooth(cfg.wipe[0], cfg.wipe[1], p), pct = wipe * 100, reveal = cfg.frames ? it.framesC : it.video;
-    reveal.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
-    reveal.style.visibility = wipe > 0 ? 'visible' : 'hidden';
+    const wipe = smooth(cfg.wipe[0], cfg.wipe[1], p), pct = wipe * 100;
+    it.video.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+    it.video.style.visibility = wipe > 0 ? 'visible' : 'hidden';
     it.scan.style.left = `${pct}%`;
     it.scan.style.opacity = wipe > 0.001 && wipe < 0.999 ? 1 : 0;
     // Model.
@@ -249,33 +247,20 @@ export function mountWork(container, options = {}) {
         it.cad.render();
       }
     }
-    // Footage moved by the scroll, at an even pace so it is moving from its first frame to its last.
-    if (cfg.scrub && it.seq?.total) {
-      const k = clamp((p - cfg.scrub[0]) / (cfg.scrub[1] - cfg.scrub[0]));
-      if (it.forceDraw) { it.seq.draw(Math.round(k * (it.seq.total - 1)), true); it.forceDraw = false; } else it.seq.seek(k * 0.9999);
-    }
-    if (cfg.scrub2 && it.seq2?.total) {
-      const on = p >= cfg.cut2;
-      it.frames2C.style.opacity = on ? 1 : 0; it.frames2C.style.visibility = on ? 'visible' : 'hidden';
-      const k = clamp((p - cfg.scrub2[0]) / (cfg.scrub2[1] - cfg.scrub2[0]));
-      if (it.forceDraw2) { it.seq2.draw(Math.round(k * (it.seq2.total - 1)), true); it.forceDraw2 = false; } else it.seq2.seek(k * 0.9999);
-    }
-    // Footage that plays by itself. Its first frame is already mid-stride, so it is moving from the cut.
-    if (it.video) {
-      if (cfg.cutClip) {
-        const on = p >= cfg.cutClip;
-        it.video.style.opacity = on ? 1 : 0; it.video.style.visibility = on ? 'visible' : 'hidden';
-      }
-      setPlaying(it, p >= cfg.clipAt);
-    }
+    // Footage that plays by itself once the model has given way to it.
+    setPlaying(it, p >= cfg.clipAt);
     // Words.
+    const vt = p >= cfg.clipAt ? it.video.currentTime : -1;
     it.copies.forEach((node, i) => {
       const at = cfg.copyAt[i] || [2, 3], edge = 0.018;
-      const a = smooth(at[0], at[0] + edge, p) * (at[1] >= 1 ? 1 : 1 - smooth(at[1] - edge, at[1], p));
+      const a = at.t
+        ? (vt < 0 ? 0 : smooth(at.t[0], at.t[0] + 0.3, vt + (at.t[0] === 0 ? 0.3 : 0)) * (1 - smooth(at.t[1] - 0.3, at.t[1], vt)))
+        : smooth(at[0], at[0] + edge, p) * (at[1] >= 1 ? 1 : 1 - smooth(at[1] - edge, at[1], p));
       node.style.opacity = a; node.style.transform = `translate3d(0,${(1 - a) * 14}px,0)`;
       node.style.visibility = a > 0.001 ? 'visible' : 'hidden';
     });
     it.bar.style.transform = `scaleX(${p})`;
+    it.cue.style.opacity = 1 - smooth(0.002, 0.02, p);
   };
 
   // Smooth scrolling with a gentle glide, off for reduced motion and left native on touch.

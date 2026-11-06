@@ -1,5 +1,5 @@
-// Turns a stretch of video into numbered WebP frames for scroll scrubbing.
-// Run from the repo root: node draft/tools/build-frames.mjs [clip name]
+// Turns a stretch of video into steadied, numbered WebP frames in toolkit/frames, which build-video.mjs joins into
+// the dog's video. Run from the repo root: node draft/tools/build-frames.mjs [clip name]
 // A clip with `lock` follows the background and cancels the camera's movement, so the subject stays put in the frame.
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
@@ -22,7 +22,7 @@ for (const [name, c] of Object.entries(CLIPS)) {
   if (only && only !== name) continue;
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'frames-'));
   execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(c.ss), '-t', String(c.t), '-i', c.src, '-an', '-vf', c.vf, path.join(tmp, '%04d.png')]);
-  const out = path.join(here, '../media', name);
+  const out = path.join(here, '../../toolkit/frames', name);
   fs.rmSync(out, { recursive: true, force: true });
   fs.mkdirSync(out, { recursive: true });
   const files = fs.readdirSync(tmp).filter((f) => f.endsWith('.png')).sort();

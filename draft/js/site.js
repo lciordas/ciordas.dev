@@ -61,7 +61,7 @@ export function renderOverview(root, c) {
         <div class="ov-foot"><span data-edit="site.hint">${esc(c.site.hint)}</span><button id="replay" type="button">Replay intro</button></div>
       </header>
       <div class="ov-cols" style="grid-template-columns:${across.map((n) => `${n}fr`).join(' ')}">
-        ${c.columns.map((col, k) => `<section class="ov-col ov-reveal" style="--across:${across[k]}"><h2 data-edit="columns.${k}.title">${esc(col.title)}</h2><ul>${col.items.map(row).join('')}</ul></section>`).join('')}
+        ${c.columns.map((col, k) => `<section class="ov-col ov-reveal" style="--across:${across[k]}"><h2 data-edit="columns.${k}.title" data-count="${String(col.items.filter((id) => c.projects[id]).length).padStart(2, '0')}">${esc(col.title)}</h2><ul>${col.items.map(row).join('')}</ul></section>`).join('')}
       </div>
       ${extras ? `<div class="ov-extra ov-reveal">${list('distinctions')}${list('experience')}</div>${other}` : ''}
     </div>`;
