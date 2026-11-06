@@ -113,35 +113,80 @@
         "Walking gait, with the camera tracking the robot across the mat."
       ],
       "thumb": "robot-dog",
-      "media": [
+      "stream": [
         {
           "src": "media/projects/robot-dog/sketches.webp",
-          "caption": "Early leg sketches."
+          "size": "l",
+          "ar": 1.78
         },
         {
-          "src": "media/projects/robot-dog/legs.webp",
-          "caption": "Leg designs considered before the final version.",
+          "src": "media/projects/robot-dog/cad.webp",
+          "size": "s",
+          "ar": 1.3,
+          "light": true
+        },
+        {
+          "src": "media/projects/robot-dog/leg-designs.webp",
+          "size": "m",
+          "ar": 2.2,
           "light": true
         },
         {
           "src": "media/projects/robot-dog/leg-test.mp4",
-          "caption": "Testing a single leg prototype."
+          "size": "l"
+        },
+        {
+          "src": "media/projects/robot-dog/pose-crouch.webp",
+          "size": "s"
         },
         {
           "src": "media/projects/robot-dog/prototype.mp4",
-          "caption": "An earlier prototype."
+          "size": "m"
         },
         {
-          "src": "media/projects/robot-dog/front.webp",
-          "caption": "The finished quadruped, head on."
+          "src": "media/projects/robot-dog/poses.mp4",
+          "size": "l"
+        },
+        {
+          "src": "media/projects/robot-dog/pose-pitch.webp",
+          "size": "s"
         },
         {
           "src": "media/projects/robot-dog/side.webp",
-          "caption": "Side view."
+          "size": "m"
+        },
+        {
+          "src": "media/projects/robot-dog/front.webp",
+          "size": "l"
+        },
+        {
+          "src": "media/projects/robot-dog/pose-roll.webp",
+          "size": "s"
+        },
+        {
+          "src": "media/projects/robot-dog/sway.mp4",
+          "size": "m",
+          "ar": 1.2
+        },
+        {
+          "src": "media/projects/robot-dog/pose-front.webp",
+          "size": "s"
         },
         {
           "src": "media/projects/robot-dog/quarter.webp",
-          "caption": "Front quarter view."
+          "size": "l"
+        },
+        {
+          "src": "media/projects/robot-dog/pose-tilt.webp",
+          "size": "s"
+        },
+        {
+          "src": "media/projects/robot-dog/pose-rear.webp",
+          "size": "m"
+        },
+        {
+          "src": "media/projects/robot-dog/pose-low.webp",
+          "size": "l"
         }
       ]
     },
@@ -155,18 +200,48 @@
         "A PID controller holds the ball at center and rejects disturbances. The second revision upgraded the hardware and corrected the control law: setting the servo angle to the controller output, rather than adding the output to the angle, removed an unintended integrator and the lag it caused."
       ],
       "thumb": "pid-seesaw",
-      "media": [
+      "stream": [
         {
           "src": "media/projects/pid-seesaw/lego.mp4",
-          "caption": "The first version, built from LEGO."
+          "size": "l"
+        },
+        {
+          "src": "media/projects/pid-seesaw/lego-top.webp",
+          "size": "s"
+        },
+        {
+          "src": "media/projects/pid-seesaw/lego-base.webp",
+          "size": "m",
+          "ar": 0.92
+        },
+        {
+          "src": "media/projects/pid-seesaw/arduino.mp4",
+          "size": "l"
         },
         {
           "src": "media/projects/pid-seesaw/lego-arduino.webp",
-          "caption": "The LEGO version wired to an Arduino."
+          "size": "s",
+          "ar": 1.78
         },
         {
           "src": "media/projects/pid-seesaw/wood.mp4",
-          "caption": "The wooden version recovering after the ball is pushed."
+          "size": "m"
+        },
+        {
+          "src": "media/projects/pid-seesaw/beam.webp",
+          "size": "s"
+        },
+        {
+          "src": "media/projects/pid-seesaw/pokes.mp4",
+          "size": "l"
+        },
+        {
+          "src": "media/projects/pid-seesaw/beam-low.webp",
+          "size": "m"
+        },
+        {
+          "src": "media/projects/pid-seesaw/beam-warm.webp",
+          "size": "s"
         }
       ]
     },
@@ -296,12 +371,13 @@
     },
     "tennis-simulation": {
       "title": "Tennis Statistics Library",
-      "tag": "Bayesian updates, Monte Carlo",
+      "tag": "Bayesian updates, Monte Carlo, live trading",
       "kind": "detail",
-      "summary": "A library that simulates tennis matches from simple inputs, updated during play with Bayesian statistics. Monte Carlo simulation produces point importance and win probability.",
+      "summary": "A library that simulates tennis matches from simple inputs, updated during play with Bayesian statistics. Monte Carlo simulation produces point importance and win probability. Tested in live trading at the US Open: positions are sized by point importance, so exposure rises ahead of the points most likely to swing the match.",
       "tech": [
         "Bayesian statistics",
         "Monte Carlo",
+        "Live trading",
         "Python"
       ],
       "links": [],
