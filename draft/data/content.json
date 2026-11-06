@@ -337,17 +337,30 @@
     },
     "world-models": {
       "title": "Plan Shallow While You Learn",
-      "tag": "Research, NeurIPS 2026 workshop",
+      "tag": "NeurIPS 2026 workshop paper",
       "kind": "detail",
-      "summary": "Co-authored paper accepted to the Continual World Models workshop at NeurIPS 2026. It shows that while a world model adapts to changed physics, planning compute should favor breadth over depth to maximize returns.",
+      "summary": "Plan Shallow While You Learn: Reallocating Planning Compute During World-Model Adaptation. Co-authored paper accepted to the Continual World Models workshop at NeurIPS 2026 in Sydney. It shows that while a world model adapts to changed physics, planning compute should favor breadth over depth to maximize returns.",
       "tech": [
         "Reinforcement learning",
         "World models",
         "Planning"
       ],
-      "links": [],
+      "links": [
+        {
+          "label": "Read the paper",
+          "url": "https://drive.google.com/file/d/1gkL3NjcQfLhjKjkchxo_QiyPVmY7tCOZ/view?usp=drive_link"
+        }
+      ],
       "thumb": "world-models",
       "media": [
+        {
+          "src": "media/projects/world-models/title.webp",
+          "caption": "Accepted to the Continual World Models workshop at NeurIPS 2026, Sydney, December 12. Photo of Sydney Harbour: Benh Lieu Song, CC BY-SA 4.0."
+        },
+        {
+          "src": "media/projects/world-models/programme.webp",
+          "caption": "The workshop’s accepted papers include work co-authored by Yann LeCun and Fei-Fei Li."
+        },
         {
           "src": "media/projects/world-models/figure-1.webp",
           "caption": "Return against imagination depth, for a healthy model and three damping levels.",

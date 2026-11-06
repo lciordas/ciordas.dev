@@ -68,13 +68,13 @@ await still('micromanipulator', 'bench', await frame(`${OLD}/35_stepper_breadboa
 await thumb('micromanipulator', microPhoto);
 
 const shipDone = await frame(`${OLD}/17_ship_finished_on_books.mp4`, 1.2);
-// Close on the ship itself, 16:9, cut from the untrimmed frame.
+// The ship and most of the bottle, 16:9, cut from the untrimmed frame.
 const shipRaw = temp('png'); run('ffmpeg', '-v', 'error', '-y', '-ss', '1.2', '-i', `${OLD}/17_ship_finished_on_books.mp4`, '-frames:v', '1', shipRaw);
-await still('ship-in-a-bottle', 'finished', shipRaw, { width: 1000, crop: { left: 400, top: 190, width: 1000, height: 562 } });
+await still('ship-in-a-bottle', 'finished', shipRaw, { width: 1000, crop: { left: 330, top: 130, width: 1150, height: 646 } });
 clip('ship-in-a-bottle', 'rigging', `${OLD}/22_ship_rigging_masts.mp4`);
 clip('ship-in-a-bottle', 'inserting', `${OLD}/24_ship_inserting_into_bottle.mp4`);
 clip('ship-in-a-bottle', 'raising', `${OLD}/25_ship_raising_masts_in_bottle.mp4`);
-await thumb('ship-in-a-bottle', shipRaw, { crop: { left: 470, top: 150, width: 860, height: 640 } });
+await thumb('ship-in-a-bottle', shipRaw, { crop: { left: 410, top: 0, width: 1000, height: 1000 } });
 
 // Other projects: one photo each.
 const ev = await frame(`${OLD}/11_ev_closeup.mp4`, 1.4);
@@ -107,7 +107,7 @@ const wm1 = pdfCrop(WM, 2, 0.2, 0.05, 0.62, 0.215), wm2 = pdfCrop(WM, 4, 0.14, 0
 await still('world-models', 'figure-1', wm1, { width: 1100, trim: true, flat: true });
 await still('world-models', 'figure-3', wm2, { width: 1100, trim: true, flat: true });
 await still('world-models', 'figure-2', wm3, { width: 1100, trim: true, flat: true });
-await thumb('world-models', wm1, { flat: true });
+// The paper's overview cover comes from build-paper.mjs.
 
 const AO = fs.readdirSync(D).find((f) => f.startsWith('Orbit_Determination'));
 const star = pdfCrop(`${D}/${AO}`, 3, 0.04, 0.3, 0.46, 0.255), orbit = pdfCrop(`${D}/${AO}`, 9, 0.5, 0.08, 0.46, 0.18), photo = pdfCrop(`${D}/${AO}`, 4, 0.02, 0.05, 0.96, 0.2);
