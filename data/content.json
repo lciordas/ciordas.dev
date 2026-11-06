@@ -372,25 +372,15 @@
       "media": [
         {
           "src": "media/projects/world-models/title.webp",
-          "caption": "Accepted to the Continual World Models workshop at NeurIPS 2026, Sydney, December 12. Photo of Sydney Harbour: Benh Lieu Song, CC BY-SA 4.0."
+          "caption": "NeurIPS 2026 · Sydney, December 12. Photo: Benh Lieu Song, CC BY-SA 4.0."
         },
         {
           "src": "media/projects/world-models/programme.webp",
-          "caption": "The workshop’s accepted papers include work co-authored by Yann LeCun and Fei-Fei Li."
+          "caption": "The workshop’s accepted papers include work co-authored by Yann LeCun and Fei-Fei Li. [See for yourself!](https://neurips.cc/virtual/2026/loc/sydney/workshop/137499)"
         },
         {
-          "src": "media/projects/world-models/figure-1.webp",
-          "caption": "Return against imagination depth, for a healthy model and three damping levels.",
-          "light": true
-        },
-        {
-          "src": "media/projects/world-models/figure-2.webp",
-          "caption": "Return improvement from reallocating the same planning budget.",
-          "light": true
-        },
-        {
-          "src": "media/projects/world-models/figure-3.webp",
-          "caption": "Deployment streams on the drag tiers.",
+          "src": "media/projects/world-models/figures.webp",
+          "caption": "Drag compresses the optimal imagination depth from H=12 to H=6 (Fig. 1). Moving the same budget from depth to refinement iterations gains +2.4 to +11.2 return across the drag tiers (Fig. 2) and leads the deep default in all six deployment panels (Fig. 3).",
           "light": true
         }
       ],

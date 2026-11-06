@@ -8,7 +8,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp');
 const D = `${os.homedir()}/Downloads`, OLD = `${D}/old_clips`, BROLL = `${D}/maker portfolio b-roll`, MAKER = `${D}/maker_portfolio_v1.mp4`;
-const DECK = `${D}/SRP Micromanipulator Presentation - Lucas Ciordas.pdf`, WM = `${os.homedir()}/Documents/NeurIPS/authored papers/Plan_Shallow_While_You_Learn.pdf`;
+const DECK = `${D}/SRP Micromanipulator Presentation - Lucas Ciordas.pdf`;
 const OUT = path.join(here, '../media/projects'), THUMBS = path.join(here, '../media/thumbs');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'media-'));
 const run = (...a) => execFileSync(a[0], a.slice(1), { stdio: ['ignore', 'ignore', 'pipe'] });
@@ -101,11 +101,7 @@ await still('protein-classifier', 'notebook', await frame(`${OLD}/47_svm_jupyter
 await thumb('protein-classifier', poster);
 
 // Figures from the papers, leaving out the first pages with everyone's addresses.
-const wm1 = pdfCrop(WM, 2, 0.2, 0.05, 0.62, 0.215), wm2 = pdfCrop(WM, 4, 0.14, 0.05, 0.72, 0.225), wm3 = pdfCrop(WM, 3, 0.15, 0.05, 0.7, 0.16);
-await still('world-models', 'figure-1', wm1, { width: 1100, trim: true, flat: true });
-await still('world-models', 'figure-3', wm2, { width: 1100, trim: true, flat: true });
-await still('world-models', 'figure-2', wm3, { width: 1100, trim: true, flat: true });
-// The paper's overview cover comes from build-paper.mjs.
+// The NeurIPS paper's cover and slides, its figures included, come from build-paper.mjs.
 
 const AO = fs.readdirSync(D).find((f) => f.startsWith('Orbit_Determination'));
 const star = pdfCrop(`${D}/${AO}`, 3, 0.04, 0.3, 0.46, 0.255), orbit = pdfCrop(`${D}/${AO}`, 9, 0.5, 0.08, 0.46, 0.18), photo = pdfCrop(`${D}/${AO}`, 4, 0.02, 0.05, 0.96, 0.2);

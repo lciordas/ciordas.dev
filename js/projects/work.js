@@ -88,6 +88,10 @@ function buildAnimated(id, cfg, p, index, next, content) {
 }
 
 const isVideo = (src) => /\.mp4$/i.test(src);
+// Captions may carry links written [text](https://…); everything else is plain text. The alt text drops the address.
+const LINK = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
+const capHtml = (s) => esc(s).replace(LINK, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+const capText = (s) => String(s ?? '').replace(LINK, '$1');
 const body = (p) => `
   <div class="detail__body">
     <p>${esc(p.summary)}</p>
@@ -110,13 +114,13 @@ const gallery = (p, head = '') => {
       <div class="gallery__view"><div class="gallery__track">${media.map((m, i) => `
         <figure class="slide${m.light ? ' slide--light' : ''}">
           <div class="slide__frame">${isVideo(m.src)
-            ? `<video data-src="${esc(m.src)}" muted playsinline loop preload="none" aria-label="${esc(m.caption || p.title)}"></video>`
-            : `<img data-src="${esc(m.src)}" alt="${esc(m.caption || p.title)}" decoding="async">`}</div>
+            ? `<video data-src="${esc(m.src)}" muted playsinline loop preload="none" aria-label="${esc(capText(m.caption) || p.title)}"></video>`
+            : `<img data-src="${esc(m.src)}" alt="${esc(capText(m.caption) || p.title)}" decoding="async">`}</div>
         </figure>`).join('')}
       </div></div>
       <div class="gallery__text">
         <span class="gallery__count"><b>01</b> / ${String(n).padStart(2, '0')}</span>
-        <div class="gallery__caps">${media.map((m) => `<p class="gallery__cap">${esc(m.caption || '')}</p>`).join('')}</div>
+        <div class="gallery__caps">${media.map((m) => `<p class="gallery__cap">${capHtml(m.caption || '')}</p>`).join('')}</div>
         ${n > 1 ? `<div class="gallery__nav">
           <button type="button" class="gallery__btn" data-go="-1" aria-label="Previous picture"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <span class="gallery__dots" aria-hidden="true">${media.map(() => '<i></i>').join('')}</span>
@@ -357,6 +361,8 @@ export function mountWork(container, options = {}) {
   };
   size();
   addEventListener('resize', size);
+  // The words under a picture change height once the fonts arrive, and the picture takes the room they leave.
+  document.fonts?.ready.then(size);
   requestAnimationFrame(tick);
 
   const showAll = () => { sections.forEach((s) => { s.hidden = false; }); container.classList.remove('is-focus'); focusId = null; size(); lenis?.resize(); };
