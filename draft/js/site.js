@@ -53,12 +53,12 @@ export function renderOverview(root, c) {
   const icons = (cls) => `<nav class="ov-links ${cls}" aria-label="Links">${(c.site.links || []).map(link).join('')}</nav>`;
   const research = (c.research?.items || []).filter((id) => c.projects[id]).map((id) => {
     const p = c.projects[id];
-    return `<li><a class="rrow" href="#${id}" data-project="${id}">${p.thumb ? `<img src="media/thumbs/${esc(p.thumb)}.webp" alt="" decoding="async">` : ''}<span><strong>${esc(p.title)}</strong><em>${esc(p.tag)}</em></span></a></li>`;
+    return `<li><a class="rrow" href="#${id}" data-project="${id}">${p.thumb ? `<img src="media/thumbs/${esc(p.thumb)}.webp" alt="" decoding="async">` : ''}<span><strong>${esc(p.fullTitle || p.title)}</strong><em>${esc(p.tag)}</em></span></a></li>`;
   }).join('');
   const fact = (key) => {
     const l = c.lists?.[key];
     if (!l?.items?.length) return '';
-    return `<section class="ov-fact"><h2 data-edit="lists.${key}.title">${esc(l.title)}</h2><ul>${l.items.map((it) => `<li><strong>${rich(it.title)}</strong><span>${rich(it.detail)}</span></li>`).join('')}</ul></section>`;
+    return `<section class="ov-fact ov-fact--${key}"><h2 data-edit="lists.${key}.title">${esc(l.title)}</h2><ul>${l.items.map((it) => `<li><strong>${rich(it.title)}</strong>${it.detail ? `<span>${rich(it.detail)}</span>` : ''}</li>`).join('')}</ul></section>`;
   };
   // The logos twice over, so the row can slide along without a gap.
   const logos = c.site.logos || [];
@@ -70,8 +70,7 @@ export function renderOverview(root, c) {
         <div class="ov-foot"><span data-edit="site.hint">${esc(c.site.hint)}</span><button id="replay" type="button">Replay intro</button></div>
       </header>
       <section class="ov-hero ov-reveal" aria-label="About">
-        <p class="ov-hero-name" aria-hidden="true">${esc(c.site.name)}</p>
-        ${icons('ov-links--hero')}
+        <div class="ov-hero-top"><p class="ov-hero-name" aria-hidden="true">${esc(c.site.name)}</p>${icons('ov-links--hero')}</div>
         <div class="ov-card">
         ${intro ? `<p class="ov-bio">${bio}</p>` : ''}
         ${strip}

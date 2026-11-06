@@ -17,7 +17,7 @@
       }
     ],
     "hint": "Arrow keys to move, Enter to open, or scroll",
-    "intro": "**Hey, I'm Lucas.** I'm a senior at **Regis High School** who takes classes at **Columbia**, and does research for the **Summer Science Program** and **NeurIPS**. I **code**, and build **hardware and robots**. This summer I interned at an **a16z-backed $125M** AI-Native Services startup.",
+    "intro": "**Hey, I'm Lucas.** I'm a senior at **Regis High School** who takes classes at **Columbia**, and does research for the **Summer Science Program** and **NeurIPS**. I **code**, and build **hardware and robots**. This summer I interned at an **a16z-backed $125M** AI-Native Services **stealth** startup.",
     "logos": [
       {
         "name": "Regis High School",
@@ -68,12 +68,24 @@
       "title": "Honors",
       "items": [
         {
-          "title": "Xerox Award for Innovation",
+          "title": "1550 SAT · National Merit Semifinalist",
+          "detail": ""
+        },
+        {
+          "title": "NeurIPS Continual World Models Workshop",
+          "detail": "Co-author"
+        },
+        {
+          "title": "National Spanish Exam",
+          "detail": "Gold Medalist (1x) · Silver Medalist (2x)"
+        },
+        {
+          "title": "Xerox Award for Innovation and Information Technology",
           "detail": "University of Rochester"
         },
         {
-          "title": "National Merit Semifinalist",
-          "detail": "2027"
+          "title": "Nationally ranked tennis player",
+          "detail": "Peak #17 NJ · #325 US · Class of '27"
         }
       ]
     },
@@ -82,7 +94,7 @@
       "items": [
         {
           "title": "Software Engineering Intern",
-          "detail": "AI-Native Services · **a16z-backed** stealth startup, **~10 people**, valued at **$125M** · Summer 2026"
+          "detail": "AI-Native Services · **a16z-backed** stealth startup · **$125M** valuation · ~10 people · Summer 2026 · 8 weeks"
         }
       ]
     }
@@ -342,7 +354,7 @@
     },
     "world-models": {
       "title": "Plan Shallow While You Learn",
-      "tag": "NeurIPS 2026 workshop paper",
+      "tag": "NeurIPS 2026 · Continual World Models Workshop",
       "kind": "detail",
       "summary": "Co-authored paper accepted to the Continual World Models workshop at NeurIPS 2026 in Sydney. It shows that while a world model adapts to changed physics, planning compute should favor breadth over depth to maximize returns.",
       "tech": [
@@ -381,11 +393,12 @@
           "caption": "Deployment streams on the drag tiers.",
           "light": true
         }
-      ]
+      ],
+      "fullTitle": "Plan Shallow While You Learn: Reallocating Planning Compute During World-Model Adaptation"
     },
     "asteroid-orbit": {
       "title": "Orbit of Asteroid 1991 JF1",
-      "tag": "Research, Summer Science Program",
+      "tag": "Summer Science Program · Research paper",
       "kind": "detail",
       "summary": "In a team of three, determined the orbit of asteroid 1991 JF1 from original observations: imaging over three nights, plate solving for celestial coordinates, and computing orbital elements with the Method of Gauss. Results were written up as a technical paper and submitted to the Minor Planet Center.",
       "tech": [
@@ -410,7 +423,8 @@
           "caption": "Photometric calibration against reference stars.",
           "light": true
         }
-      ]
+      ],
+      "fullTitle": "Orbit Determination and Photometry of the Mars-crossing Asteroid 6249 Jennifer (1991 JF1)"
     }
   },
   "style": {
