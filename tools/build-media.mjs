@@ -36,7 +36,7 @@ const clip = (id, name, src, ss, t, vf = 'scale=960:-2') => {
   run('ffmpeg', '-v', 'error', '-y', ...(ss ? ['-ss', String(ss)] : []), ...(t ? ['-t', String(t)] : []), '-i', src, '-an', '-vf', `fps=30,${vf},pad=ceil(iw/2)*2:ceil(ih/2)*2`, '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '26', '-preset', 'slow', '-movflags', '+faststart', path.join(dir, `${name}.mp4`));
 };
 // The overview's project cards. Photos fill a square; graphs fit inside it on white so nothing is cut off.
-// The hardware projects' cards and the protein classifier's are cropped by hand in build-thumbs.mjs.
+// The hardware projects' cards, the protein classifier's and the tennis library's are cropped by hand in build-thumbs.mjs.
 const thumb = async (id, src, { position = 'centre', flat = false, crop = null } = {}) => {
   fs.mkdirSync(THUMBS, { recursive: true });
   let img = sharp(src).rotate();
@@ -82,8 +82,9 @@ for (const [name, f] of [['xor', 'xor_network'], ['sine', 'sine_regression_netwo
 await thumb('hybrid-networks', `${EG}/xor_network.png`, { flat: true });
 
 const T = `${D}/tennis_`;
-for (const [name, f] of [['win-probability', 'bayesian_win_prob_evolution_static_vs_bayesian'], ['match-importance', 'point_importance_importance_during_one_match'], ['serve', 'point_importance_serve_win_prob_vs_importance_logistic'], ['distribution', 'point_importance_importance_distribution_all_scores_bo5'], ['top-points', 'point_importance_top100_most_important_points_bo5']]) await still('tennis-simulation', name, `${T}${f}.png`, { width: 1400, flat: true });
-await thumb('tennis-simulation', `${T}bayesian_win_prob_evolution_static_vs_bayesian.png`, { flat: true });
+// The tennis library's clip comes from build-tennis.py.
+for (const [name, f] of [['match-importance', 'point_importance_importance_during_one_match'], ['distribution', 'point_importance_importance_distribution_all_scores_bo5'], ['serve', 'point_importance_serve_win_prob_vs_importance_logistic']]) await still('tennis-simulation', name, `${T}${f}.png`, { width: 2400, flat: true });
+// The tennis library's card comes from build-thumbs.mjs.
 
 const poster = await frame(`${OLD}/49_svm_poster_closeup.mp4`, 1.2);
 await still('protein-classifier', 'poster', poster, { width: 1000 });

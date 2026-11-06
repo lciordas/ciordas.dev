@@ -1,4 +1,4 @@
-// The overview's card pictures for the hardware projects and the protein classifier, each cropped by hand.
+// The overview's card pictures for the hardware projects, the protein classifier and the tennis library, each cropped by hand.
 // Run from the repo root: node tools/build-thumbs.mjs [id ...]
 // The cards' frames run from about square on a laptop to 4:3 on a phone, so each picture is cut a little wider
 // than square with its subject in the middle, and the card's cover crop only ever takes a strip of background.
@@ -32,6 +32,8 @@ const THUMB = {
   'ship-in-a-bottle': { src: () => frame(`${D}/old_clips/17_ship_finished_on_books.mp4`, 1.2), crop: { left: 398, top: 0, width: 1242, height: 1080 } },
   // Fig. 3.1 of the protein figures: how long the proteins in each class are.
   'protein-classifier': { src: () => path.join(TOOLKIT, 'sources/protein-figures.png'), crop: { left: 300, top: 1030, width: 1370, height: 860 }, graph: true, margin: 60 },
+  // The last third of the point-importance chart, inside its frame: the match's closing points, where the important ones bunch up.
+  'tennis-simulation': { src: () => `${D}/tennis_point_importance_importance_during_one_match.png`, crop: { left: 2100, top: 96, width: 1403, height: 1210 }, graph: true, margin: 64 },
 };
 
 const build = async (id) => {

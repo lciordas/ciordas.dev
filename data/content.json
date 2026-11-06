@@ -421,13 +421,12 @@
       "thumb": "tennis-simulation",
       "media": [
         {
-          "src": "media/projects/tennis-simulation/win-probability.webp",
-          "caption": "Win probability through a match, static compared with Bayesian updates.",
-          "light": true
+          "src": "media/projects/tennis-simulation/match.mp4",
+          "caption": "One simulated match, point by point: win probability with Bayesian serve estimates against fixed priors, and the importance of each point."
         },
         {
           "src": "media/projects/tennis-simulation/match-importance.webp",
-          "caption": "Point importance during one match.",
+          "caption": "Point importance during one match; points above 0.1 marked by outcome.",
           "light": true
         },
         {
@@ -437,12 +436,7 @@
         },
         {
           "src": "media/projects/tennis-simulation/serve.webp",
-          "caption": "Serve win probability against point importance.",
-          "light": true
-        },
-        {
-          "src": "media/projects/tennis-simulation/top-points.webp",
-          "caption": "The 100 most important points, best of 5 sets.",
+          "caption": "Serve win probability against point importance: logistic fit compared with the modelled curve.",
           "light": true
         }
       ]
