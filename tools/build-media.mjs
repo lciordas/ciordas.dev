@@ -36,6 +36,7 @@ const clip = (id, name, src, ss, t, vf = 'scale=960:-2') => {
   run('ffmpeg', '-v', 'error', '-y', ...(ss ? ['-ss', String(ss)] : []), ...(t ? ['-t', String(t)] : []), '-i', src, '-an', '-vf', `fps=30,${vf},pad=ceil(iw/2)*2:ceil(ih/2)*2`, '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '26', '-preset', 'slow', '-movflags', '+faststart', path.join(dir, `${name}.mp4`));
 };
 // The overview's project cards. Photos fill a square; graphs fit inside it on white so nothing is cut off.
+// The hardware projects' cards and the protein classifier's are cropped by hand in build-thumbs.mjs.
 const thumb = async (id, src, { position = 'centre', flat = false, crop = null } = {}) => {
   fs.mkdirSync(THUMBS, { recursive: true });
   let img = sharp(src).rotate();
@@ -46,8 +47,6 @@ const thumb = async (id, src, { position = 'centre', flat = false, crop = null }
 
 // Hardware.
 const dogPic = heic(`${BROLL}/quadrued pic2.HEIC`);
-await thumb('robot-dog', dogPic);
-await thumb('pid-seesaw', await frame(MAKER, 24.2));
 await still('robot-dog', 'side', dogPic, { width: 1600 });
 await still('robot-dog', 'front', heic(`${BROLL}/quadrupedpic1.HEIC`), { width: 1600 });
 await still('robot-dog', 'quarter', heic(`${BROLL}/quadrued pic3.HEIC`), { width: 1600 });
@@ -64,14 +63,12 @@ await still('micromanipulator', 'assembly', microPhoto, { width: 900 });
 await still('micromanipulator', 'microstepping', `${D}/microstepping_comparison.png`, { width: 1400, flat: true });
 await still('micromanipulator', 'encoder', await frame(`${OLD}/39_encoder_magnet_board.mp4`, 0.8), { width: 900 });
 await still('micromanipulator', 'bench', await frame(`${OLD}/35_stepper_breadboard_pico_vertical.mp4`, 2), { width: 900 });
-await thumb('micromanipulator', microPhoto);
 
 const shipDone = await frame(`${OLD}/17_ship_finished_on_books.mp4`, 1.2);
 // The ship and most of the bottle, 16:9, cut from the untrimmed frame.
 const shipRaw = temp('png'); run('ffmpeg', '-v', 'error', '-y', '-ss', '1.2', '-i', `${OLD}/17_ship_finished_on_books.mp4`, '-frames:v', '1', shipRaw);
 await still('ship-in-a-bottle', 'finished', shipRaw, { width: 1000, crop: { left: 330, top: 130, width: 1150, height: 646 } });
 // The ship's build video comes from build-ship.mjs.
-await thumb('ship-in-a-bottle', shipRaw, { crop: { left: 410, top: 0, width: 1000, height: 1000 } });
 
 // Other projects: one photo each.
 const ev = await frame(`${OLD}/11_ev_closeup.mp4`, 1.4);
@@ -97,7 +94,6 @@ await thumb('tennis-simulation', `${T}bayesian_win_prob_evolution_static_vs_baye
 const poster = await frame(`${OLD}/49_svm_poster_closeup.mp4`, 1.2);
 await still('protein-classifier', 'poster', poster, { width: 1000 });
 await still('protein-classifier', 'notebook', await frame(`${OLD}/47_svm_jupyter_notebook_plots.mp4`, 3), { width: 1200 });
-await thumb('protein-classifier', poster);
 
 // Figures from the papers, leaving out the first pages with everyone's addresses.
 // The NeurIPS paper's cover and slides, its figures included, come from build-paper.mjs.
