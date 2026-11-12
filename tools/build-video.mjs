@@ -31,9 +31,9 @@ const CLIPS = {
   dog() {
     const shots = [
       [`${FRAMES}/dog/%04d.webp`, 0, 51], // 0 to 1.7 s, side on: pitching nose down, then settling level; its first frame is the one the model lines up with
-      [`${FRAMES}/dog-quarter/%04d.webp`, 5, 59], // 1.7 to 3.5 s, front three-quarter: rising and rolling away, then dropping low
-      [path.join(FRAMES, 'dog-walk.mp4'), 136, 190], // 3.5 to 5.3 s, walking on the mat, mid-stride
-      [`${FRAMES}/dog-front/%04d.webp`, 96, 153], // 5.3 to 7.2 s, head on: one side of the body tilting up, then the other
+      [`${FRAMES}/dog-front/%04d.webp`, 96, 153], // 1.7 to 3.6 s, head on: gyrating, one side of the body tilting up, then the other
+      [path.join(FRAMES, 'dog-walk.mp4'), 136, 190], // 3.6 to 5.4 s, walking on the mat, mid-stride
+      [`${FRAMES}/dog-quarter/%04d.webp`, 5, 59], // 5.4 to 7.2 s, front three-quarter: the side-to-side level change, rising and rolling away, then dropping low
     ];
     const inputs = shots.flatMap(([file]) => [...(file.endsWith('.webp') ? ['-framerate', '30'] : []), '-i', file]);
     const chains = shots.map(([, a, b], i) => `[${i}:v]trim=start_frame=${a}:end_frame=${b},setpts=N/30/TB,scale=1280:720,setsar=1[s${i}]`);
