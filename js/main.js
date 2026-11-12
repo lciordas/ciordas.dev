@@ -71,9 +71,10 @@ const showPortfolio = async (direct) => {
   document.body.classList.remove('is-intro'); document.body.classList.add('is-portfolio');
   document.documentElement.classList.add('can-scroll');
   const work = $('work'); work.hidden = false;
-  const [{ mountWork }, { mountSite }] = await Promise.all([import('./projects/work.js'), import('./site.js')]);
+  const [{ mountWork }, { mountSite }, { mountKeynav }] = await Promise.all([import('./projects/work.js'), import('./site.js'), import('./keynav.js')]);
   const api = mountWork(work, { content, fade: direct ? [] : [canvas], onHero: (h) => onHero?.(h) });
   mountSite({ root: portfolio, work: api, content, onReplay: () => { location.href = location.pathname + location.search.replace(/[?&]to=[^&]*/, ''); } });
+  mountKeynav({ work: api, root: portfolio });
   gsap.fromTo(portfolio.querySelectorAll('.ov-reveal'), { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 1.05, ease: 'expo.out', stagger: 0.08 });
 };
 
