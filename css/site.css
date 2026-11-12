@@ -171,6 +171,8 @@ html.lenis, html.lenis body { height: auto; }
 .screen { z-index: 3; pointer-events: none; }
 .screen::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(244, 239, 232, .14); }
 .clip { position: absolute; inset: 0; width: 100%; height: 100%; display: block; visibility: hidden; object-fit: cover; }
+/* A photo in the window in place of a model, until the footage wipes over it. */
+.poster { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; will-change: transform; }
 .title { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; will-change: opacity; }
 .title .index { font-size: 13px; letter-spacing: .24em; color: var(--muted); }
 .title .big { margin-top: 6px; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: calc(var(--rw) * .19); line-height: .92; text-transform: uppercase; color: #f4efe8; opacity: .13; letter-spacing: -.005em; }

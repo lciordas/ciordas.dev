@@ -44,6 +44,13 @@ const ANIMATED = {
     assemble: [0.038, 0.636], title: [0.089, 0.229], wipe: [0.764, 0.84], clipAt: 0.84,
     copyAt: [[0.255, 0.535], [0.56, 0.84], { t: [0, 9.9] }],
   },
+  // No model: a photo of the finished ship stands in the window from the start and drifts in a little, then the same
+  // light line wipes it over to the build video, which opens on the finished ship framed much like the photo.
+  'ship-in-a-bottle': {
+    poster: 'media/projects/ship-in-a-bottle/finished.webp', length: 230, clip: 'media/projects/ship-in-a-bottle/build.mp4',
+    title: [-0.06, -0.04], wipe: [0.48, 0.6], clipAt: 0.6,
+    copyAt: [[-0.1, 0.4], [0.4, 0.74], [0.74, 1]],
+  },
 };
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -89,6 +96,7 @@ function buildAnimated(id, cfg, p, index, next, content) {
         <div class="window" aria-hidden="true"><div class="title"><span class="index">${index}</span><span class="big">${esc(p.title)}</span></div></div>
         <canvas class="cad" aria-hidden="true"></canvas>
         <div class="screen">
+          ${cfg.poster ? `<img class="poster" data-src="${esc(cfg.poster)}" alt="${esc(p.title)}" decoding="async">` : ''}
           ${cfg.clip ? `<video class="clip" muted playsinline loop preload="none" aria-label="${esc(p.title)} video"></video>` : ''}
           ${slides.map((m) => `<div class="sshow"><img data-src="${esc(m.src)}" alt="${esc(capText(m.caption) || p.title)}" decoding="async"></div>`).join('')}
           <i class="scan" aria-hidden="true"></i>
@@ -302,14 +310,14 @@ export function mountWork(container, options = {}) {
     const item = {
       id, cfg, el, runway: q('.runway'), title: q('.title'), head: q('.head'), screen: q('.screen'), cadC: q('.cad'), video: q('.clip'), scan: q('.scan'), bar: q('.bar i'),
       copies: [...el.querySelectorAll('.points > .point')], cue: q('.pcue'), cad: null, p: 0, loading: false, fit: 1, playing: false,
-      panel: q('ul.points'), shows: [...el.querySelectorAll('.sshow')],
+      panel: q('ul.points'), poster: q('.poster'), shows: [...el.querySelectorAll('.sshow')],
       // Each slide's bullets light one after another over the slide's stretch of scroll; the last stays lit.
       panels: [...el.querySelectorAll('.points--slide')].map((node, i) => {
         const [a, b] = cfg.slides[i], end = cfg.slides[i + 1]?.[0] ?? 1, pts = [...node.querySelectorAll('.point')], n = pts.length, seg = (end - b) / Math.max(1, n);
         return { node, pts, at: pts.map((_, j) => [j ? b + j * seg : a, j === n - 1 ? 1 : b + (j + 1) * seg]) };
       }),
     };
-    if (!gl) item.cadC.style.display = 'none';
+    if (!gl || !cfg.model) item.cadC.style.display = 'none';
     items.push(item);
   });
   const foot = document.createElement('div'); foot.className = 'after after--end'; foot.innerHTML = '<a class="after__back" href="#">Back to overview</a>'; container.appendChild(foot);
@@ -339,7 +347,8 @@ export function mountWork(container, options = {}) {
     if (it.loading) return; it.loading = true;
     if (it.video) { it.video.src = it.cfg.clip; it.video.preload = 'auto'; it.video.load(); }
     it.shows.forEach((sh) => { const img = sh.firstElementChild; img.src = img.dataset.src; });
-    if (gl) loadModel(it.cfg.model).then((m) => {
+    if (it.poster) it.poster.src = it.poster.dataset.src;
+    if (gl && it.cfg.model) loadModel(it.cfg.model).then((m) => {
       it.cad = mountCad(it.cadC, m, { up: it.cfg.up, fov: it.cfg.fov });
       size();
     });
@@ -375,6 +384,11 @@ export function mountWork(container, options = {}) {
     });
     it.scan.style.left = `${line * 100}%`;
     it.scan.style.opacity = line > 0.001 && line < 0.999 ? 1 : 0;
+    // Or the photo in place of a model, easing in slightly until the line has passed over it.
+    if (it.poster) {
+      it.poster.style.transform = `scale(${(1.06 - 0.06 * smooth(0, cfg.wipe[1], p)).toFixed(4)})`;
+      it.poster.style.visibility = wipe < 1 ? 'visible' : 'hidden';
+    }
     // Model.
     if (it.cad) {
       const show = p < cfg.wipe[1] + 0.01;

@@ -300,24 +300,14 @@
     "ship-in-a-bottle": {
       "title": "Ship in a Bottle",
       "tag": "Scratch-built, with custom tools",
-      "kind": "detail",
-      "summary": "A ship built from scratch and assembled inside the bottle. The work demanded extreme precision and custom tools made from clothes hangers to reach inside.",
-      "tech": [
-        "Hand fabrication",
-        "Custom tooling"
+      "kind": "scroll",
+      "summary": "",
+      "captions": [
+        "A ship built from scratch and assembled inside the bottle.",
+        "Extreme precision, with custom tools bent from clothes hangers to reach through the neck.",
+        "Made from a block of basswood, wooden dowels, 22-gauge wire, rigging thread, paint and paper."
       ],
-      "links": [],
       "thumb": "ship-in-a-bottle",
-      "media": [
-        {
-          "src": "media/projects/ship-in-a-bottle/build.mp4",
-          "caption": "The build: shaping and carving the hull, painting, rigging the masts and sails, then passing the folded ship through the neck and raising it inside the bottle."
-        },
-        {
-          "src": "media/projects/ship-in-a-bottle/finished.webp",
-          "caption": "Finished ship in its bottle."
-        }
-      ],
       "stream": [
         {
           "src": "media/projects/ship-in-a-bottle/carve.webp",
