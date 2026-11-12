@@ -1,11 +1,19 @@
-// The Alzheimer's protein classifier's slide: the original NCBI protein data beside the length-matched dataset Lucas
-// built to take sequence length out of the picture. Top row: how long the Alzheimer's-associated and other proteins
-// are in each; bottom row: the SVM's raw and length-adjusted accuracy as the dataset shrinks, the gap between them
-// being what length alone explains. Redrawn from the charts in Lucas's research presentation, read off them pixel by
-// pixel, so the lettering is large enough to read on the site:
-//   toolkit/sources/protein-figures.png            screenshot of the write-up's results (Figs. 2.1 and 3.1 used)
-//   toolkit/sources/protein-balanced-accuracy.jpg  Fig. 4.1 } pulled from the deck's PDF, page 10, with
-//   toolkit/sources/protein-balanced-lengths.jpg   Fig. 4.2 } pdfimages -j -f 10 -l 10
+// The Alzheimer's protein classifier's slide: Lucas's four results charts from his research presentation, the original
+// NCBI protein dataset on the left and the length-matched dataset he rebuilt on the right. Top row: how long the
+// Alzheimer's-associated and other proteins are (his matplotlib histograms); bottom row: the SVM's raw and adjusted
+// accuracy as the dataset shrinks (his Google Sheets charts).
+//
+// The charts in the deck are too small to read at the slide's size, so each is redrawn here in its own tool's default
+// look (Google Sheets: Arial, grey title, #4285F4 and #EA4335, minor gridlines; matplotlib: DejaVu Sans, tab:blue and
+// tab:orange at 90% opacity, grey grid) with the values read off the originals, only with the lettering larger next
+// to the plot. Changes from the originals: the four chart titles are replaced by one heading per dataset, and the
+// histogram legends sit just above the plot instead of inside it, where at this size they'd cover the bars.
+//   toolkit/sources/protein-original-accuracy.jpg  Fig. 2.1 } embedded in the deck's PDF, pages 6 and 10,
+//   toolkit/sources/protein-balanced-accuracy.jpg  Fig. 4.1 } pulled with pdfimages -j
+//   toolkit/sources/protein-balanced-lengths.jpg   Fig. 4.2 }
+//   toolkit/sources/protein-figures.png            screenshot of the results slide, Fig. 3.1 read from it (sharper
+//                                                  than the PDF's copy, protein-original-lengths.jpg)
+//   toolkit/sources/fonts/Arial.ttf, DejaVuSans.ttf  the two charting tools' default fonts (macOS / matplotlib)
 // Laid out on a 1600×900 grid and drawn at twice that, for sharp text on retina screens.
 // Run from the repo root: node tools/build-protein.mjs
 import { createRequire } from 'node:module';
@@ -14,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp'), opentype = require('opentype.js');
-const SRC = path.join(here, '../toolkit/sources'), FONTS = path.join(here, '../toolkit/node_modules/@fontsource');
+const SRC = path.join(here, '../toolkit/sources');
 const OUT = path.join(here, '../media/projects/protein-classifier/charts.webp');
 
 // ---- Reading the charts ----------------------------------------------------------------------------------------
@@ -22,160 +30,203 @@ const raster = async (file) => {
   const { data, info } = await sharp(path.join(SRC, file)).flatten({ background: '#fff' }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   return { at: (x, y) => { const i = 3 * (y * info.width + x); return [data[i], data[i + 1], data[i + 2]]; } };
 };
-// Accuracy charts: the blue (raw) and red (adjusted) dots, found as solid discs inside the plot, left to right at
-// 100%, 90% … 10% of the dataset. y100 is the pixel row of the 100% gridline, perUnit the pixels per point.
-async function dots(file, [x0, y0, x1, y1], y100, perUnit) {
+
+// Accuracy: the blue (raw) and red (adjusted) dots sit on the vertical gridlines at 100%, 90% … 10% (columns
+// x100 + i*dx). Down each of those columns the dot is the longest run of its colour (the line through it is far
+// thinner); its middle is the value. y100 is the pixel row of the 100% gridline, perUnit the pixels a point.
+async function dots(file, x100, dx, y100, perUnit) {
   const img = await raster(file);
-  const kind = ([r, g, b]) => (b > 200 && r < 120 && g > 100 && g < 170 ? 'raw' : r > 200 && g < 110 && b < 100 ? 'adj' : null);
-  const out = {};
-  for (const k of ['raw', 'adj']) {
-    const hit = new Set();
-    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (kind(img.at(x, y)) === k) hit.add(y * 1e5 + x);
-    const groups = [];
-    for (const key of hit) {
-      const x = key % 1e5, y = Math.floor(key / 1e5); let n = 0;
-      for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) if (hit.has((y + j) * 1e5 + x + i)) n++;
-      if (n < 70) continue; // the line between dots is thin; only a disc fills this neighbourhood
-      let g = groups.find((q) => Math.abs(q.x / q.n - x) < 15 && Math.abs(q.y / q.n - y) < 15);
-      if (!g) groups.push(g = { x: 0, y: 0, n: 0 });
-      g.x += x; g.y += y; g.n++;
+  const kind = ([r, g, b]) => (b > 200 && r < 140 && g < 190 ? 'raw' : r > 200 && g < 120 && b < 110 ? 'adj' : null);
+  const out = { raw: [], adj: [] };
+  for (let i = 0; i < 10; i++) {
+    const x = Math.round(x100 + i * dx);
+    for (const k of ['raw', 'adj']) {
+      let best = null;
+      for (let c = x - 1; c <= x + 1; c++) {
+        let run = null;
+        for (let y = 215; y < 612; y++) { // inside the plot, clear of the legend's dots
+          if (kind(img.at(c, y)) === k) { run = run || { a: y, b: y }; run.b = y; }
+          else if (run && y - run.b > 2) { if (!best || run.b - run.a > best.b - best.a) best = run; run = null; } // JPEG can blur a row or two
+        }
+      }
+      if (!best || best.b - best.a < 9) throw new Error(`${file}: no ${k} dot at column ${x}`);
+      out[k].push(Math.round((100 - ((best.a + best.b) / 2 - y100) / perUnit) * 10) / 10);
     }
-    const pts = groups.filter((g) => g.n > 5).sort((a, b) => a.x / a.n - b.x / b.n);
-    if (pts.length !== 10) throw new Error(`${file}: found ${pts.length} ${k} dots`);
-    out[k] = pts.map((g) => 100 - (g.y / g.n - y100) / perUnit);
   }
   return out;
 }
-// Histograms: for each pixel column, the top of the blue (other proteins) and orange (Alzheimer's) bars. Orange is
-// drawn over blue, so where both rise the overlap is a darker orange; below the taller bar's top the other one's top
-// is where that colour changes. Columns of one height are one bar. x/y map pixels to amino acids and counts.
-async function bars(file, c) {
+
+// Histograms: matplotlib's hist() with 50 bins per class, blue (other proteins) drawn first and orange (Alzheimer's)
+// over it at 90% opacity, so where both rise the overlap is a darker orange. Each pixel is matched to the nearest of
+// the chart's colours. Down a column, blue's top is the first blue or overlap pixel, orange's the first light or dark
+// orange one. First the bin grid: the edges between bars fall on lo + k*w; w and the phase come from where the bar
+// heights step, lo from the first bar (`first`, read off the chart). Then each bin's height from its middle columns.
+async function hist(file, c) {
   const img = await raster(file);
-  const kind = ([r, g, b]) => (b > r + 40 ? 'B' : r > b + 80 ? (g < c.gmid ? 'D' : 'L') : null);
-  const solid = (x, y, k) => [0, 1, 2].every((d) => (k ? kind(img.at(x, y + d)) === k : kind(img.at(x, y + d))));
-  const blue = [], orange = [];
-  for (let x = c.x0; x < c.x1; x++) {
-    let top = -1, under = c.axis;
-    for (let y = x >= c.legend[0] ? c.legend[1] : c.top; y < c.axis; y++) if (solid(x, y)) { top = y; break; }
-    if (top < 0) { blue.push(0); orange.push(0); continue; }
-    const blueOnTop = kind(img.at(x, top)) === 'B';
-    for (let y = top; y < c.axis; y++) {
-      const k = kind(img.at(x, y));
-      if (k && (blueOnTop ? k !== 'B' : k !== 'L') && solid(x, y, k)) { under = y; break; }
+  const d2 = (p, q) => (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2;
+  const refs = { W: [255, 255, 255], K: [0, 0, 0], G: c.grid, B: c.B, D: c.D, L: c.L };
+  const kind = (p) => { let k = null, m = 1e9; for (const [n, q] of Object.entries(refs)) { const d = d2(p, q); if (d < m) { m = d; k = n; } } return m < 45 ** 2 ? k : null; };
+  const px = (aa) => c.x0 + aa * c.perAA, top = (x) => (x >= c.legend[0] ? c.legend[1] : c.top);
+  // Column heights of each class, in counts.
+  const height = (x, set) => { for (let y = top(x); y < c.axis; y++) if (set.includes(kind(img.at(x, y)))) return (c.axis - y) / c.perCount; return 0; };
+  const cols = { blue: [], orange: [] };
+  for (let x = Math.ceil(px(-50)); x < px(c.xmax); x++) { cols.blue.push([x, height(x, 'BD')]); cols.orange.push([x, height(x, 'DL')]); }
+  const out = {};
+  for (const k of ['blue', 'orange']) {
+    // Steps: columns where the height jumps by more than 4 counts.
+    const steps = [];
+    for (let i = 1; i < cols[k].length; i++) if (Math.abs(cols[k][i][1] - cols[k][i - 1][1]) > 4) steps.push((cols[k][i][0] - 0.5 - c.x0) / c.perAA);
+    let best = null;
+    for (let w = c.w[0]; w <= c.w[1]; w += 0.02) for (let ph = 0; ph < w; ph += 0.25) {
+      let n = 0, err = 0;
+      for (const s of steps) { const d = Math.abs(((s - ph) % w + w * 1.5) % w - w / 2); if (d < 4) { n++; err += d; } }
+      if (!best || n > best.n || (n === best.n && err < best.err)) best = { n, err, w, ph };
     }
-    blue.push(c.axis - (blueOnTop ? top : under)); orange.push(c.axis - (blueOnTop ? under : top));
+    const lo = best.ph + Math.round((c.first[k] - best.ph) / best.w) * best.w, w = best.w;
+    const counts = [];
+    for (let b = 0; b < 50; b++) {
+      const a = Math.ceil(px(lo + b * w) + 2), z = Math.floor(px(lo + (b + 1) * w) - 2), hs = [];
+      for (let x = a; x <= z; x++) hs.push(height(x, k === 'blue' ? 'BD' : 'DL'));
+      hs.sort((p, q) => p - q);
+      let v = Math.max(0, Math.round(hs[hs.length >> 1] || 0));
+      // A bar of one or two sequences is under a pixel tall: in the JPEG it only tints the rows just above the axis.
+      if (!v && c.tint) {
+        const x = Math.round((a + z) / 2), [r, , bl] = img.at(x, c.axis - 3);
+        if (k === 'blue' ? bl - r > 30 : r - bl > 40) v = 1;
+      }
+      counts.push(v);
+    }
+    out[k] = { lo, w, counts, fit: `${best.n}/${steps.length}` };
   }
-  // Runs of equal height (within 2.5 px); a run of under 5 px is the antialiased edge between two bars.
-  const steps = (h) => {
-    const runs = [];
-    h.forEach((v, i) => { const r = runs[runs.length - 1]; if (r && Math.abs(v - r.ref) <= 2.5) { r.v.push(v); r.b = i; } else runs.push({ a: i, b: i, ref: v, v: [v] }); });
-    const keep = runs.filter((r) => r.b - r.a >= 4);
-    return keep.map((r, i) => {
-      const a = i ? (keep[i - 1].b + r.a) / 2 + 0.5 : r.a, b = i < keep.length - 1 ? (r.b + keep[i + 1].a) / 2 + 0.5 : r.b + 1;
-      const v = r.v.sort((p, q) => p - q)[r.v.length >> 1];
-      return [c.x(c.x0 + a), c.x(c.x0 + b), Math.max(0, v / c.perCount)];
-    });
-  };
-  return { blue: steps(blue), orange: steps(orange) };
+  return out;
 }
 
-// Figs. 2.1 and 3.1 from the screenshot. Gridlines: 100% at row 348.5, 12.386 px a point; 0 aa at column 469.5,
-// 0.1972 px an amino acid; counts 1.008 px each, up from row 1795.3.
+const SHOT = { B: [56, 116, 174], D: [216, 128, 56], L: [240, 144, 64] }; // the screenshots' colours (display profile)
 const ORIG = {
-  acc: await dots('protein-figures.png', [380, 330, 1600, 800], 348.5, 12.386),
-  len: await bars('protein-figures.png', { x0: 420, x1: 1556, top: 1093, axis: 1795, legend: [990, 1192], gmid: 128, x: (px) => (px - 469.5) / 0.1972, perCount: 1.008 }),
+  acc: await dots('protein-original-accuracy.jpg', 172.5, 108.89, 224.5, 10.743),
+  // 0 aa at column 469.5, 0.1972 px an amino acid; 1.008 px a count up from row 1795.
+  len: await hist('protein-figures.png', { ...SHOT, grid: [176, 176, 176], x0: 469.5, perAA: 0.1972, xmax: 5400, top: 1093, axis: 1795, perCount: 1.008, legend: [990, 1192], w: [80, 130], first: { blue: 8, orange: 0 } }),
 };
-// Figs. 4.1 and 4.2. 100% at row 224.5, 10.743 px a point; 0 aa at column 198.5, 0.2625 px an amino acid; counts
-// 0.8338 px each, up from row 832.5.
 const BAL = {
-  acc: await dots('protein-balanced-accuracy.jpg', [140, 200, 1180, 620], 224.5, 10.743),
-  len: await bars('protein-balanced-lengths.jpg', { x0: 147, x1: 1382, top: 64, axis: 831, legend: [762, 172], gmid: 136, x: (px) => (px - 198.5) / 0.2625, perCount: 0.8338 }),
+  acc: await dots('protein-balanced-accuracy.jpg', 172.5, 108.89, 224.5, 10.743),
+  // 0 aa at column 198.5, 0.2625 px an amino acid; 0.8338 px a count up from row 832.
+  len: await hist('protein-balanced-lengths.jpg', { ...SHOT, B: [57, 117, 179], grid: [193, 193, 193], x0: 198.5, perAA: 0.2625, xmax: 4400, top: 64, axis: 832, perCount: 0.8338, legend: [762, 172], w: [70, 100], first: { blue: 3, orange: 6 }, tint: true }),
 };
 
 // ---- Drawing ---------------------------------------------------------------------------------------------------
-const font = (pkg, file) => { const b = fs.readFileSync(path.join(FONTS, pkg, 'files', file)); return opentype.parse(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength)); };
-const REG = font('hanken-grotesk', 'hanken-grotesk-latin-400-normal.woff'), MED = font('hanken-grotesk', 'hanken-grotesk-latin-500-normal.woff'), SEMI = font('hanken-grotesk', 'hanken-grotesk-latin-600-normal.woff');
+const font = (file) => { const b = fs.readFileSync(path.join(SRC, 'fonts', file)); return opentype.parse(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength)); };
+const ARIAL = font('Arial.ttf'), DEJAVU = font('DejaVuSans.ttf');
 const n = (v) => (Math.round(v * 100) / 100).toString();
 const pathData = (p) => p.commands.map((c) => c.type === 'Z' ? 'Z' : c.type === 'Q' ? `Q${n(c.x1)} ${n(c.y1)} ${n(c.x)} ${n(c.y)}` : c.type === 'C' ? `C${n(c.x1)} ${n(c.y1)} ${n(c.x2)} ${n(c.y2)} ${n(c.x)} ${n(c.y)}` : `${c.type}${n(c.x)} ${n(c.y)}`).join('');
 const advance = (f, s, size) => { let w = 0, prev = null; for (const ch of s) { const g = f.charToGlyph(ch); if (prev) w += f.getKerningValue(prev, g) * size / f.unitsPerEm; w += g.advanceWidth * size / f.unitsPerEm; prev = g; } return w; };
-function text(f, s, size, x, y, fill, anchor = 'start') {
+function text(f, s, size, x, y, fill, anchor = 'start', rotate = 0) {
   let cx = anchor === 'middle' ? x - advance(f, s, size) / 2 : anchor === 'end' ? x - advance(f, s, size) : x, prev = null, d = '';
   for (const ch of s) { const g = f.charToGlyph(ch); if (prev) cx += f.getKerningValue(prev, g) * size / f.unitsPerEm; d += pathData(g.getPath(cx, y, size)); cx += g.advanceWidth * size / f.unitsPerEm; prev = g; }
-  return `<path fill="${fill}" d="${d}"/>`;
+  return `<path fill="${fill}" d="${d}"${rotate ? ` transform="rotate(${rotate} ${n(x)} ${n(y)})"` : ''}/>`;
 }
-const line = (pts, stroke, w) => `<path d="M${pts.map(([x, y]) => `${n(x)} ${n(y)}`).join('L')}" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"/>`;
+const hline = (x1, x2, y, stroke, w) => `<line x1="${n(x1)}" y1="${n(y)}" x2="${n(x2)}" y2="${n(y)}" stroke="${stroke}" stroke-width="${n(w)}"/>`;
+const vline = (x, y1, y2, stroke, w) => `<line x1="${n(x)}" y1="${n(y1)}" x2="${n(x)}" y2="${n(y2)}" stroke="${stroke}" stroke-width="${n(w)}"/>`;
 
-const W = 1600, H = 900, K = 2;
-const BG = '#171513', INK = '#f4efe8', MUTED = 'rgba(244,239,232,.62)', FAINT = 'rgba(244,239,232,.1)', AXIS = 'rgba(244,239,232,.32)';
-// Validated as pairs on this surface (colour-blind separation, contrast): proteins by class, accuracy by kind.
-const AD = '#d95926', OTHER = '#3987e5', RAW = '#9085e9', ADJ = '#199e70';
-const COLS = [
-  { x: 64, data: ORIG, title: 'Original dataset', sub: '7,857 NCBI proteins. Lengths misaligned.', xmax: 2500, ymax: 700, gap: '9.3', pct: ['89.6%', '80.3%'] },
-  { x: 840, data: BAL, title: 'Length-matched dataset', sub: '18,824 NCBI proteins. Lengths aligned.', xmax: 4000, ymax: 900, gap: '3', pct: ['86%', '83%'] },
-];
-const CW = 696, YL = 62; // column width; room on the left of each plot for its tick labels
-const R1 = { t: 194, b: 414 }, R2 = { t: 566, b: 786 };
-const fmt = (v) => v.toLocaleString('en-US');
-let body = `<rect width="${W}" height="${H}" fill="${BG}"/>`;
-
-COLS.forEach((c, ci) => {
-  const L = c.x + YL, R = c.x + CW;
-  body += text(SEMI, c.title, 38, c.x, 86, INK) + text(REG, c.sub, 24, c.x, 122, MUTED);
-
-  // Length distribution: each class as a translucent step area with a solid outline.
-  const hx = (v) => L + Math.max(0, Math.min(v, c.xmax)) / c.xmax * (R - L), hy = (v) => R1.b - v / c.ymax * (R1.b - R1.t);
-  body += text(MED, 'Protein length', 25, c.x, R1.t - 22, INK);
-  for (let v = 0; v <= c.ymax; v += 200) {
-    body += `<line x1="${L}" y1="${n(hy(v))}" x2="${R}" y2="${n(hy(v))}" stroke="${v ? FAINT : AXIS}" stroke-width="${v ? 1 : 1.5}"/>`;
-    body += text(REG, fmt(v), 20, L - 12, hy(v) + 7, MUTED, 'end');
+// Google Sheets line chart, as in Figs. 2.1 and 4.1. U canvas units to a Sheets pixel; the measurements are the
+// originals' (a 600×371 chart): 12 px Arial in black for axes and #222 for the legend, legend centred on top with
+// 12 px dots, a black left axis with ticks at every point (longer at every 5), major gridlines #ccc every 5 points
+// and 20% of the data, minor ones #e6e6e6 every point and 5%, 2 px lines and 3.5 px dots.
+const U = 2;
+function sheets(x0, y0, w, h, acc) {
+  const s = (v) => v * U, W = w / U, H = h / U;
+  const L = 58.25, R = W - 6, T = 26, B = H - 37, AX = L - 4;
+  const X = (pct) => x0 + s(L + (100 - pct) / (100 - 9.17) * (R - L)), Y = (v) => y0 + s(T + (100 - v) / 35 * (B - T));
+  let o = '';
+  for (let p = 95; p >= 10; p -= 5) if (p % 20) o += vline(X(p), Y(100), Y(65), '#e6e6e6', s(1));
+  for (let v = 99; v > 65; v--) if (v % 5) o += hline(x0 + s(L), x0 + s(R), Y(v), '#e6e6e6', s(1));
+  for (let p = 100; p >= 20; p -= 20) o += vline(X(p), Y(100), Y(65), '#cccccc', s(1));
+  for (let v = 100; v >= 65; v -= 5) o += hline(x0 + s(L), x0 + s(R), Y(v), '#cccccc', s(1));
+  o += vline(x0 + s(AX), Y(100) - s(0.5), Y(65) + s(0.5), '#000', s(1));
+  for (let v = 100; v >= 65; v--) o += hline(x0 + s(AX - (v % 5 ? 2.75 : 5.5)), x0 + s(AX + (v % 5 ? 2.75 : 5.5)), Y(v), '#000', s(1));
+  for (let v = 100; v >= 65; v -= 5) o += text(ARIAL, String(v), s(12), x0 + s(AX - 13.25), Y(v) + s(4.3), '#000', 'end');
+  for (let p = 100; p >= 20; p -= 20) o += text(ARIAL, String(p), s(12), X(p), y0 + s(B + 16.5), '#000', 'middle');
+  o += text(ARIAL, 'Percentage of Dataset Used', s(12), x0 + s((L + R) / 2), y0 + s(B + 34), '#000', 'middle');
+  o += text(ARIAL, 'Model Accuracy (%)', s(12), x0 + s(10.6), y0 + s((T + B) / 2), '#000', 'middle', -90);
+  for (const [k, color] of [['raw', '#4285F4'], ['adj', '#EA4335']]) {
+    const pts = acc[k].map((v, i) => [X(100 - i * 10), Y(v)]);
+    o += `<path d="M${pts.map(([x, y]) => `${n(x)} ${n(y)}`).join('L')}" fill="none" stroke="${color}" stroke-width="${s(2)}" stroke-linejoin="round"/>`;
+    o += pts.map(([x, y]) => `<circle cx="${n(x)}" cy="${n(y)}" r="${s(3.5)}" fill="${color}"/>`).join('');
   }
-  for (let v = 0; v <= c.xmax; v += c.xmax > 3000 ? 1000 : 500) body += text(REG, fmt(v), 20, hx(v), R1.b + 28, MUTED, 'middle');
-  body += text(REG, 'amino acids', 20, R, R1.b + 56, MUTED, 'end');
-  for (const [series, color] of [[c.data.len.blue, OTHER], [c.data.len.orange, AD]]) {
-    const pts = []; let last = 0;
-    for (const [a, b, v] of series) { if (a >= c.xmax) break; pts.push([hx(a), hy(last)], [hx(a), hy(v)], [hx(b), hy(v)]); last = v; }
-    pts.push([pts[pts.length - 1][0], hy(0)]);
-    body += `<path d="M${n(pts[0][0])} ${n(hy(0))}L${pts.map(([x, y]) => `${n(x)} ${n(y)}`).join('L')}Z" fill="${color}" fill-opacity=".28"/>` + line(pts, color, 2.5);
+  // Legend: dot, 8 px, label, 17 px to the next dot; the whole row centred on the chart.
+  const items = [['#4285F4', 'Raw Accuracy'], ['#EA4335', 'Adjusted Accuracy']];
+  const total = items.reduce((t, [, l]) => t + 12 + 8 + advance(ARIAL, l, s(12)) / U, 0) + 17;
+  let lx = x0 + s((W - total) / 2);
+  for (const [color, label] of items) {
+    o += `<circle cx="${n(lx + s(6))}" cy="${n(y0 + s(8))}" r="${s(6)}" fill="${color}"/>` + text(ARIAL, label, s(12), lx + s(20), y0 + s(12.3), '#222222');
+    lx += s(20 + 17) + advance(ARIAL, label, s(12));
   }
-  // Legend on the heading's line, right-aligned.
-  let lx = R;
-  [[OTHER, 'Other proteins'], [AD, "Alzheimer's-associated"]].forEach(([color, label]) => {
-    lx -= advance(REG, label, 22);
-    body += text(REG, label, 22, lx, R1.t - 22, INK) + `<rect x="${n(lx - 28)}" y="${R1.t - 39}" width="18" height="18" rx="3" fill="${color}"/>`;
-    lx -= 28 + 26;
+  return o;
+}
+
+// matplotlib histogram with its defaults, as in Figs. 3.1 and 4.2. P canvas units to a point: 10 pt DejaVu Sans,
+// 0.8 pt black spines and 3.5 pt outward ticks, #b0b0b0 grid under the bars, tab:blue then tab:orange at 0.9 alpha,
+// 5% margins, MaxNLocator ticks; legend box white at 0.8 alpha with a #ccc edge and rounded corners, measured off the
+// original: its rows 1.52 em apart with 2 × 0.7 em patches.
+const P = 2.3, FS = 10 * P;
+const nice = (lo, hi, nbins) => { // matplotlib's MaxNLocator with steps 1, 2, 2.5, 5, 10
+  const raw = (hi - lo) / nbins, mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((v) => v >= raw - 1e-9);
+  const t = []; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) t.push(v); return t;
+};
+function mpl(x0, y0, w, h, len, yticksMax) {
+  const series = [['blue', '#1f77b4', 1], ['orange', '#ff7f0e', 0.9]];
+  const lo = Math.min(...series.map(([k]) => len[k].lo)), hi = Math.max(...series.map(([k]) => len[k].lo + 50 * len[k].w));
+  const ymax = Math.max(...series.flatMap(([k]) => len[k].counts));
+  const xl = [lo - (hi - lo) * 0.05, hi + (hi - lo) * 0.05], yl = [0, ymax * 1.05];
+  // Legend first, above the plot at its right edge; then the axes box below it.
+  const labels = ["Non-Alzheimer's associated proteins", "Alzheimer's associated proteins"];
+  const lw = (0.58 + 2.02 + 0.8 + 0.75) * FS + Math.max(...labels.map((l) => advance(DEJAVU, l, FS))), lh = 3.79 * FS;
+  const yTicksW = advance(DEJAVU, String(yticksMax), FS);
+  const AL = x0 + FS * 1.2 + 4 * P + yTicksW + 7 * P, AR = x0 + w - P, AT = y0 + lh + 0.5 * FS, AB = y0 + h - (7 * P + FS + 4 * P + FS);
+  const X = (v) => AL + (v - xl[0]) / (xl[1] - xl[0]) * (AR - AL), Y = (v) => AB - (v - yl[0]) / (yl[1] - yl[0]) * (AB - AT);
+  const xt = nice(xl[0], xl[1], Math.min(9, Math.floor((AR - AL) / P / (FS / P * 3)))).filter((v) => v >= xl[0] && v <= xl[1]);
+  const yt = nice(yl[0], yl[1], Math.min(9, Math.floor((AB - AT) / P / (FS / P * 2)))).filter((v) => v <= yl[1]);
+  let o = '';
+  for (const v of xt) o += vline(X(v), AT, AB, '#b0b0b0', 0.8 * P);
+  for (const v of yt) o += hline(AL, AR, Y(v), '#b0b0b0', 0.8 * P);
+  for (const [k, color, alpha] of series) {
+    const { lo: a, w: bw, counts } = len[k];
+    counts.forEach((c, i) => { if (c > 0) o += `<rect x="${n(X(a + i * bw))}" y="${n(Y(c))}" width="${n(X(a + (i + 1) * bw) - X(a + i * bw))}" height="${n(Y(0) - Y(c))}" fill="${color}"${alpha < 1 ? ` fill-opacity="${alpha}"` : ''}/>`; });
+  }
+  o += `<rect x="${n(AL)}" y="${n(AT)}" width="${n(AR - AL)}" height="${n(AB - AT)}" fill="none" stroke="#000" stroke-width="${n(0.8 * P)}"/>`;
+  for (const v of xt) o += vline(X(v), AB, AB + 3.5 * P, '#000', 0.8 * P) + text(DEJAVU, String(v), FS, X(v), AB + 7 * P + 0.76 * FS, '#000', 'middle');
+  for (const v of yt) o += hline(AL - 3.5 * P, AL, Y(v), '#000', 0.8 * P) + text(DEJAVU, String(v), FS, AL - 7 * P, Y(v) + 0.364 * FS, '#000', 'end');
+  o += text(DEJAVU, 'Protein Sequence Length (Amino Acids)', FS, (AL + AR) / 2, AB + 7 * P + FS + 4 * P + 0.76 * FS, '#000', 'middle');
+  o += text(DEJAVU, 'Number of Protein Sequences', FS, AL - 7 * P - yTicksW - 4 * P - 0.24 * FS, (AT + AB) / 2, '#000', 'middle', -90);
+  const bx = AR - lw, by = y0;
+  o += `<rect x="${n(bx)}" y="${n(by)}" width="${n(lw)}" height="${n(lh)}" rx="${n(0.2 * FS)}" fill="#fff" fill-opacity=".8" stroke="#cccccc" stroke-opacity=".8" stroke-width="${n(P)}"/>`;
+  labels.forEach((label, i) => {
+    const base = by + 1.37 * FS + i * 1.52 * FS, [, color, alpha] = series[i];
+    o += `<rect x="${n(bx + 0.58 * FS)}" y="${n(base - 0.05 * FS - 0.7 * FS)}" width="${n(2.02 * FS)}" height="${n(0.7 * FS)}" fill="${color}"${alpha < 1 ? ` fill-opacity="${alpha}"` : ''}/>`;
+    o += text(DEJAVU, label, FS, bx + (0.58 + 2.02 + 0.8) * FS, base, '#000');
   });
-  if (ci === 0) body += text(REG, 'Tail to 5,300 not shown', 18, R, R1.t + 30, 'rgba(244,239,232,.45)', 'end');
+  return o;
+}
 
-  // Accuracy: raw and length-adjusted, the band between them shaded and named in the row's heading.
-  const ax = (i) => L + 8 + i / 9 * (R - L - 16), ay = (v) => R2.t + (100 - v) / 35 * (R2.b - R2.t);
-  const head = 'Accuracy as data shrinks', hw = advance(MED, head, 25);
-  body += text(MED, head, 25, c.x, R2.t - 22, INK) + text(REG, ` · ${c.gap} pts from length alone`, 25, c.x + hw, R2.t - 22, MUTED);
-  for (let v = 70; v <= 100; v += 10) {
-    body += `<line x1="${L}" y1="${n(ay(v))}" x2="${R}" y2="${n(ay(v))}" stroke="${FAINT}" stroke-width="1"/>`;
-    body += text(REG, `${v}%`, 20, L - 12, ay(v) + 7, MUTED, 'end');
-  }
-  body += `<line x1="${L}" y1="${R2.b}" x2="${R}" y2="${R2.b}" stroke="${AXIS}" stroke-width="1.5"/>`;
-  for (let i = 0; i <= 9; i += 2) body += text(REG, `${100 - i * 10}%`, 20, ax(i), R2.b + 28, MUTED, 'middle');
-  body += text(REG, 'of the dataset used', 20, R, R2.b + 56, MUTED, 'end');
-  const raw = c.data.acc.raw.map((v, i) => [ax(i), ay(v)]), adj = c.data.acc.adj.map((v, i) => [ax(i), ay(v)]);
-  body += `<path d="M${raw.map(([x, y]) => `${n(x)} ${n(y)}`).join('L')}L${[...adj].reverse().map(([x, y]) => `${n(x)} ${n(y)}`).join('L')}Z" fill="${INK}" fill-opacity=".08"/>`;
-  for (const [pts, color] of [[raw, RAW], [adj, ADJ]]) {
-    body += line(pts, color, 3);
-    pts.forEach(([x, y]) => { body += `<circle cx="${n(x)}" cy="${n(y)}" r="5" fill="${color}" stroke="${BG}" stroke-width="2"/>`; });
-  }
-  // Direct labels at the full dataset, with the presentation's figures.
-  const label = (color, name, pct, y) => `<circle cx="${n(L + 16)}" cy="${n(y - 8)}" r="7" fill="${color}"/>`
-    + text(REG, name, 22, L + 32, y, MUTED) + text(SEMI, pct, 22, L + 32 + advance(REG, name, 22), y, INK);
-  body += label(RAW, 'Raw ', c.pct[0], raw[0][1] - 22) + label(ADJ, 'Length-adjusted ', c.pct[1], adj[0][1] + 40);
-});
-// A hairline between the two datasets.
-const mid = (COLS[0].x + CW + COLS[1].x) / 2;
-body += `<line x1="${mid}" y1="56" x2="${mid}" y2="${H - 50}" stroke="${FAINT}" stroke-width="1.5"/>`;
-
+// ---- The slide -------------------------------------------------------------------------------------------------
+const W = 1600, H = 900, K = 2;
+const COLS = [
+  { x: 56, data: ORIG, title: 'Original dataset', sub: '7,857 NCBI protein sequences' },
+  { x: 839, data: BAL, title: 'Length-matched dataset', sub: '18,824 NCBI protein sequences' },
+];
+const CW = 705, HEAD = 60, R1 = [82, 444], R2 = [542, 326];
+let body = `<rect width="${W}" height="${H}" fill="#fff"/>`;
+for (const c of COLS) {
+  // Each dataset's heading in the Sheets title style (Arial, #757575), standing in for the charts' own titles.
+  body += text(ARIAL, c.title, 34, c.x, HEAD, '#757575') + text(ARIAL, c.sub, 23, c.x + advance(ARIAL, c.title, 34) + 16, HEAD, '#9e9e9e');
+  body += mpl(c.x, R1[0], CW, R1[1], c.data.len, 800);
+  body += sheets(c.x, R2[0], CW, R2[1], c.data.acc);
+}
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W * K}" height="${H * K}" viewBox="0 0 ${W} ${H}">${body}</svg>`;
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 await sharp(Buffer.from(svg)).webp({ lossless: true, effort: 6 }).toFile(OUT);
+if (process.env.DUMP) fs.writeFileSync(process.env.DUMP, JSON.stringify({ ORIG, BAL })); // the values read, for checking
 const r = (a) => a.map((v) => v.toFixed(1)).join(' ');
 console.log('original raw', r(ORIG.acc.raw), '\n         adj', r(ORIG.acc.adj), '\nmatched  raw', r(BAL.acc.raw), '\n         adj', r(BAL.acc.adj));
-console.log('bars', ORIG.len.blue.length, ORIG.len.orange.length, BAL.len.blue.length, BAL.len.orange.length);
+for (const [nm, d] of [['original', ORIG], ['matched ', BAL]]) for (const k of ['blue', 'orange']) console.log(nm, k, `lo ${d.len[k].lo.toFixed(1)} w ${d.len[k].w.toFixed(2)} fit ${d.len[k].fit}`, d.len[k].counts.join(' '));
 console.log(OUT, `${(fs.statSync(OUT).size / 1024).toFixed(0)} KB`);

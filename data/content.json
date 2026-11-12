@@ -564,7 +564,8 @@
       "media": [
         {
           "src": "media/projects/protein-classifier/charts.webp",
-          "caption": "The original dataset beside the length-matched one. Protein lengths by class, and raw against length-adjusted accuracy as the dataset shrinks."
+          "caption": "The original dataset beside the length-matched one. Protein lengths by class, and raw against length-adjusted accuracy as the dataset shrinks.",
+          "light": true
         }
       ]
     },
