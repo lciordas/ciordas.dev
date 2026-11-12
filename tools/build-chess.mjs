@@ -1,6 +1,7 @@
 // Draws the chess engine's two explanatory slides: how bitboards hold a position and generate moves, and how an
 // NNUE evaluates one. Laid out on a 1152×648 grid and drawn at twice that, for sharp text on retina screens.
 // Run from the repo root: node tools/build-chess.mjs
+// Not used on the site: the chess engine now shows only its game, with bullets beside it. Kept for reference.
 import { createRequire } from 'node:module';
 import fs from 'node:fs'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';

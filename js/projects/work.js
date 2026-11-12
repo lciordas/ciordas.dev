@@ -123,23 +123,28 @@ const bold = (h) => h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 const slideText = (m) => m.points?.length
   ? `<div class="gallery__cap gallery__cap--points">${m.caption ? `<p class="gallery__lead">${capHtml(m.caption)}</p>` : ''}<ul>${m.points.map((t) => `<li>${bold(capHtml(t))}</li>`).join('')}</ul></div>`
   : `<p class="gallery__cap">${capHtml(m.caption || '')}</p>`;
+const plinks = (p) => (p.links?.length ? `<p class="plinks">${p.links.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join('')}</p>` : '');
 const body = (p) => `
   <div class="detail__body">
     ${p.summary ? `<p>${esc(p.summary)}</p>` : ''}
     ${p.tech?.length ? `<ul class="tech">${p.tech.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
-    ${p.links?.length ? `<p class="plinks">${p.links.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join('')}</p>` : ''}
+    ${plinks(p)}
   </div>`;
+// A gallery project with bullets of its own ("captions", as on the animated projects) has them beside the pictures
+// with its links under them, and only its title above: no paragraph or tags.
+const sideOf = (p) => (p.captions?.length ? `<ul class="gallery__side">${p.captions.map((t) => `<li>${bold(capHtml(t))}</li>`).join('')}</ul>${plinks(p)}` : '');
 // Photos and clips in a row on the left two thirds of the screen, with their text on the right. Scrolling down
 // slides the row across; each picture holds still for a while before the next slides in. Scrolling sideways,
 // the left and right arrow keys, the buttons, or clicking the next picture move one picture at a time.
 const SLIDE_VH = 85;
 // The project's heading and words sit at the top of the same screen, so the whole thing fits one screen exactly.
-const gallery = (p, head = '') => {
+// A single picture told in bullets has the links at the end at the bottom of that screen too, so the page stops there.
+const gallery = (p, head = '', side = '', end = '') => {
   const media = p.media || [], n = media.length;
   if (!n) return '';
   return `
-  <div class="gallery" style="height:calc(${(n - 1) * SLIDE_VH}vh + 100vh)">
-    <div class="gallery__stage">
+  <div class="gallery${side ? ' gallery--side' : ''}" style="height:calc(${(n - 1) * SLIDE_VH}vh + 100vh)">
+    <div class="gallery__stage${end ? ' gallery__stage--end' : ''}">
       ${head ? `<div class="gallery__head">${head}</div>` : ''}
       <div class="gallery__main">
       <div class="gallery__view"><div class="gallery__track">${media.map((m, i) => `
@@ -150,8 +155,9 @@ const gallery = (p, head = '') => {
         </figure>`).join('')}
       </div></div>
       <div class="gallery__text">
-        <span class="gallery__count"><b>01</b> / ${String(n).padStart(2, '0')}</span>
-        <div class="gallery__caps">${media.map(slideText).join('')}</div>
+        ${side && n < 2 ? '' : `<span class="gallery__count"><b>01</b> / ${String(n).padStart(2, '0')}</span>`}
+        ${side}
+        ${side && n < 2 ? '' : `<div class="gallery__caps">${media.map(slideText).join('')}</div>`}
         ${n > 1 ? `<div class="gallery__nav">
           <button type="button" class="gallery__btn" data-go="-1" aria-label="Previous picture"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <span class="gallery__dots" aria-hidden="true">${media.map(() => '<i></i>').join('')}</span>
@@ -160,6 +166,7 @@ const gallery = (p, head = '') => {
       </div>
       </div>
       ${n > 1 ? CUE : ''}
+      ${end}
     </div>
   </div>`;
 };
@@ -240,11 +247,13 @@ function mountStream(el) {
 function buildDetail(id, p, index, next, content) {
   const s = document.createElement('section');
   s.className = 'project project--detail'; s.id = id; s.dataset.project = id; s.setAttribute('aria-label', p.title);
-  const head = `<h3 class="detail__title"><span class="index">${index}</span>${esc(p.title)}</h3>${body(p)}`;
+  const side = p.media?.length ? sideOf(p) : '', title = `<h3 class="detail__title"><span class="index">${index}</span>${esc(p.title)}</h3>`;
+  const head = side ? title : `${title}${body(p)}`, links = endLinks(next, content);
+  const inStage = side && p.media.length === 1 && !p.stream?.length;
   s.innerHTML = `
-    ${p.media?.length ? gallery(p, head) : `<div class="detail detail--head">${head}</div>`}
+    ${p.media?.length ? gallery(p, head, side, inStage ? links : '') : `<div class="detail detail--head">${head}</div>`}
     ${p.stream?.length ? stream(p) : ''}
-    ${endLinks(next, content)}`;
+    ${inStage ? '' : links}`;
   return s;
 }
 
@@ -281,7 +290,7 @@ function mountGallery(el) {
     const active = Math.round(pos);
     if (active !== g.active) {
       g.active = active;
-      g.count.textContent = String(active + 1).padStart(2, '0');
+      if (g.count) g.count.textContent = String(active + 1).padStart(2, '0');
       g.dots.forEach((d, i) => d.classList.toggle('on', i === active));
     }
     // A clip plays while it holds in the middle and waits while the row is moving.

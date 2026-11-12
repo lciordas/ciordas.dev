@@ -400,17 +400,20 @@
       "title": "Chess Engine",
       "tag": "Bitboards, NNUE, 2000+ Elo",
       "kind": "detail",
-      "summary": "A chess engine built on a bitboard representation and minimax search, later extended with iterative deepening and NNUE evaluation, which replaces handcrafted heuristics with a neural network. Rated 2000+ Elo against other bots on Lichess.",
-      "tech": [
-        "Bitboards",
-        "Minimax",
-        "Iterative deepening",
-        "NNUE"
+      "captions": [
+        "My first and longest-running project, started four years ago and improved ever since.",
+        "A pure-Python engine built on bitboards and minimax search, with iterative deepening, alpha-beta pruning and a transposition table.",
+        "NNUE evaluation, a small neural network that updates incrementally as pieces move, replaces handcrafted heuristics.",
+        "Rated 2000+ Elo against other bots on Lichess."
       ],
       "links": [
         {
           "label": "Play it on Lichess",
           "url": "https://lichess.org/@/lc-bot"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/lciordas/lc-bot"
         }
       ],
       "thumb": "chess-engine",
@@ -418,28 +421,6 @@
         {
           "src": "media/projects/chess-engine/game.mp4",
           "caption": "The engine playing a game as Black."
-        },
-        {
-          "src": "media/projects/chess-engine/bitboards.webp",
-          "caption": "Bitboards: the board as integers",
-          "points": [
-            "**12** integers of **64 bits**, one per piece type and color.",
-            "Each bit is a square: **a1** is bit **0**, **h8** is bit **63**.",
-            "One shift and mask moves **every piece** of a type at once.",
-            "**Magic bitboards** turn sliding attacks into one table lookup.",
-            "More: [Chess Programming Wiki](https://www.chessprogramming.org/Bitboards)"
-          ]
-        },
-        {
-          "src": "media/projects/chess-engine/nnue.webp",
-          "caption": "NNUE: an efficiently updatable neural network",
-          "points": [
-            "Replaces handcrafted terms: material, piece tables, king safety.",
-            "Inputs are piece–square pairs; at most **32** are on.",
-            "A move flips **2–4** inputs; the first layer updates incrementally.",
-            "Small later layers keep evaluation fast on a **CPU**.",
-            "More: [Chess Programming Wiki](https://www.chessprogramming.org/NNUE)"
-          ]
         }
       ]
     },
@@ -581,18 +562,19 @@
       "title": "Orbit Determination and Photometry of the Mars-crossing Asteroid 6249 Jennifer (1991 JF1)",
       "tag": "Summer Science Program",
       "kind": "detail",
-      "summary": "In a team of three, determined the orbit of asteroid 6249 Jennifer from original observations: imaging over three nights, plate solving for celestial coordinates, and computing orbital elements with the Method of Gauss. Results were written up as a technical paper, with the observations submitted to the Minor Planet Center. The paper can’t be shared publicly under the Summer Science Program’s policies.",
-      "tech": [
-        "Astrometry",
-        "Method of Gauss",
-        "Orbital mechanics"
+      "captions": [
+        "In a team of three, determined the orbit of asteroid 6249 Jennifer from original observations over three nights.",
+        "Plate solving gave its celestial coordinates, and the Method of Gauss turned them into orbital elements.",
+        "Written up as a technical paper, with the observations submitted to the Minor Planet Center.",
+        "The paper can’t be shared publicly under the Summer Science Program’s policies.",
+        "Calibrated 60-second exposure from a Las Cumbres Observatory telescope, with the computed orbit and photometric fits."
       ],
       "links": [],
       "thumb": "asteroid-orbit",
       "media": [
         {
           "src": "media/projects/asteroid-orbit/collage.webp",
-          "caption": "Left: calibrated 60-second exposure from a Las Cumbres Observatory 0.35 m telescope, with 6249 Jennifer circled. Top right: computed orbit (green) and Earth’s (blue). Bottom right: nightly photometric fits against UCAC4 reference stars."
+          "caption": "Calibrated 60-second exposure from a Las Cumbres Observatory telescope, with the computed orbit and photometric fits."
         }
       ],
       "fullTitle": "Orbit Determination and Photometry of the Mars-crossing Asteroid 6249 Jennifer (1991 JF1)"

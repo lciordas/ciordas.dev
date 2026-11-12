@@ -240,6 +240,15 @@ html.lenis, html.lenis body { height: auto; }
 .gallery__cap--points li { position: relative; padding-left: 1.15em; line-height: 1.42; color: rgba(247, 242, 234, .8); }
 .gallery__cap--points li::before { content: ''; position: absolute; left: .1em; top: .6em; width: 5px; height: 5px; border-radius: 50%; background: var(--glow); }
 .gallery__cap--points strong { font-weight: 600; color: #f7f2ea; white-space: nowrap; }
+/* A project told in bullets of its own: they sit beside the pictures, its links under them. */
+.gallery__side { margin: 0; padding: 0; list-style: none; display: grid; gap: .8em; max-width: 24em; font-size: clamp(15px, 1.2vw, 20px); }
+.gallery__side li { position: relative; padding-left: 1.15em; line-height: 1.45; color: rgba(247, 242, 234, .86); }
+.gallery__side li::before { content: ''; position: absolute; left: .1em; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: var(--glow); }
+.gallery__side strong { font-weight: 600; color: #f7f2ea; }
+.gallery__text .plinks { margin: 0; }
+.gallery__text .plinks a { font-size: clamp(14px, 1vw, 16px); }
+/* With one picture, the links at the end take the bottom of the same screen instead of a strip below it. */
+.gallery__stage > .after { flex: none; width: 100%; padding-top: 6px; padding-bottom: calc(clamp(18px, 3.4vh, 36px) + env(safe-area-inset-bottom, 0px)); }
 .gallery__nav { display: flex; align-items: center; gap: 14px; }
 .gallery__btn { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border-radius: 50%; border: 1px solid rgba(244, 239, 232, .24); background: transparent; color: var(--ink); cursor: pointer; transition: border-color .2s ease, color .2s ease, background-color .2s ease; }
 .gallery__btn svg { width: 18px; height: 18px; }
@@ -260,6 +269,9 @@ html { overscroll-behavior-x: none; }
   .gallery__lead { margin-bottom: .45em; font-size: 1.2em; }
   .gallery__cap--points ul { gap: .3em; }
   .gallery__cap--points li { line-height: 1.32; }
+  .gallery__side { font-size: 14px; gap: .45em; }
+  .gallery__side li { line-height: 1.38; }
+  .gallery__text:has(.gallery__side) { gap: 12px; }
 }
 /* Short phones keep the words smaller, so the picture keeps its room. */
 @media (max-aspect-ratio: 9/10) and (max-height: 700px) { .gallery__cap { font-size: 15px; line-height: 1.35; } }

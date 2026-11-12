@@ -81,9 +81,10 @@ const TABS = {
     const sel = el('select', {}, ids.map((id) => el('option', { value: id, textContent: c.projects[id].title, selected: id === picked })));
     sel.addEventListener('change', () => { picked = sel.value; render(); });
     const p = c.projects[picked], base = `projects.${picked}`;
-    const out = [el('label', {}, 'Project', sel), field('Title', `${base}.title`), ...(p.fullTitle !== undefined ? [field('Full title (shown under Research)', `${base}.fullTitle`)] : []), field('Line on the overview', `${base}.tag`), field('Summary', `${base}.summary`, { long: true })];
+    const out = [el('label', {}, 'Project', sel), field('Title', `${base}.title`), ...(p.fullTitle !== undefined ? [field('Full title (shown under Research)', `${base}.fullTitle`)] : []), field('Line on the overview', `${base}.tag`), ...(p.summary !== undefined || !p.captions ? [field('Summary', `${base}.summary`, { long: true })] : [])];
     if (p.captions) {
-      out.push(el('h2', { textContent: 'Captions below the window' }), el('p', { className: 'note', textContent: 'They show in this order as you scroll. Choose the project under Preview to see them in place.' }));
+      // A gallery project's bullets sit beside its picture; an animated project's show as you scroll.
+      out.push(el('h2', { textContent: p.kind === 'detail' ? 'Bullets beside the picture' : 'Captions below the window' }), el('p', { className: 'note', textContent: p.kind === 'detail' ? 'They replace the summary and tags under the title. Wrap words in **double asterisks** for bold.' : 'They show in this order as you scroll. Choose the project under Preview to see them in place.' }));
       p.captions.forEach((_, i) => out.push(field(`Caption ${i + 1}`, `${base}.captions.${i}`, { long: true })));
     } else {
       const tech = el('input', { type: 'text', value: (p.tech || []).join(', ') });
