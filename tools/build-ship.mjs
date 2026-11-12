@@ -9,17 +9,18 @@ const OUT = path.join(here, '../media/projects/ship-in-a-bottle/build.mp4');
 const encode = ['-an', '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '26', '-preset', 'slow', '-movflags', '+faststart'];
 // [start, duration] in seconds of the source. None of these has on-screen text, and each starts mid-motion. It opens
 // on the finished ship in its bottle, framed much like the photo the page shows before it, then runs through the
-// build and ends raising the masts inside, which loops back round to the finished ship.
+// build, raises the masts inside and ends stoppering the bottle, lying on its side, which loops back round to the
+// finished ship.
 const CUTS = [
   [831.2, 1.4], // the finished ship in the bottle
   [40.0, 1.5], // shaping the hull block with the rotary tool
   [84.3, 1.5], // carving the recessed deck in the vise
   [246.3, 1.4], // bending the wire railing with pliers
-  [319.5, 1.4], // drilling a mast with the pin vise
   [510.0, 1.5], // tying off rigging with tweezers
   [716.2, 1.5], // the clothes-hanger tool setting the hull down inside the bottle
   [771.2, 1.6], // the folded ship going through the neck
   [803.2, 1.9], // pulling the lines to raise the masts
+  [849.05, 2.3], // pushing the glass stopper in, the bottle on its side throughout (after the caption, before it's stood up)
 ];
 const inputs = CUTS.flatMap(([ss, t]) => ['-ss', String(ss), '-t', String(t), '-i', SRC]);
 const chains = CUTS.map((_, i) => `[${i}:v]setpts=PTS-STARTPTS,fps=30,scale=1280:720,setsar=1[v${i}]`).join(';'); // the source is already 16:9

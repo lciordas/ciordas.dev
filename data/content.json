@@ -325,9 +325,19 @@
           "ar": 1.52
         },
         {
+          "src": "media/projects/ship-in-a-bottle/hollow.webp",
+          "size": "s",
+          "ar": 2
+        },
+        {
           "src": "media/projects/ship-in-a-bottle/stain.webp",
           "size": "l",
           "ar": 1.59
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/spars.webp",
+          "size": "m",
+          "ar": 1.82
         },
         {
           "src": "media/projects/ship-in-a-bottle/cabin.webp",
@@ -345,6 +355,11 @@
           "ar": 1.78
         },
         {
+          "src": "media/projects/ship-in-a-bottle/bow-rail.webp",
+          "size": "s",
+          "ar": 1.61
+        },
+        {
           "src": "media/projects/ship-in-a-bottle/hull.webp",
           "size": "m",
           "ar": 2.38
@@ -360,14 +375,34 @@
           "ar": 1.24
         },
         {
+          "src": "media/projects/ship-in-a-bottle/laid-out.webp",
+          "size": "m",
+          "ar": 1.4
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/test-stand.webp",
+          "size": "s",
+          "ar": 1.78
+        },
+        {
           "src": "media/projects/ship-in-a-bottle/rigged.webp",
           "size": "m",
           "ar": 1.53
         },
         {
+          "src": "media/projects/ship-in-a-bottle/sail-paper.webp",
+          "size": "l",
+          "ar": 0.86
+        },
+        {
           "src": "media/projects/ship-in-a-bottle/sails.webp",
           "size": "s",
           "ar": 1.15
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/glue-sail.webp",
+          "size": "m",
+          "ar": 1.64
         },
         {
           "src": "media/projects/ship-in-a-bottle/lit.webp",
@@ -380,6 +415,16 @@
           "ar": 1.5
         },
         {
+          "src": "media/projects/ship-in-a-bottle/above.webp",
+          "size": "l",
+          "ar": 1.56
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/pegs.webp",
+          "size": "s",
+          "ar": 1.93
+        },
+        {
           "src": "media/projects/ship-in-a-bottle/hull-in.webp",
           "size": "m",
           "ar": 1.9
@@ -388,6 +433,11 @@
           "src": "media/projects/ship-in-a-bottle/folded.webp",
           "size": "s",
           "ar": 1.39
+        },
+        {
+          "src": "media/projects/ship-in-a-bottle/underside.webp",
+          "size": "m",
+          "ar": 2.27
         },
         {
           "src": "media/projects/ship-in-a-bottle/final.webp",

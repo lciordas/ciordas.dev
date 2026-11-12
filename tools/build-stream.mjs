@@ -126,6 +126,16 @@ const PROJECTS = {
       ['hull-in', 711.1, { left: 0, top: 0, width: 1180, height: 620 }], // the hull's lower half set on its stand inside
       ['folded', 792.4, { left: 60, top: 0, width: 1000, height: 720 }], // through the neck, sails folded flat
       ['final', 836.3, { left: 100, top: 0, width: 1100, height: 720 }], // masts raised inside the bottle
+      ['hollow', 97.5, { left: 40, top: 20, width: 1040, height: 520 }], // the hollowed hull held in two fingers
+      ['spars', 130.0, { left: 0, top: 60, width: 1200, height: 660 }], // the dowels for the masts and spars, stained
+      ['bow-rail', 287.5, { left: 120, top: 0, width: 1000, height: 620 }], // the pin vise at the bow's railing posts
+      ['laid-out', 413.0, { left: 60, top: 20, width: 980, height: 700 }], // masts and spars laid out beside the hull
+      ['test-stand', 455.0, { left: 140, top: 0, width: 1140, height: 640 }], // a test stand in the bottle, a bent wire tool
+      ['sail-paper', 577.0, { left: 0, top: 0, width: 620, height: 720 }], // the coffee-dyed paper for the sails
+      ['glue-sail', 610.0, { left: 0, top: 0, width: 1180, height: 720 }], // gluing on the last sail
+      ['above', 697.5, { left: 0, top: 0, width: 1000, height: 640 }], // the ship in its bottle from above
+      ['pegs', 700.0, { left: 60, top: 60, width: 1080, height: 560 }], // the stand alone in the bottle, matchstick pegs up
+      ['underside', 837.5, { left: 200, top: 100, width: 1000, height: 440 }], // the hull's underside through the glass
     ]) await still('ship-in-a-bottle', name, sharpest(SHIP, t), { crop, width: 1280, quality: 85 });
     // Bending the wire hinges that let the masts fold. Still camera.
     await clip('ship-in-a-bottle', 'hinge', SHIP, 401.2, 3.5, { crop: [0.15, 0, 0.7, 1], width: 896 });
