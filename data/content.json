@@ -107,7 +107,7 @@
       "summary": "",
       "captions": [
         "Quadrupedal robot, designed and coded from scratch. The culmination of multiple leg-linkage prototypes, a full CAD assembly, and custom control code.",
-        "Inverse kinematics maps the three degrees of freedom per leg, 12 in all, to full six-degree-of-freedom control of the body.",
+        "Inverse kinematics maps the three degrees of freedom per leg to a full 6 DOF control of the body.",
         "Walks, and rotates, wiggles and gyrates smoothly, blending motion across all of its axes of freedom."
       ],
       "thumb": "robot-dog",
