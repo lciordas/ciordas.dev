@@ -10,7 +10,7 @@ import numpy as np
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 PALETTE_JS = open(os.path.join(ROOT, 'js/palette.js')).read()
-DEFAULT = re.search(r"DEFAULT_PALETTE = '(\w+)'", PALETTE_JS).group(1)
+DEFAULT = re.search(r"BAKED_IN = '(\w+)'", PALETTE_JS).group(1)
 accent = lambda key: re.search(r"\n  " + key + r": \{\s*name: '[^']*', accent: '(#[0-9a-f]{6})'", PALETTE_JS).group(1)
 rgb = lambda h: np.array([int(h[i:i + 2], 16) for i in (1, 3, 5)], dtype=np.float64)
 

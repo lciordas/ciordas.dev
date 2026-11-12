@@ -63,7 +63,10 @@ export const PALETTES = {
     trace: { stroke: 'rgba(255,222,194,.8)', tip: 'rgba(255,246,234,1)', glow: 'rgba(255,164,104,.62)', tipGlow: 'rgba(255,190,130,1)' },
   },
 };
-export const DEFAULT_PALETTE = 'a';
+export const DEFAULT_PALETTE = 'f';
+// The palette the plain media files (match.mp4, cartpole.mp4, the NeurIPS SVGs, thumbnails) were drawn in; other
+// palettes get their baked copy or a recolour of these.
+export const BAKED_IN = 'a';
 
 // ?palette=e picks a palette by its letter or its name (crimson, orange, bottle...), in any case. The misspellings
 // pallete and pallette work too, and so does a ?palette= typed after the #.
@@ -101,12 +104,12 @@ const RECOLOR = /^media\/projects\/world-models\/[a-z]+\.svg$/;
 export const bakedSrc = (src, key = PALETTE_KEY) => (BAKED[src]?.includes(key) ? src.replace(/(\.\w+)$/, `-${key}$1`) : src);
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)).join(',');
 // An SVG drawn in the default palette, redrawn in this one.
-export function recolorSvg(text, from = PALETTES[DEFAULT_PALETTE], to = PALETTE) {
+export function recolorSvg(text, from = PALETTES[BAKED_IN], to = PALETTE) {
   return text.split(from.accent).join(to.accent).split(hexRgb(from.accent)).join(hexRgb(to.accent)).split(from.onWhite).join(to.onWhite);
 }
 // The content file with each baked picture and video swapped for this palette's copy. Thumbnails are named by id.
 export async function paletteContent(content) {
-  if (PALETTE_KEY === DEFAULT_PALETTE || !content) return content;
+  if (PALETTE_KEY === BAKED_IN || !content) return content;
   const svgs = new Map();
   const walk = (o) => {
     for (const [k, v] of Object.entries(o)) {
@@ -132,7 +135,7 @@ if (typeof document !== 'undefined' && PALETTE_KEY !== DEFAULT_PALETTE) {
   fetch('favicon.svg').then((r) => r.text()).then((t) => {
     document.querySelectorAll('link[rel="icon"]').forEach((l) => l.remove());
     const l = document.createElement('link'); l.rel = 'icon'; l.type = 'image/svg+xml';
-    l.href = URL.createObjectURL(new Blob([recolorSvg(t)], { type: 'image/svg+xml' }));
+    l.href = URL.createObjectURL(new Blob([recolorSvg(t, PALETTES[DEFAULT_PALETTE])], { type: 'image/svg+xml' }));
     document.head.append(l);
   }).catch(() => {});
 }

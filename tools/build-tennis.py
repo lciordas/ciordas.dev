@@ -19,7 +19,7 @@ from fontTools.ttLib import TTFont
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 PALETTE_JS = open(os.path.join(ROOT, 'js/palette.js')).read()
-DEFAULT = re.search(r"DEFAULT_PALETTE = '(\w+)'", PALETTE_JS).group(1)
+DEFAULT = re.search(r"BAKED_IN = '(\w+)'", PALETTE_JS).group(1)
 KEY = os.environ.get('PALETTE') or DEFAULT
 ACCENT = re.search(r"\n  " + KEY + r": \{\s*name: '[^']*', accent: '(#[0-9a-f]{6})'", PALETTE_JS).group(1)
 OUT = os.path.join(ROOT, 'media/projects/tennis-simulation', 'match.mp4' if KEY == DEFAULT else f'match-{KEY}.mp4')

@@ -8,15 +8,15 @@ import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PALETTES, DEFAULT_PALETTE } from '../js/palette.js';
+import { PALETTES, BAKED_IN } from '../js/palette.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp'), opentype = require('opentype.js');
 const FONTS = path.join(here, '../toolkit/node_modules/@fontsource');
 const DATA = JSON.parse(fs.readFileSync(path.join(here, '../toolkit/sources/cartpole.json'), 'utf8'));
 // PALETTE=e draws it in palette e, as cartpole-e.mp4 beside the default one (see BAKED in js/palette.js).
-const KEY = process.env.PALETTE || DEFAULT_PALETTE;
-const OUT = path.join(here, `../media/projects/hybrid-networks/${KEY === DEFAULT_PALETTE ? 'cartpole' : `cartpole-${KEY}`}.mp4`);
+const KEY = process.env.PALETTE || BAKED_IN;
+const OUT = path.join(here, `../media/projects/hybrid-networks/${KEY === BAKED_IN ? 'cartpole' : `cartpole-${KEY}`}.mp4`);
 const font = (pkg, file) => { const b = fs.readFileSync(path.join(FONTS, pkg, 'files', file)); return opentype.parse(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength)); };
 const REG = font('hanken-grotesk', 'hanken-grotesk-latin-400-normal.woff'), MED = font('hanken-grotesk', 'hanken-grotesk-latin-500-normal.woff'), SEMI = font('hanken-grotesk', 'hanken-grotesk-latin-600-normal.woff');
 

@@ -9,7 +9,7 @@ import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PALETTES, DEFAULT_PALETTE } from '../js/palette.js';
+import { PALETTES, BAKED_IN } from '../js/palette.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp'), opentype = require('opentype.js');
@@ -57,7 +57,7 @@ function wrap(f, s, size, max, ls = 0) {
 // The highlight is the site palette's, and its darker onWhite on the white figures slide. PALETTE=e node
 // tools/build-paper.mjs cover draws palette e's overview card as world-models-e.webp; the slides need no copies, since
 // the site swaps their colours as they load (recolorSvg in js/palette.js).
-const KEY = process.env.PALETTE || DEFAULT_PALETTE;
+const KEY = process.env.PALETTE || BAKED_IN;
 const INK = '#f4efe8', MUTED = 'rgba(244,239,232,.68)', ACCENT = PALETTES[KEY].accent, ON_WHITE = PALETTES[KEY].onWhite;
 const tint = (a) => `rgba(${[1, 3, 5].map((i) => parseInt(ACCENT.slice(i, i + 2), 16)).join(',')},${a})`;
 const TITLE = 'Plan Shallow While You Learn', SUB = 'Reallocating Planning Compute During World-Model Adaptation';
@@ -106,7 +106,7 @@ async function cover() {
   const shade = `<defs><linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#080706" stop-opacity=".8"/><stop offset=".34" stop-color="#080706" stop-opacity=".3"/><stop offset=".62" stop-color="#080706" stop-opacity=".72"/><stop offset="1" stop-color="#080706" stop-opacity=".94"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#b)"/>${body.join('')}`;
   const img = await backdrop(S, S, { left: 230, top: 0, width: 759, height: 759 }, shade);
   const lg = await logoPng(240);
-  await sharp(await img.toBuffer()).composite([{ input: lg, left: Math.round(S * 0.085), top: Math.round(S * 0.07) }]).webp({ quality: 80, effort: 5 }).toFile(path.join(THUMBS, KEY === DEFAULT_PALETTE ? 'world-models.webp' : `world-models-${KEY}.webp`));
+  await sharp(await img.toBuffer()).composite([{ input: lg, left: Math.round(S * 0.085), top: Math.round(S * 0.07) }]).webp({ quality: 80, effort: 5 }).toFile(path.join(THUMBS, KEY === BAKED_IN ? 'world-models.webp' : `world-models-${KEY}.webp`));
 }
 
 async function title() {
