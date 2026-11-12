@@ -19,7 +19,6 @@ const CUTS = [
   [716.2, 1.5], // the clothes-hanger tool setting the hull down inside the bottle
   [771.2, 1.6], // the folded ship going through the neck
   [803.2, 1.9], // pulling the lines to raise the masts
-  [831.2, 1.4], // the finished ship in the bottle
   [849.05, 2.3], // pushing the glass stopper in, the bottle on its side throughout (after the caption, before it's stood up)
 ];
 const inputs = CUTS.flatMap(([ss, t]) => ['-ss', String(ss), '-t', String(t), '-i', SRC]);
