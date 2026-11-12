@@ -24,11 +24,19 @@ const CLIPS = {
   micromanipulator() {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '48.2', '-t', '5.3', '-i', MAKER, '-vf', 'fps=30,scale=1280:720', ...encode, path.join(OUT, 'micromanipulator.mp4')]);
   },
-  // The dog's four shots back to back with hard cuts: side on, front three-quarter, head on, then walking. The
-  // first three come steadied from build-frames.mjs, so run that and 'dog-walk' first.
+  // The dog's highlight cut: the liveliest stretch of each of its four shots, back to back with hard cuts, each one
+  // already moving when it starts. The first three come steadied from build-frames.mjs, so run that and 'dog-walk'
+  // first; the trims below are seconds into those clips.
   dog() {
-    execFileSync('ffmpeg', ['-v', 'error', '-y', '-framerate', '30', '-i', `${FRAMES}/dog/%04d.webp`, '-framerate', '30', '-i', `${FRAMES}/dog-quarter/%04d.webp`, '-framerate', '24', '-i', `${FRAMES}/dog-front/%04d.webp`, '-i', path.join(FRAMES, 'dog-walk.mp4'),
-      '-filter_complex', '[0:v]fps=30,setsar=1[a];[1:v]fps=30,setsar=1[q];[2:v]fps=30,setsar=1[b];[3:v]fps=30,scale=1280:720,setsar=1[c];[a][q][b][c]concat=n=4:v=1[o]', '-map', '[o]', ...encode.map((v) => (v === '24' ? '27' : v)), path.join(OUT, 'dog.mp4')]); // a little lighter, being the longest
+    const shots = [
+      [`${FRAMES}/dog/%04d.webp`, 30, 0, 2.7], // side on: pitching nose down, then nose up; its first frame is the one the model lines up with
+      [`${FRAMES}/dog-quarter/%04d.webp`, 30, 0, 2.3], // front three-quarter: rising and rolling away, then dropping low
+      [`${FRAMES}/dog-front/%04d.webp`, 24, 2.5, 5], // head on: rolling one way, a yaw, then rolling hard the other way
+      [path.join(FRAMES, 'dog-walk.mp4'), 0, 4.25, 6.65], // walking on the mat, mid-stride
+    ];
+    const inputs = shots.flatMap(([file, rate]) => [...(rate ? ['-framerate', String(rate)] : []), '-i', file]);
+    const chains = shots.map(([, , a, b], i) => `[${i}:v]trim=${a}:${b},setpts=PTS-STARTPTS,fps=30,scale=1280:720,setsar=1[s${i}]`);
+    execFileSync('ffmpeg', ['-v', 'error', '-y', ...inputs, '-filter_complex', `${chains.join(';')};${shots.map((_, i) => `[s${i}]`).join('')}concat=n=${shots.length}:v=1[o]`, '-map', '[o]', ...encode.map((v) => (v === '24' ? '27' : v)), path.join(OUT, 'dog.mp4')]);
   },
   // The chess engine's own window from the screen recording: the board and its status line ("thinking..."), from the
   // first move to the engine's last reply before the recording ends, played at 1.6x so the pauses stay short.

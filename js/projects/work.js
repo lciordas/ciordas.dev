@@ -29,7 +29,7 @@ const ANIMATED = {
     assemble: [0.03, 0.52], title: [0.08, 0.2], wipe: [0.62, 0.68], clipAt: 0.68,
     copyAt: [[0.12, 0.36], [0.38, 0.6], [0.62, 0.8], [0.82, 1]],
   },
-  // Lined up with the first frame of the video. Its four shots run 0 to 6 s, 6 to 9.3 s, 9.3 to 15.8 s, and 15.8 to 22.8 s.
+  // Lined up with the first frame of the video. Its four shots run 0 to 2.7 s, 2.7 to 5 s, 5 to 7.5 s, and 7.5 to 9.9 s.
   'robot-dog': {
     model: 'dog', up: [0, 0, 1.5325], fov: 34.28, length: 440, clip: 'media/video/dog.mp4',
     views: [
@@ -39,7 +39,7 @@ const ANIMATED = {
     ],
     // Little scroll after the clip starts, so the photo stream follows soon after.
     assemble: [0.038, 0.636], title: [0.089, 0.229], wipe: [0.764, 0.84], clipAt: 0.84,
-    copyAt: [[0.255, 0.535], [0.56, 0.84], { t: [0, 22.77] }],
+    copyAt: [[0.255, 0.535], [0.56, 0.84], { t: [0, 9.9] }],
   },
 };
 
