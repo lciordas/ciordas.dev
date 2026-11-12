@@ -3,7 +3,7 @@
 // the page's own text at any size: a picture of text, scaled down to fit, always came out soft. Only the title's photo
 // is a picture, inside its SVG. Run from the repo root: node tools/build-paper.mjs
 // Sources, downloaded once into toolkit/sources: the NeurIPS logo from neurips.cc, and Benh LIEU SONG's photo of the
-// Sydney Opera House and Harbour Bridge from Wikimedia Commons (CC BY-SA 4.0, credited in the slide's caption).
+// Sydney Opera House and Harbour Bridge from Wikimedia Commons (CC BY-SA 4.0, credited in a corner of the slide).
 // The figures are cut from the paper's PDF as vectors with pdftocairo.
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
@@ -112,6 +112,9 @@ async function title() {
   wrap(MED, SUB, 34, 900).forEach((l) => { body.push(line(MED, [[l, INK]], 34, X, y)); y += 46; });
   body.push(line(REG, AUTHORS, 26, X, y + 30));
   body.push(line(MED, [['Sydney  ·  December 12, 2026', MUTED]], 24, X, y + 82));
+  // The photo's credit, which its CC BY-SA 4.0 licence asks for: small and faint in the bottom right corner.
+  const credit = 'Photo: Benh Lieu Song, CC BY-SA 4.0';
+  body.push(line(REG, [[credit, 'rgba(244,239,232,.5)']], 15, W - 28 - advance(REG, credit, 15), H - 24));
   // The photo and its dark wash are the one picture, at twice the grid; the words and logo go over it as vectors.
   const shade = await wash(W * K, H * K, [[0, 0.95], [0.5, 0.78], [0.85, 0.12]]);
   const img = await backdrop(W, H, { left: 0, top: 0, width: 3840, height: 1518 }, '', K, photoBig, shade);
@@ -119,29 +122,41 @@ async function title() {
   writeSvg('title', `<image width="${W}" height="${H}" preserveAspectRatio="none" xlink:href="data:image/webp;base64,${photoData}"/>${logoSvg(X - 20, 70, 190)}${body.join('')}`);
 }
 
-// Three of the workshop's accepted papers, from its schedule on neurips.cc, with this one marked.
+// The programme slide: the workshop, how many papers it took (42, counted from its schedule on neurips.cc,
+// https://neurips.cc/virtual/2026/loc/sydney/workshop/137499), and two of them with their best-known co-author's name
+// set large, above this one.
 async function programme() {
-  const W = 1600, H = 900, X = 120, body = [];
-  const papers = [
-    ['AdaJEPA: An Adaptive Latent World Model', [['Ying Wang  ·  Oumayma Bounou  ·  ', MUTED], ['Yann LeCun', INK], ['  ·  Mengye Ren', MUTED]]],
-    ['Planning with View World Models', [['Kangrui Wang  ·  Linjie Li  ·  Zhengyuan Yang  ·  Shiqi Chen  ·  Zihan Wang  ·  ', MUTED], ['Fei-Fei Li', INK], ['  ·  Jiajun Wu  ·  …', MUTED]]],
-    ['Plan Shallow While You Learn: Reallocating Planning Compute During World-Model Adaptation', [['Nicholas Ciordas  ·  Jan Safrata  ·  ', MUTED], ['Lucas Ciordas', ACCENT], ['  ·  David Safrata', MUTED]], true],
+  const W = 1600, H = 900, X = 120, R = W - X, body = [];
+  const right = (f, runs, size, y, o) => line(f, runs, size, R - P - advance(f, runs.map((r) => r[0]).join(''), size, o?.ls || 0), y, o);
+  body.push(line(MED, [['CONTINUAL WORLD MODELS WORKSHOP  ·  NEURIPS 2026', ACCENT]], 22, X + 140, 104, { ls: 0.16 }));
+  body.push(line(MED, [['Saturday, December 12, 2026  ·  Sydney', MUTED]], 24, X + 140, 144));
+  body.push(line(BLACK, [['ACCEPTED TO THE SAME WORKSHOP', INK]], 72, X, 262, { ls: 0.01 }));
+  body.push(line(MED, [['Three of the ', MUTED], ['42 papers', INK], [' accepted to this one-day workshop', MUTED]], 28, X, 312));
+  // The two names, each on its own card.
+  const GAP = 36, CW = (R - X - GAP) / 2, CY = 352, CH = 272, P = 40;
+  const stars = [
+    ['TURING AWARD LAUREATE', 'YANN LECUN', 'AdaJEPA: An Adaptive Latent World Model', 'with Ying Wang  ·  Oumayma Bounou  ·  Mengye Ren'],
+    ['CREATOR OF IMAGENET', 'FEI-FEI LI', 'Planning with View World Models', 'with Kangrui Wang  ·  Linjie Li  ·  Zhengyuan Yang  ·  +6 more'],
   ];
-  body.push(line(MED, [['CONTINUAL WORLD MODELS  ·  NEURIPS 2026', ACCENT]], 22, X + 150, 128, { ls: 0.16 }));
-  body.push(line(MED, [['Saturday, December 12, 2026  ·  Sydney', MUTED]], 24, X + 150, 168));
-  body.push(line(BLACK, [['ACCEPTED PAPERS INCLUDE', INK]], 58, X, 300, { ls: 0.01 }));
-  let y = 410;
-  for (const [t, by, mine] of papers) {
-    const ts = wrap(SEMI, t, 34, W - X * 2 - 60);
-    const h = ts.length * 44 + 48;
-    if (mine) body.push(`<rect x="${X - 30}" y="${y - 50}" width="${W - X * 2 + 60}" height="${h + 34}" rx="18" fill="rgba(255,185,138,.1)" stroke="rgba(255,185,138,.55)" stroke-width="1.5"/>`);
-    ts.forEach((l, i) => body.push(line(SEMI, [[l, INK]], 34, X, y + i * 44)));
-    body.push(line(REG, by, 24, X, y + ts.length * 44 + 4));
-    y += h + 66;
-  }
+  stars.forEach(([what, who, t, by], i) => {
+    const x = X + i * (CW + GAP);
+    body.push(`<rect x="${x}" y="${CY}" width="${CW}" height="${CH}" rx="18" fill="rgba(244,239,232,.045)" stroke="rgba(244,239,232,.14)" stroke-width="1.5"/>`);
+    body.push(line(MED, [[what, MUTED]], 16, x + P, CY + 52, { ls: 0.18 }));
+    body.push(line(BLACK, [[who, ACCENT]], 92, x + P - 4, CY + 140, { ls: 0.01 }));
+    let y = CY + 190;
+    wrap(SEMI, t, 28, CW - 2 * P).forEach((l) => { body.push(line(SEMI, [[l, INK]], 28, x + P, y)); y += 36; });
+    body.push(line(REG, [[by, MUTED]], 19, x + P, y + 2));
+  });
+  // This paper, marked in the accent.
+  const LY = CY + CH + 30, LH = H - 40 - LY;
+  body.push(`<rect x="${X}" y="${LY}" width="${R - X}" height="${LH}" rx="18" fill="rgba(255,185,138,.1)" stroke="rgba(255,185,138,.6)" stroke-width="1.5"/>`);
+  body.push(line(BLACK, [['PLAN SHALLOW WHILE YOU LEARN', INK]], 52, X + P - 2, LY + 80, { ls: 0.01 }));
+  body.push(right(MED, [['OUR PAPER', ACCENT]], 18, LY + 62, { ls: 0.2 }));
+  body.push(line(MED, [['Reallocating Planning Compute During World-Model Adaptation', MUTED]], 24, X + P, LY + 122));
+  body.push(line(REG, [['Nicholas Ciordas  ·  Jan Safrata  ·  ', MUTED], ['Lucas Ciordas', ACCENT], ['  ·  David Safrata', MUTED]], 22, X + P, LY + 164));
   // A purple glow from the top right corner: an ellipse 0.7 of the slide across each way, fading out linearly.
   const glow = `<defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="${W * 0.92}" cy="${H * 0.05}" r="${W * 0.7}" gradientTransform="translate(${W * 0.92} ${H * 0.05}) scale(1 ${H / W}) translate(${-W * 0.92} ${-H * 0.05})"><stop offset="0" stop-color="#7a4fa8" stop-opacity=".32"/><stop offset="1" stop-color="#7a4fa8" stop-opacity="0"/></radialGradient></defs><rect width="${W}" height="${H}" fill="#0e0c0b"/><rect width="${W}" height="${H}" fill="url(#g)"/>`;
-  writeSvg('programme', `${glow}${logoSvg(X - 14, 66, 130)}${body.join('')}`);
+  writeSvg('programme', `${glow}${logoSvg(X - 14, 46, 120)}${body.join('')}`);
 }
 
 // The paper's three figures on one white slide: depth and reallocation side by side, the deployment streams wide
@@ -188,6 +203,8 @@ async function figures() {
   writeSvg('figures', `<rect width="${W}" height="${H}" fill="#ffffff"/>${labels}${art}`);
 }
 
+// Any of cover, title, programme and figures can be named to draw only those; with none named, all four.
 fs.mkdirSync(OUT, { recursive: true });
-await cover(); await title(); await programme(); await figures();
+const only = process.argv.slice(2), want = (f) => !only.length || only.includes(f.name);
+for (const f of [cover, title, programme, figures]) if (want(f)) await f();
 console.log('paper graphics done');

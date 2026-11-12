@@ -563,11 +563,11 @@
       "media": [
         {
           "src": "media/projects/world-models/title.svg",
-          "caption": "NeurIPS 2026 · Sydney, December 12. Photo: Benh Lieu Song, CC BY-SA 4.0."
+          "caption": "NeurIPS 2026 · Sydney, December 12."
         },
         {
           "src": "media/projects/world-models/programme.svg",
-          "caption": "The workshop’s accepted papers include work co-authored by Yann LeCun and Fei-Fei Li. [See for yourself!](https://neurips.cc/virtual/2026/loc/sydney/workshop/137499)"
+          "caption": "Yann LeCun and Fei-Fei Li have papers in the same 42-paper workshop. [See for yourself!](https://neurips.cc/virtual/2026/loc/sydney/workshop/137499)"
         },
         {
           "src": "media/projects/world-models/figures.svg",
