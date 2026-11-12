@@ -5,27 +5,35 @@
 # Both come from tennis-lab's exact match probabilities. Run from the repo root with tennis-lab and matplotlib,
 # scipy, fonttools and brotli installed in the same Python:
 #   python tools/build-tennis.py
+# The simulated match is saved to toolkit/sources/tennis-match.json, so later runs only redraw it (and don't need
+# tennis-lab). The highlight is the site palette's: PALETTE=e python tools/build-tennis.py draws match-e.mp4 in palette e.
 # Exact probabilities are slow from scratch, so tennis-lab's scripts/cache-prob-win-{game,tiebreak,set,match}.py
 # should be run first (a grid over 0.5-0.8 is plenty for the serve-win values used here).
-import os, random, subprocess, tempfile
+import json, os, random, re, subprocess, tempfile
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import font_manager as fm, pyplot as plt
 from matplotlib.patches import Rectangle
 from fontTools.ttLib import TTFont
-from tennis_lab.core.match import Match
-from tennis_lab.core.match_format import MatchFormat
-from tennis_lab.paths.match_probability import probabilityP1WinsMatch
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-OUT = os.path.join(ROOT, 'media/projects/tennis-simulation/match.mp4')
+PALETTE_JS = open(os.path.join(ROOT, 'js/palette.js')).read()
+DEFAULT = re.search(r"DEFAULT_PALETTE = '(\w+)'", PALETTE_JS).group(1)
+KEY = os.environ.get('PALETTE') or DEFAULT
+ACCENT = re.search(r"\n  " + KEY + r": \{\s*name: '[^']*', accent: '(#[0-9a-f]{6})'", PALETTE_JS).group(1)
+OUT = os.path.join(ROOT, 'media/projects/tennis-simulation', 'match.mp4' if KEY == DEFAULT else f'match-{KEY}.mp4')
+DATA = os.path.join(ROOT, 'toolkit/sources/tennis-match.json')
 SEED = 64  # a close three-set match that ends in a final-set tiebreak
 
 # Same model as examples/6 and 7: true serve-win probabilities generate the points, Beta priors are updated after each.
 P1actual, P2actual = 0.66, 0.62
 P1prior, alpha1, P2prior, alpha2 = 0.62, 100.0, 0.62, 100.0
-fmt = MatchFormat(bestOfSets=3)
+if not os.path.exists(DATA):
+    from tennis_lab.core.match import Match
+    from tennis_lab.core.match_format import MatchFormat
+    from tennis_lab.paths.match_probability import probabilityP1WinsMatch
+    fmt = MatchFormat(bestOfSets=3)
 
 def pwin(score, server, p1, p2):
     return float(probabilityP1WinsMatch(score, server, [p1], p2)[0])
@@ -88,12 +96,15 @@ def font(name):
     return fm.FontProperties(fname=p)
 BODY, MED, HEAD = font('hanken-grotesk-latin-400-normal'), font('hanken-grotesk-latin-500-normal'), font('barlow-condensed-latin-900-normal')
 
-BG, INK, GLOW = '#171513', '#f4efe8', '#ffb98a'
+BG, INK, GLOW = '#171513', '#f4efe8', ACCENT
 MUTED, DIM, FAINT, GRID = (0.957, 0.937, 0.91, 0.55), (0.957, 0.937, 0.91, 0.38), (0.957, 0.937, 0.91, 0.28), (0.957, 0.937, 0.91, 0.08)
 W, H, FPS = 1600, 900, 30
 PTS_PER_S, HOLD_S, FADE_S = 13.0, 2.6, 0.6
 
-d = simulate(SEED); pts = d['points']; N = len(pts)
+if os.path.exists(DATA): d = json.load(open(DATA))
+else:
+    d = simulate(SEED); os.makedirs(os.path.dirname(DATA), exist_ok=True); json.dump(d, open(DATA, 'w'))
+pts = d['points']; N = len(pts)
 win = np.array([p['dyn'] for p in pts] + [1.0 if d['final']['winner'] == 1 else 0.0])
 stat = np.array([p['static'] for p in pts] + [win[-1]])
 imp = np.array([p['imp'] for p in pts])
@@ -138,7 +149,7 @@ head, = axW.plot([], [], 'o', ms=9, color=GLOW, mec=BG, mew=2)
 headTxt = axW.text(0, 0, '', fontproperties=MED, fontsize=19, color=GLOW, va='center')
 # Bars shade from the muted ink to the glow as a point matters more.
 def shade(v):
-    t = min(1.0, v / 0.25) ** 0.8; a, b = np.array([0.957, 0.937, 0.91]), np.array([1.0, 0.725, 0.541])
+    t = min(1.0, v / 0.25) ** 0.8; a, b = np.array([0.957, 0.937, 0.91]), np.array(matplotlib.colors.to_rgb(GLOW))
     return tuple(a + (b - a) * t) + (0.35 + 0.65 * t,)
 bars = [Rectangle((i + 0.1, 0), 0.8, 0, color=shade(imp[i]), lw=0) for i in range(N)]
 for b in bars: axI.add_patch(b)

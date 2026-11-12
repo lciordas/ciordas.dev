@@ -54,8 +54,11 @@ function wrap(f, s, size, max, ls = 0) {
   for (const w of s.split(' ')) { const t = cur ? `${cur} ${w}` : w; if (cur && width(f, t, size, ls) > max) { lines.push(cur); cur = w; } else cur = t; }
   return [...lines, cur];
 }
-// The highlight is the site palette's (PALETTE=b node tools/build-paper.mjs draws another palette's).
-const INK = '#f4efe8', MUTED = 'rgba(244,239,232,.68)', ACCENT = PALETTES[process.env.PALETTE || DEFAULT_PALETTE].accent;
+// The highlight is the site palette's, and its darker onWhite on the white figures slide. PALETTE=e node
+// tools/build-paper.mjs cover draws palette e's overview card as world-models-e.webp; the slides need no copies, since
+// the site swaps their colours as they load (recolorSvg in js/palette.js).
+const KEY = process.env.PALETTE || DEFAULT_PALETTE;
+const INK = '#f4efe8', MUTED = 'rgba(244,239,232,.68)', ACCENT = PALETTES[KEY].accent, ON_WHITE = PALETTES[KEY].onWhite;
 const tint = (a) => `rgba(${[1, 3, 5].map((i) => parseInt(ACCENT.slice(i, i + 2), 16)).join(',')},${a})`;
 const TITLE = 'Plan Shallow While You Learn', SUB = 'Reallocating Planning Compute During World-Model Adaptation';
 const AUTHORS = [['Nicholas Ciordas', INK], ['  ·  ', MUTED], ['Jan Safrata', INK], ['  ·  ', MUTED], ['Lucas Ciordas', ACCENT], ['  ·  ', MUTED], ['David Safrata', INK]];
@@ -103,7 +106,7 @@ async function cover() {
   const shade = `<defs><linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#080706" stop-opacity=".8"/><stop offset=".34" stop-color="#080706" stop-opacity=".3"/><stop offset=".62" stop-color="#080706" stop-opacity=".72"/><stop offset="1" stop-color="#080706" stop-opacity=".94"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#b)"/>${body.join('')}`;
   const img = await backdrop(S, S, { left: 230, top: 0, width: 759, height: 759 }, shade);
   const lg = await logoPng(240);
-  await sharp(await img.toBuffer()).composite([{ input: lg, left: Math.round(S * 0.085), top: Math.round(S * 0.07) }]).webp({ quality: 80, effort: 5 }).toFile(path.join(THUMBS, 'world-models.webp'));
+  await sharp(await img.toBuffer()).composite([{ input: lg, left: Math.round(S * 0.085), top: Math.round(S * 0.07) }]).webp({ quality: 80, effort: 5 }).toFile(path.join(THUMBS, KEY === DEFAULT_PALETTE ? 'world-models.webp' : `world-models-${KEY}.webp`));
 }
 
 async function title() {
@@ -189,7 +192,7 @@ async function figures() {
     [c, C, (W - C.w) / 2, y0 + LH + topH + GAP + LH],
   ];
   const r = (v) => n(v);
-  const labels = place.map(([f, , x, y]) => { const [num, ...rest] = f.label.split('  '); return line(SEMI, [[`FIG. ${num}`, '#b4561f'], [`   ${rest.join(' ')}`, '#57514b']], LS, x, y - 18, { ls: 0.02 }); }).join('');
+  const labels = place.map(([f, , x, y]) => { const [num, ...rest] = f.label.split('  '); return line(SEMI, [[`FIG. ${num}`, ON_WHITE], [`   ${rest.join(' ')}`, '#57514b']], LS, x, y - 18, { ls: 0.02 }); }).join('');
   const art = place.map(([f, d, x, y]) => `<svg x="${r(x)}" y="${r(y)}" width="${r(d.w)}" height="${r(d.h)}" viewBox="${r(f.box.x)} ${r(f.box.y)} ${r(f.box.w)} ${r(f.box.h)}">${f.inner}</svg>`).join('');
   writeSvg('figures', `<rect width="${W}" height="${H}" fill="#ffffff"/>${labels}${art}`);
 }

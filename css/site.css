@@ -2,7 +2,7 @@
 @font-face { font-family: "Hanken Grotesk"; font-weight: 400; src: url("../fonts/hanken-grotesk-latin-400-normal.woff2") format("woff2"); font-display: swap; }
 @font-face { font-family: "Hanken Grotesk"; font-weight: 500; src: url("../fonts/hanken-grotesk-latin-500-normal.woff2") format("woff2"); font-display: swap; }
 
-/* Colours. The default palette is the first block; ?palette=b (c, d, peach) previews the others (see js/palette.js).
+/* Colours. The default palette is the first block; ?palette=e (b, c, d, f, g, peach) previews the others (see js/palette.js).
    --accent is the highlight colour for text, --glow the lit bars and dots, --accent-hi the pale lights (focus rings,
    the scan line, progress bars). The near-blacks are tinted to match each palette. */
 :root { --ink: #f4efe8; --muted: rgba(244, 239, 232, .62); }
@@ -25,6 +25,21 @@
   --accent: #a7cfa9; --accent-rgb: 167, 207, 169; --glow: #7fa886; --glow-rgb: 127, 168, 134; --accent-hi: #dbe9d8; --hi-rgb: 219, 233, 216;
   --bg: #050605; --bg-rgb: 5, 6, 5; --bg-2: #0b0c0b; --bg-2-rgb: 11, 12, 11; --card-rgb: 8, 9, 8; --col-rgb: 18, 20, 18;
   --surface: #161816; --surface-2: #181a18; --win-1: #242824; --win-3: #111311;
+}
+:root[data-palette="e"] {
+  --accent: #e8475f; --accent-rgb: 232, 71, 95; --glow: #d8304d; --glow-rgb: 216, 48, 77; --accent-hi: #f9d0d7; --hi-rgb: 249, 208, 215;
+  --bg: #060404; --bg-rgb: 6, 4, 4; --bg-2: #0d090a; --bg-2-rgb: 13, 9, 10; --card-rgb: 9, 7, 7; --col-rgb: 21, 16, 17;
+  --surface: #1a1415; --surface-2: #1d1617; --win-1: #2b2023; --win-3: #141011;
+}
+:root[data-palette="f"] {
+  --accent: #ff8f3f; --accent-rgb: 255, 143, 63; --glow: #ff8a33; --glow-rgb: 255, 138, 51; --accent-hi: #ffe2c4; --hi-rgb: 255, 226, 196;
+  --bg: #060403; --bg-rgb: 6, 4, 3; --bg-2: #0d0a08; --bg-2-rgb: 13, 10, 8; --card-rgb: 9, 7, 5; --col-rgb: 21, 17, 13;
+  --surface: #191510; --surface-2: #1c1712; --win-1: #2a231b; --win-3: #13100c;
+}
+:root[data-palette="g"] {
+  --accent: #2f9e6c; --accent-rgb: 47, 158, 108; --glow: #23895b; --glow-rgb: 35, 137, 91; --accent-hi: #a9dcc1; --hi-rgb: 169, 220, 193;
+  --bg: #030504; --bg-rgb: 3, 5, 4; --bg-2: #070b09; --bg-2-rgb: 7, 11, 9; --card-rgb: 5, 8, 7; --col-rgb: 13, 19, 16;
+  --surface: #101613; --surface-2: #121815; --win-1: #1b241f; --win-3: #0c110e;
 }
 :root[data-palette="peach"] {
   --accent: #ffb98a; --accent-rgb: 255, 185, 138; --glow: #ffb98a; --glow-rgb: 255, 175, 115; --accent-hi: #ffe9cf; --hi-rgb: 255, 214, 176;

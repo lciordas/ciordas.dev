@@ -5,7 +5,7 @@ import { mountRenderWindows } from './render-windows.js';
 import { mountTrace } from './trace.js';
 import { mountName, DEPTH } from './name.js';
 import { bakeSurface } from './bake.js';
-import { PALETTE, FILM } from './palette.js';
+import { PALETTE, FILM, paletteContent } from './palette.js';
 
 const gsap = window.gsap;
 const params = new URLSearchParams(location.search);
@@ -63,7 +63,7 @@ const loadContent = async () => {
   // The editor's preview shows unpublished work saved in this browser.
   if (params.has('draft')) { try { content = JSON.parse(localStorage.getItem('lc-content-draft')); } catch { content = null; } }
   content = content || await (await fetch('data/content.json', { cache: 'no-cache' })).json(); // always the latest words
-  return content;
+  return (content = await paletteContent(content));
 };
 const showPortfolio = async (direct) => {
   await (content || loadContent());

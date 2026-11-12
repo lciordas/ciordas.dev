@@ -14,7 +14,9 @@ const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp'), opentype = require('opentype.js');
 const FONTS = path.join(here, '../toolkit/node_modules/@fontsource');
 const DATA = JSON.parse(fs.readFileSync(path.join(here, '../toolkit/sources/cartpole.json'), 'utf8'));
-const OUT = path.join(here, '../media/projects/hybrid-networks/cartpole.mp4');
+// PALETTE=e draws it in palette e, as cartpole-e.mp4 beside the default one (see BAKED in js/palette.js).
+const KEY = process.env.PALETTE || DEFAULT_PALETTE;
+const OUT = path.join(here, `../media/projects/hybrid-networks/${KEY === DEFAULT_PALETTE ? 'cartpole' : `cartpole-${KEY}`}.mp4`);
 const font = (pkg, file) => { const b = fs.readFileSync(path.join(FONTS, pkg, 'files', file)); return opentype.parse(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength)); };
 const REG = font('hanken-grotesk', 'hanken-grotesk-latin-400-normal.woff'), MED = font('hanken-grotesk', 'hanken-grotesk-latin-500-normal.woff'), SEMI = font('hanken-grotesk', 'hanken-grotesk-latin-600-normal.woff');
 
@@ -38,7 +40,7 @@ function text(f, s, size, x, y, fill, anchor = 'start', opacity = 1) {
 }
 
 const W = 1600, H = 900, FPS = 50, HOLD = 1.5 * FPS;
-const BG = '#0e0c0b', INK = '#f4efe8', MUTED = 'rgba(244,239,232,.62)', FAINT = 'rgba(244,239,232,.16)', ACCENT = PALETTES[process.env.PALETTE || DEFAULT_PALETTE].accent; // the site palette's highlight
+const BG = '#0e0c0b', INK = '#f4efe8', MUTED = 'rgba(244,239,232,.62)', FAINT = 'rgba(244,239,232,.16)', ACCENT = PALETTES[KEY].accent; // the site palette's highlight
 const tint = (a) => `rgba(${[1, 3, 5].map((i) => parseInt(ACCENT.slice(i, i + 2), 16)).join(',')},${a})`;
 const POS = '#7aaef0', NEG = '#ee7f62'; // the network slide's blue and red, lifted for a dark ground
 
@@ -113,4 +115,4 @@ for (let f = 0; f < FRAMES; f++) {
 execFileSync('ffmpeg', ['-v', 'error', '-y', '-framerate', String(FPS), '-i', path.join(tmp, '%04d.png'), '-an', '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '27', '-preset', 'slow', '-movflags', '+faststart', OUT]);
 for (const f of [0, 300, FRAMES - 1]) fs.copyFileSync(path.join(tmp, `${String(f).padStart(4, '0')}.png`), path.join(os.tmpdir(), `cartpole-${f}.png`));
 fs.rmSync(tmp, { recursive: true, force: true });
-console.log('cartpole.mp4', `${FRAMES} frames`, `${(fs.statSync(OUT).size / 1e6).toFixed(2)} MB`, LANES.map(({ e }) => `generation ${e.gen}: ${e.steps} steps, ${e.end}`).join('; '));
+console.log(path.basename(OUT), `${FRAMES} frames`, `${(fs.statSync(OUT).size / 1e6).toFixed(2)} MB`, LANES.map(({ e }) => `generation ${e.gen}: ${e.steps} steps, ${e.end}`).join('; '));
