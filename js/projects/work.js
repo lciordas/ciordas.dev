@@ -334,8 +334,6 @@ export function mountWork(container, options = {}) {
     if (!gl || !cfg.model) item.cadC.style.display = 'none';
     items.push(item);
   });
-  // A project marked "scrollStop" in the content file holds a fast scroll at its end (keynav.js).
-  sections.forEach((s) => { if (content.projects[s.dataset.project]?.scrollStop) s.dataset.scrollStop = ''; });
   const galleries = [...container.querySelectorAll('.gallery')].map(mountGallery);
   const streams = [...container.querySelectorAll('.stream')].map(mountStream);
 

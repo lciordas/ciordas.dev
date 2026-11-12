@@ -1,6 +1,7 @@
 // site: the overview page shown behind the name, and moving between it and the projects.
 import { REDUCED } from './_util.js';
 import { PALETTE, PALETTE_KEY, DEFAULT_PALETTE } from './palette.js';
+import { SNAP } from './keynav.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 // Words wrapped in **double asterisks** in the content file are set in bold.
@@ -265,7 +266,11 @@ export function mountSite({ root, work, content }) {
     e.preventDefault();
     best.focus({ preventScroll: true });
     const r = best.getBoundingClientRect();
-    if (r.top < 0 || r.bottom > innerHeight) { if (work.lenis) work.lenis.scrollTo(best, { offset: -innerHeight * 0.3 }); else best.scrollIntoView({ block: 'center' }); }
+    if (r.top < 0 || r.bottom > innerHeight) {
+      // With the page moving in whole screens, to the overview's screen the card is on.
+      if (SNAP && work.lenis) work.lenis.scrollTo(best.closest('.ov-projects') ? cardsTop() : 0, { duration: 0.7 });
+      else if (work.lenis) work.lenis.scrollTo(best, { offset: -innerHeight * 0.3 }); else best.scrollIntoView({ block: 'center' });
+    }
   });
   addEventListener('scroll', () => {
     // Only once the overview's own bar has gone, so the two never sit on top of each other.
