@@ -17,7 +17,7 @@
       }
     ],
     "hint": "Arrow keys to move, Enter to open, or scroll",
-    "intro": "**Hey, I'm Lucas.** A senior at Regis High School taking classes at Columbia. I build robots, write code, and do research with the Summer Science Program and NeurIPS. This summer I was a software engineer at an **a16z-backed, $125M** stealth AI startup.",
+    "intro": "**Hey, I'm Lucas.** A senior at **Regis High School** taking classes at **Columbia**. I build **robots**, write code, and do research with the **Summer Science Program** and **NeurIPS**. This summer I was a software engineer at an **a16z-backed, $125M** stealth AI startup.",
     "logos": [
       {
         "name": "Regis High School",
@@ -305,7 +305,7 @@
       "captions": [
         "A ship built from scratch and assembled inside the bottle.",
         "Extreme precision, with custom tools bent from clothes hangers to reach through the neck.",
-        "Made from a block of basswood, wooden dowels, 22-gauge wire, rigging thread, paint and paper."
+        "Made from a block of basswood, wooden dowels, 22-gauge wire, sewing thread, paint and paper."
       ],
       "thumb": "ship-in-a-bottle",
       "stream": [
@@ -447,7 +447,7 @@
       "title": "EvoGrad",
       "tag": "Hybrid neural networks: NEAT with gradient descent",
       "kind": "detail",
-      "summary": "A neural-network library where evolution designs the network and gradient descent trains it, with KAN-style learnable activation functions trained alongside the weights. On the same curve-fitting task, the learnable activations reach 500× lower error than evolution alone, in a single generation.",
+      "summary": "A neural-network library where evolution designs the network and gradient descent trains it. KAN-style learnable activation functions train alongside the weights.",
       "tech": [
         "NEAT",
         "KAN",
@@ -464,29 +464,29 @@
       "media": [
         {
           "src": "media/projects/hybrid-networks/cartpole.mp4",
-          "caption": "Gymnasium's CartPole, solved by EvoGrad's NEAT: the fittest network of each generation of one run, all from the same start. Each reads the cart's position and velocity and the pole's angle and angular velocity, and pushes the cart left or right. Evolution adds connections, then a hidden node; by generation 4 the network balances the pole for the full 500 steps from all 100 test starts."
+          "caption": "CartPole, solved by EvoGrad. The best network of each generation, all from the same start. By generation 4 it balances the pole for all 500 steps, from every one of 100 test starts."
         },
         {
           "src": "media/projects/hybrid-networks/modes.webp",
-          "caption": "One target, a damped sine, fitted by EvoGrad's regression example three ways, with the same settings and seed:",
+          "caption": "One curve, fitted three ways.",
           "points": [
-            "**Evolution only:** after 300 generations the best network is still a step, with a mean squared error of 0.009.",
-            "**Plus gradient descent** on every network's weights each generation: under the 0.0002 threshold in 15 generations.",
-            "**Plus learnable activations**, Legendre expansions trained with the weights: an error of 0.000017 after one generation, from one hidden node."
+            "**Evolution only.** Still a crude step after 300 generations.",
+            "**+ Gradient descent.** Hits the target in 15 generations.",
+            "**+ Learnable activations.** 500× lower error than evolution alone, in one generation."
           ]
         },
         {
           "src": "media/projects/hybrid-networks/networks.webp",
-          "caption": "Networks evolved for XOR, sin(x) and a damped sine, each with at most three hidden nodes. Blue edges carry positive weights, red negative; thicker edges, larger weights.",
+          "caption": "Networks evolved for XOR, sin(x) and a damped sine. Blue edges are positive weights, red negative.",
           "light": true
         }
       ]
     },
     "tennis-simulation": {
       "title": "Tennis Statistics Library",
-      "tag": "Bayesian updates, Monte Carlo, live trading",
+      "tag": "Bayesian updates, Monte Carlo, live-traded on prediction markets",
       "kind": "detail",
-      "summary": "A library that simulates tennis matches from simple inputs, updated during play with Bayesian statistics. Monte Carlo simulation produces point importance and win probability. Tested in live trading at the 2026 US Open: positions are sized by point importance, so exposure rises ahead of the points most likely to swing the match.",
+      "summary": "Simulates tennis matches and updates win probability live with Bayesian statistics. Its point-importance module was tested in live trading on prediction markets at the 2026 US Open, sizing positions up before the points most likely to swing the match.",
       "tech": [
         "Bayesian statistics",
         "Monte Carlo",
@@ -503,15 +503,14 @@
       "media": [
         {
           "src": "media/projects/tennis-simulation/match.mp4",
-          "caption": "One simulated match, point by point: win probability with Bayesian serve estimates against fixed priors, and the importance of each point."
+          "caption": "One simulated match, point by point. Win probability updates live, and each point's importance shows below."
         },
         {
           "src": "media/projects/tennis-simulation/charts.webp",
-          "caption": "Point importance: one match, every score, and the serve.",
+          "caption": "Point importance",
           "points": [
-            "**One match:** importance of each point; those above 0.1 marked by outcome, serving or receiving.",
-            "**All scores, best of 5 sets:** most points fall below 0.05; the largest reach 0.25.",
-            "**Serve:** win probability on serve falls as importance rises; the logistic fit tracks the model to about 0.5, then falls more slowly."
+            "**One match.** The biggest points, marked by who won them.",
+            "**Serve.** Players win less often on serve as the stakes rise."
           ],
           "light": true
         }
