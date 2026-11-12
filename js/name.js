@@ -18,13 +18,15 @@ const MAX_SAMPLES = 8;
 
 const VERT = /* glsl */`
 attribute vec3 aQ; attribute float aFace;
-varying vec3 vWP, vWN, vP, vZ; varying float vFace;
+varying vec3 vWP, vWN, vP, vZ, vC; varying float vFace;
 void main(){
-  vP=aQ; vFace=aFace;
+  vP=aQ; vFace=aFace; vC=modelMatrix[3].xyz;
   vZ=normalize(mat3(modelMatrix)*vec3(0.,0.,1.));
   vec4 wp=modelMatrix*vec4(position,1.);
   vWP=wp.xyz;
-  vWN=normalize(mat3(modelMatrix)*normal);
+  // Shards are flattened as they fly, so the normal is scaled back (inverse transpose of rotation times scale).
+  vec3 s2=vec3(dot(modelMatrix[0].xyz,modelMatrix[0].xyz),dot(modelMatrix[1].xyz,modelMatrix[1].xyz),dot(modelMatrix[2].xyz,modelMatrix[2].xyz));
+  vWN=normalize(mat3(modelMatrix)*(normal/s2));
   gl_Position=projectionMatrix*viewMatrix*wp;
 }`;
 
@@ -37,7 +39,7 @@ void main(){
 const FRAG = /* glsl */`
 precision highp float;
 #define MAXS ${MAX_SAMPLES}
-varying vec3 vWP, vWN, vP, vZ; varying float vFace;
+varying vec3 vWP, vWN, vP, vZ, vC; varying float vFace;
 uniform sampler2D uBuffer;
 uniform mat4 uProj;
 uniform int uSamples;
@@ -53,6 +55,32 @@ float panel(vec3 d, vec3 P, vec3 T, vec2 size, float soft){
   vec3 B=normalize(cross(P,T));
   vec2 q=vec2(dot(d,T),dot(d,B))/k;
   return smoothstep(size.x,size.x-soft,abs(q.x))*smoothstep(size.y,size.y-soft,abs(q.y));
+}
+// A lightformer strip seen through the glass. Its brightness falls off along its length in soft pools, like a
+// row of lamps of different strength, so a straight bevel that sweeps along it passes through bright cores,
+// coloured edges and dark gaps instead of meeting one even band.
+float strip(vec3 d, vec3 P, vec3 T, vec2 size, float soft, float f, float ph){
+  float k=dot(d,P); if(k<=0.) return 0.;
+  vec3 B=normalize(cross(P,T));
+  vec2 q=vec2(dot(d,T),dot(d,B))/k;
+  float a=.5+.5*cos(q.x*f+ph);
+  return smoothstep(size.x,size.x-soft*6.,abs(q.x))*smoothstep(size.y,size.y-soft,abs(q.y))*(.08+.92*a*a);
+}
+// The lamps are a few metres off, not infinitely far: the direction to them changes from one end of an edge to
+// the other, and as the letters drift and tilt.
+vec3 near(vec3 d, vec3 p, float D){ return normalize(d*D+p); }
+// For loose shards: a dark room with one broad soft key and a dim fill, so every face reflects a gradient
+// rather than a flat panel.
+vec3 envSoft(vec3 d){
+  float k=sat(dot(d,normalize(vec3(-.35,.8,.5)))), f=sat(dot(d,normalize(vec3(.7,-.25,.6))));
+  return vec3(1.,.99,.97)*pow(k,5.)*.85+vec3(.9,.95,1.)*pow(f,10.)*.4+vec3(.003);
+}
+// Keeps a colour from going fully saturated: real dispersion splits white light, so even its fringes keep
+// some white in them, and dim fringes are paler still.
+vec3 capSat(vec3 c, float m){
+  float l=dot(c,vec3(.2126,.7152,.0722)), mx=max(c.r,max(c.g,c.b)), mn=min(c.r,min(c.g,c.b));
+  float s=(mx-mn)/max(mx,1e-4);
+  return mix(vec3(l),c,min(1.,m/max(s,1e-4)));
 }
 // The studio, as seen in reflections. Neutral white light; the accent shows only as one faint low strip.
 vec3 env(vec3 d){
@@ -73,14 +101,14 @@ vec3 env(vec3 d){
 // The lights seen through the glass, behind and to the sides of it: what a steep ray leaving a bevel meets.
 vec3 envBack(vec3 d){
   vec3 c=vec3(0.);
-  // Wide enough that a straight bevel (which sends its rays out about 25 degrees) sees a whole strip and shines
-  // white; the curved ones sweep across the strips' edges and break into spectra.
-  c+=vec3(2.2)*panel(d,normalize(vec3(-.5,.05,-1.)),vec3(0.,1.,0.),vec2(2.,.17),.07);
-  c+=vec3(2.2)*panel(d,normalize(vec3(.5,.05,-1.)),vec3(0.,1.,0.),vec2(2.,.17),.07);
-  c+=vec3(2.)*panel(d,normalize(vec3(0.,.5,-1.)),vec3(1.,0.,0.),vec2(2.,.15),.06);
-  c+=vec3(1.3)*panel(d,normalize(vec3(0.,-.5,-1.)),vec3(1.,0.,0.),vec2(2.,.15),.06);
-  c+=vec3(1.)*panel(d,normalize(vec3(-.95,-.1,-1.)),vec3(0.,1.,0.),vec2(2.,.1),.05);
-  c+=vec3(1.)*panel(d,normalize(vec3(.95,-.1,-1.)),vec3(0.,1.,0.),vec2(2.,.1),.05);
+  // Wide enough that a straight bevel (which sends its rays out about 25 degrees) crosses a strip; the pools
+  // along each strip and the waviness of the bevels break it into white cores, short spectra and dark gaps.
+  c+=vec3(2.8)*strip(d,normalize(vec3(-.5,.05,-1.)),vec3(0.,1.,0.),vec2(2.,.17),.07,9.,.3);
+  c+=vec3(2.8)*strip(d,normalize(vec3(.5,.05,-1.)),vec3(0.,1.,0.),vec2(2.,.17),.07,8.,2.1);
+  c+=vec3(2.2)*strip(d,normalize(vec3(0.,.5,-1.)),vec3(1.,0.,0.),vec2(2.,.15),.06,7.,1.2);
+  c+=vec3(1.4)*strip(d,normalize(vec3(0.,-.5,-1.)),vec3(1.,0.,0.),vec2(2.,.15),.06,10.,4.);
+  c+=vec3(1.1)*strip(d,normalize(vec3(-.95,-.1,-1.)),vec3(0.,1.,0.),vec2(2.,.1),.05,11.,.7);
+  c+=vec3(1.1)*strip(d,normalize(vec3(.95,-.1,-1.)),vec3(0.,1.,0.),vec2(2.,.1),.05,12.,3.3);
   return c;
 }
 vec3 glint(vec3 N, vec3 V, vec3 L, vec3 col, float tight){
@@ -97,6 +125,9 @@ void main(){
   // Cast glass is never quite flat: a faint ripple in the face bends what is behind it as the letter moves.
   vec2 rip=vec2(sin(vP.x*9.+vP.y*4.)+sin(vP.y*13.-vP.x*3.+1.7),sin(vP.y*8.-vP.x*5.+2.)+sin(vP.x*11.+vP.y*7.))*.5;
   N=normalize(N+vec3(rip,0.)*.007*uEnvK*uEnvK*vFace);
+  // Polished bevels and walls are never perfectly flat either: a slow waviness along them turns each part of a
+  // straight edge to a slightly different angle, so its colour shifts along its length.
+  if(vFace<.5){ vec3 nq=vP*3.2; N=normalize(N+(vec3(vnoise(nq),vnoise(nq+17.1),vnoise(nq+31.7))-.5)*.17); }
   float NdV=sat(dot(N,V));
   float F=.04+.96*pow(1.-NdV,5.);
   vec3 Z=normalize(vZ);
@@ -109,8 +140,18 @@ void main(){
   // that colour, so a bright edge seen through a bevel spreads into a continuous spectrum.
   vec3 tr=vec3(0.), lit=vec3(0.), wsum=vec3(0.);
   // A ray trapped by total internal reflection (through the side walls) comes back the same for every colour.
-  vec3 r0=refract(-V,N,1./uIor), o0=refract(r0,Z,uIor);
-  vec3 trapped=backP?vec3(0.):env(reflect(r0,Z))*.3;
+  vec3 r0=refract(-V,N,1./uIor);
+  // The far face is whichever of the two flat faces the ray is heading for: a shard that has turned over looks
+  // in through its back.
+  if(dot(r0,Z)>0.) Z=-Z;
+  vec3 o0=refract(r0,Z,uIor);
+  bool loose=uShard>.5;
+  // A small shard is close to the lamps compared with its size, so they cross it as a band of light; a letter's
+  // faces look straight through to the backdrop and only its edges reach the lamps.
+  vec3 lp=(vWP-vC)*(loose?1.:1.-vFace);
+  float ld=loose?.7:3.;
+  vec3 tdir=near(reflect(r0,Z),lp,ld);
+  vec3 trapped=backP?vec3(0.):(loose?envSoft(tdir)*.5:env(tdir)*.3);
   for(int i=0;i<MAXS;i++){
     if(i>=uSamples) break;
     float prog=(float(i)+jit)/float(uSamples);
@@ -123,14 +164,18 @@ void main(){
     if(!backP){
       // The same ray leaving through the back face, into the lights behind and beside the glass.
       vec3 ro=refract(r,Z,io);
-      lit+=(dot(o0,o0)>.01&&dot(ro,ro)>.01?envBack(ro):trapped)*w;
+      lit+=(dot(o0,o0)>.01&&dot(ro,ro)>.01?envBack(near(ro,lp,ld)):trapped)*w;
     }
     wsum+=w;
   }
   tr/=wsum; lit/=wsum;
+  lit=capSat(lit,.3+.4*sat(dot(lit,vec3(.33))));
+  if(loose) lit*=.55;
 
   vec3 R=reflect(-V,N);
-  vec3 refl=env(R);
+  // A loose shard turns its faces through every angle; it reflects the soft room, offset across the face so each
+  // face carries a gradient.
+  vec3 refl=loose?envSoft(normalize(R+vP*1.8)):env(R);
   float ph=uTime*.19;
   vec3 spec=glint(N,V,normalize(vec3(-.55+.3*sin(ph),.85,.55)),vec3(1.,.99,.97)*30.,900.)
            +glint(N,V,normalize(vec3(.55-.3*sin(ph),.85,.55)),vec3(.97,.99,1.)*30.,900.)
@@ -150,10 +195,11 @@ void main(){
   // A loose shard is lit a little harder at its broken edges, so it stays visible as it turns in the dark.
   // Its broken edges and rim pick up a spectrum that shifts as it turns, and now and then a glimmer runs over it.
   if(uShard>.5&&!backP){
-    float rim=edge*.05+pow(1.-NdV,4.)*.22;
-    vec3 hue=.6+.4*cos(6.283*(fract(dot(N,vec3(1.3,.9,.6))*1.5+uTime*.05)+vec3(0.,.33,.67)));
-    float gl=pow(.5+.5*sin(uTime*1.1+dot(vP,vec3(9.,6.,4.))),12.);
-    c+=hue*rim*(1.+3.*gl)+F*refl*.3+spec*.4;
+    // Bright thin broken edges, a faint spectral rim, and only now and then a glimmer.
+    float rim=edge*(.04+.32*pow(1.-NdV,2.))+pow(1.-NdV,4.)*.1;
+    vec3 hue=.75+.25*cos(6.283*(fract(dot(N,vec3(1.3,.9,.6))*1.5+dot(vP.xy,vec2(.8,.5))+uTime*.05)+vec3(0.,.33,.67)));
+    float gl=pow(.5+.5*sin(uTime*1.1+dot(vP,vec3(9.,6.,4.))),24.);
+    c+=hue*rim*(1.+3.*gl)+spec*.25;
   }
   // Under the pointer a faint warm light glows inside the glass.
   if(uHotAmt>.002){
@@ -456,7 +502,7 @@ export function mountName(scene, data, palU, baked) {
           s.mesh.position.copy(s.p); s.mesh.quaternion.copy(s.q);
           // Shards thin out as they fly, into slivers rather than blocks.
           const sc = Math.max(0.0001, s.scale);
-          s.mesh.scale.set(sc, sc, sc * (1 - 0.62 * smooth(0, 0.9, a)));
+          s.mesh.scale.set(sc, sc, sc * (1 - 0.82 * smooth(0, 0.45, a)));
           s.mesh.visible = s.scale > 0.002;
         });
       }
