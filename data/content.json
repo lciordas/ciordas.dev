@@ -260,7 +260,7 @@
       "kind": "scroll",
       "summary": "A low-cost, 3D-printed alternative to industrial micromanipulators, which cost $1,000 to $60,000. Geometric microstepping and a magnetic-gearing encoder bring angular error down to about 0.0005°, which allows a theoretical end-effector resolution of 100 nm. Physical testing of that resolution is the next step.",
       "captions": [
-        "A DIY, $200 version of a $10,000–60,000 industrial device that moves on the nanometer scale with comparable accuracy.",
+        "A DIY, $200 version of a $10,000–60,000 industrial device that moves on the nanometer scale.",
         "A new microstepping formula I derived eliminates up to 1/25 of a full step of error, 0.072°, more than 140 times the 0.0005° accuracy the system achieves.",
         "A row of 17 axially magnetized magnets multiplies encoder resolution 8.5 times.",
         "Closed-loop PID control holds angular error to 0.0005°, for a theoretical 100 nm resolution at the tip."
@@ -495,21 +495,21 @@
       "media": [
         {
           "src": "media/projects/hybrid-networks/cartpole.mp4",
-          "caption": "CartPole, solved by EvoGrad. The best network of each generation, all from the same start. By generation 4 it balances the pole for all 500 steps, from every one of 100 test starts."
-        },
-        {
-          "src": "media/projects/hybrid-networks/modes.webp",
-          "caption": "One curve, fitted three ways.",
-          "points": [
-            "**Evolution only.** Still a crude step after 300 generations.",
-            "**+ Gradient descent.** Hits the target in 15 generations.",
-            "**+ Learnable activations.** 500× lower error than evolution alone, in one generation."
-          ]
+          "caption": "Gymnasium's CartPole, solved by EvoGrad's NEAT. The best network of each generation, all from the same start. By generation 4 it balances the pole for the full 500 steps."
         },
         {
           "src": "media/projects/hybrid-networks/networks.webp",
           "caption": "Networks evolved for XOR, sin(x) and a damped sine. Blue edges are positive weights, red negative.",
           "light": true
+        },
+        {
+          "src": "media/projects/hybrid-networks/modes.webp",
+          "caption": "Learnable activations let each connection bend into the shape a formula needs, so small networks match complicated equations efficiently. One damped sine, fitted three ways.",
+          "points": [
+            "**Evolution only.** Still a crude step after 300 generations.",
+            "**+ Gradient descent.** Hits the target in 15 generations.",
+            "**+ Learnable activations.** 500× lower error than evolution alone, in one generation."
+          ]
         }
       ]
     },
@@ -603,7 +603,7 @@
         },
         {
           "src": "media/projects/world-models/figures.svg",
-          "caption": "Drag compresses the optimal imagination depth from H=12 to H=6 (Fig. 1). Moving the same budget from depth to refinement iterations gains +2.4 to +11.2 return across the drag tiers (Fig. 2) and leads the deep default in all six deployment panels (Fig. 3).",
+          "caption": "When the physics change, a world model is wrong until it relearns, and its predictions get less reliable the further ahead it imagines. So looking far ahead stops paying off. Under added drag, the best planning depth halves, from 12 steps to 6 (Fig. 1). Spending that compute on refining the plan instead gains +2.4 to +11.2 return (Fig. 2) and beats the default deep planner in all six test settings (Fig. 3).",
           "light": true
         }
       ],
@@ -614,7 +614,7 @@
       "tag": "Summer Science Program",
       "kind": "detail",
       "captions": [
-        "In a team of three, determined the orbit of asteroid 6249 Jennifer from original observations over three nights.",
+        "Determined the orbit of asteroid 6249 Jennifer from original observations over three nights.",
         "Plate solving gave its celestial coordinates, and the Method of Gauss turned them into orbital elements.",
         "Written up as a technical paper, with the observations submitted to the Minor Planet Center.",
         "The paper can’t be shared publicly under the Summer Science Program’s policies.",
