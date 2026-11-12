@@ -267,8 +267,8 @@ export function mountSite({ root, work, content }) {
     best.focus({ preventScroll: true });
     const r = best.getBoundingClientRect();
     if (r.top < 0 || r.bottom > innerHeight) {
-      // With the page moving in whole screens, to the overview's screen the card is on.
-      if (SNAP && work.lenis) work.lenis.scrollTo(best.closest('.ov-projects') ? cardsTop() : 0, { duration: 0.7 });
+      // Kept inside the overview, so the page never rests with the first project half on screen.
+      if (SNAP && work.lenis) work.lenis.scrollTo(Math.max(0, Math.min(root.offsetHeight - innerHeight, r.top + window.scrollY - innerHeight * 0.3)), { duration: 0.7 });
       else if (work.lenis) work.lenis.scrollTo(best, { offset: -innerHeight * 0.3 }); else best.scrollIntoView({ block: 'center' });
     }
   });

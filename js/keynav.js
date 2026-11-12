@@ -1,19 +1,19 @@
-// keynav: the page moves a whole step at a time, from one full screen to the next, instead of scrolling freely. The
-// stops are read from the page as it is now: the two screens of the overview, the top of each project, the moments its
-// model is built, its video shows, each bullet over the video lights and each slide is in, the end of its scrolling
-// part, the start and end of each stream (and steps of about a screen through it), each gallery picture, and the end
-// of the page. Whatever plays with the scroll (the build, the wipes, the slides, the galleries and streams) plays on
-// the way from one stop to the next.
-// The down and up arrows, Page Down and Page Up, and Space and Shift+Space step through them. On the overview the
-// arrows still move between the cards (site.js), and past the last row (or with no card on screen) they move the page
-// on a step here. A press while the page is still gliding goes straight on to the stop after, carrying the speed it
-// already has, and a key held down runs through the stops very fast.
-// A scroll with a mouse wheel or trackpad does the same: one push is one step, however long the trackpad's glide
-// carries on after it. A fresh push, even while that glide is still dying away, is another step, and a scroll that
-// keeps going at a steady pace steps on each time the page arrives. The page never comes to rest between two stops:
-// let go of the scroll bar between them and it settles on the nearest. Sideways scrolling over a gallery or a stream
-// still moves that, and anywhere in a stream is a place to rest. Touch screens scroll as usual, and ?scroll=free brings
-// back the free scrolling for the wheel and trackpad.
+// keynav: how the wheel, the trackpad and the keys move the page.
+// Inside the overview or a project, the wheel and trackpad scroll freely and smoothly, so the build, the wipes, the
+// slides, the galleries and the streams play along with the scroll. Between them the page moves on its own: a scroll
+// that carries on past the end of one glides the next one's top into full screen, and a scroll up from a project's
+// top glides back to the end of the one before, its last screen filling the window. One push is one such move: the
+// rest of that push, however long a trackpad's glide runs on, is spent, and a fresh push (or a scroll that keeps going
+// at a steady pace once the page has arrived) scrolls on inside the new one. The page never comes to rest with two of
+// them on screen: once it has been still for a moment it settles onto the nearer, leaning the way it was going.
+// The down and up arrows, Page Down and Page Up, and Space and Shift+Space step through stops read from the page as it
+// is now: the two screens of the overview, the top and end of each project, the moments its model is built, its video
+// shows, each bullet over the video lights and each slide is in, the end of its scrolling part, the start and end of
+// each stream (and steps of about a screen through it), each gallery picture, and the end of the page. On the overview
+// the arrows still move between the cards (site.js), and past the last row (or with no card on screen) they move the
+// page on a step here. A press while the page is still gliding goes straight on to the stop after, carrying the speed
+// it already has, and a key held down runs through the stops very fast.
+// Touch screens scroll as usual, and ?scroll=free scrolls freely everywhere with the wheel and trackpad.
 import { REDUCED } from './_util.js';
 
 const DOWN = new Set(['ArrowDown', 'PageDown']), UP = new Set(['ArrowUp', 'PageUp']);
@@ -26,11 +26,13 @@ const params = new URLSearchParams(location.search);
 export const SNAP = !params.has('edit') && params.get('scroll') !== 'free' && !matchMedia('(hover: none) and (pointer: coarse)').matches;
 
 // Wheel and trackpad gestures. This is heard from the moment the page loads (index.html loads this file before the
-// intro), so a scroll that skipped through the intro is known as one and its trackpad glide is spent, not stepped on.
+// intro), so a scroll that skipped through the intro is known as one and its trackpad glide is spent, not scrolled on.
 // A gesture is a run of scrolling with no pause longer than GAP. Inside one, a sudden pick-up in speed after it had
 // been slowing down is a fresh push: a trackpad's glide only ever dies away.
 const GAP = 200;
 let g = null, wheelAt = -1e9, hist = [], onGesture = null;
+// Wheel events the smooth scroller is not to act on.
+const blocked = new WeakSet();
 // How fast the scroll went over the w milliseconds up to t, in pixels per millisecond. Each event is spread over the
 // time since the one before, so events a busy page has run together don't read as a burst of speed.
 const rate = (t, w) => { let n = 0; for (const [at, d, dt] of hist) n += (d * Math.max(0, Math.min(at, t) - Math.max(at - dt, t - w))) / dt; return n / w; };
@@ -38,9 +40,9 @@ if (SNAP) addEventListener('wheel', (e) => {
   if (e.ctrlKey) return; // pinch zoom
   const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1, dy = e.deltaY * k, dx = e.deltaX * k;
   const on = !!onGesture && document.body.classList.contains('is-portfolio');
-  // The page itself never scrolls by the wheel; sideways scrolling goes on to the galleries and streams (work.js).
-  if (on) e.preventDefault();
-  if (!dy || Math.abs(dx) > Math.abs(dy)) return;
+  const block = () => { if (on) { e.preventDefault(); blocked.add(e); } };
+  // Sideways scrolling goes on to the galleries and streams (work.js), never up or down the page.
+  if (!dy || Math.abs(dx) > Math.abs(dy)) { block(); return; }
   const now = e.timeStamp || performance.now(), gap = now - wheelAt, d = Math.abs(dy), dir = Math.sign(dy);
   wheelAt = now;
   let fresh = !g || gap > GAP || dir !== g.dir;
@@ -49,11 +51,11 @@ if (SNAP) addEventListener('wheel', (e) => {
   while (hist[0][0] < now - 400) hist.shift();
   const r = rate(now, 50);
   if (!fresh && g.n > 4 && now - g.t0 > 120 && g.low < g.peak * 0.7 && r > g.low * 2 + 0.35 && r > 0.6) fresh = true;
-  if (fresh) g = { dir, t0: now, n: 0, sum: 0, peak: 0, low: Infinity, done: !on };
+  if (fresh) g = { dir, t0: now, n: 0, sum: 0, peak: 0, low: Infinity, spent: !on, at: now };
   g.n++; g.sum += d;
   if (r > g.peak) { g.peak = g.low = r; } else g.low = Math.min(g.low, r);
-  if (!on) { g.done = true; return; }
-  onGesture(g, r, now);
+  if (!on) { g.spent = true; return; }
+  if (onGesture(g, r, now, dy)) block();
 }, { passive: false, capture: true });
 
 export function mountKeynav({ work, root }) {
@@ -61,18 +63,28 @@ export function mountKeynav({ work, root }) {
   const lenis = work.lenis;
   const top = (el) => el.getBoundingClientRect().top + window.scrollY;
   const shown = (el) => el && !el.hidden && !el.closest('[hidden]') && el.offsetParent !== null;
-  // Stretches where any place is a whole screen to rest on: the streams, which also scroll sideways.
-  let free = [];
+  // The overview and the projects, each as the scroll positions where it fills the screen, from its top at the top of
+  // the window to its end at the bottom.
+  const sections = () => {
+    const H = innerHeight, out = [], grid = root?.querySelector('.ov-projects');
+    if (shown(root) && shown(grid)) out.push({ top: 0, end: Math.max(0, root.offsetHeight - H) });
+    document.querySelectorAll('#work .project').forEach((s) => {
+      if (!shown(s)) return;
+      const y = top(s);
+      out.push({ top: y, end: y + Math.max(0, s.offsetHeight - H) });
+    });
+    return out;
+  };
 
   const stops = () => {
-    const H = innerHeight, out = [0], loose = [];
+    const H = innerHeight, out = [0];
     // The overview: its first screen, and its project cards filling the second. A first screen taller than the
     // window rests at its foot too.
     const grid = root?.querySelector('.ov-projects');
     if (shown(grid)) { const y = top(grid); if (y > H * 1.15) out.push(y - H); out.push(y); }
     document.querySelectorAll('#work .project').forEach((s) => {
       if (!shown(s)) return;
-      out.push(top(s));
+      out.push(top(s), top(s) + Math.max(0, s.offsetHeight - H));
       // An animated project: its key moments, as positions through its runway.
       const it = work.items?.find((x) => x.el === s), run = s.querySelector('.runway');
       if (run) {
@@ -96,14 +108,12 @@ export function mountKeynav({ work, root }) {
       s.querySelectorAll('.stream').forEach((st) => {
         const y0 = top(st), len = st.offsetHeight - H, n = Math.max(1, Math.ceil(len / (H * 1.25)));
         for (let i = 0; i <= n; i++) out.push(y0 + (i / n) * len);
-        loose.push([y0, y0 + len]);
       });
       // The end links, at the bottom of the screen.
       s.querySelectorAll('.after').forEach((a) => out.push(top(a) + a.offsetHeight - H));
     });
     const max = document.documentElement.scrollHeight - H;
     out.push(max);
-    free = loose;
     // Stops closer together than about half a screen count as one.
     const sorted = out.map((y) => Math.round(Math.max(0, Math.min(max, y)))).sort((a, b) => a - b), kept = [];
     sorted.forEach((y) => { if (!kept.length || y - kept[kept.length - 1] > H * 0.45) kept.push(y); });
@@ -161,41 +171,73 @@ export function mountKeynav({ work, root }) {
     go(dir, e.repeat);
   });
 
-  if (!SNAP) return;
-  // The wheel no longer moves the page through the smooth scroller; the steps below do.
-  if (lenis) lenis.options.virtualScroll = (v) => !v.event?.type?.includes('wheel');
+  if (!SNAP || !lenis) return;
+  // The smooth scroller leaves alone the wheel events spent below.
+  lenis.options.virtualScroll = (v) => !blocked.has(v.event);
   // A gesture under way when the overview appeared was spent on the intro.
-  if (g && performance.now() - wheelAt < GAP) g.done = true;
-  onGesture = (gs, r, now) => {
-    if (!gs.done) {
-      // A light brush of a pixel or two isn't a push yet.
-      if (gs.sum < 3) return;
-      gs.done = true; gs.at = now;
-      if (held(now)) return;
-      go(gs.dir);
-      return;
+  if (g && performance.now() - wheelAt < GAP) g.spent = true;
+  // A glide from one section into the next, under way.
+  let snapTo = null;
+  const snapping = () => snapTo != null && running() && Math.abs(lenis.animate.to - snapTo) < 1;
+  const snap = (to) => {
+    const from = lenis.animatedScroll, d = to - from, H = innerHeight;
+    if (Math.abs(d) < 1) return;
+    // From 0.6 s for a screen or less to 1 s for three, setting off at the speed the page already has.
+    const t = Math.min(1, Math.max(0.6, 0.5 + (Math.abs(d) / H) * 0.15)), v = performance.now() - pt < 120 ? vy : 0;
+    const m = Math.min(2.4, Math.max(0, (v * t) / d));
+    snapTo = to;
+    glideTo(to, t, m > 0.6 ? carry(m) : glide);
+  };
+  // Where a scroll from y to `to` going dir crosses into another section: that section's top going down, its end going
+  // up. From between two sections, the one the scroll is going towards.
+  const crossing = (y, to, dir) => {
+    const all = sections(), tol = 2;
+    const i = all.findIndex((s) => y >= s.top - tol && y <= s.end + tol);
+    if (i >= 0) {
+      if (dir > 0) return to > all[i].end + 0.5 && all[i + 1] ? all[i + 1].top : null;
+      return to < all[i].top - 0.5 && i > 0 ? all[i - 1].end : null;
     }
-    // Scrolling on at a steady pace, rather than a glide dying away, steps on once the page has arrived.
-    if (!running() && now - restAt > 80 && now - gs.at > 450 && r > 0.12 && r >= gs.peak * 0.45) {
-      gs.at = now; gs.peak = gs.low = r;
-      go(gs.dir);
+    const j = all.findIndex((s, k) => all[k + 1] && y > s.end && y < all[k + 1].top);
+    if (j < 0) return null;
+    return dir > 0 ? all[j + 1].top : all[j].end;
+  };
+  // Each wheel event: true to keep it from moving the page.
+  onGesture = (gs, r, now, dy) => {
+    if (held(now) || snapping()) { gs.spent = true; return true; }
+    if (gs.spent) {
+      // Scrolling on at a steady pace, rather than a glide dying away, scrolls on once the page has arrived.
+      if (running() || now - restAt < 80 || now - gs.at < 450 || r <= 0.12 || r < gs.peak * 0.45) return true;
+      gs.spent = false; gs.peak = gs.low = r;
     }
+    const y = lenis.targetScroll, to = crossing(y, y + dy * lenis.options.wheelMultiplier, gs.dir);
+    if (to == null) return false;
+    gs.spent = true; gs.at = now;
+    snap(to);
+    return true;
   };
 
-  // Never at rest between two stops: once the page has been still for a moment, with nothing held down, it settles on
-  // the nearest one (after the scroll bar, a text selection that scrolled, the browser's find, or a resize).
-  let down = false, touchAt = -1e9, timer = 0;
+  // Never at rest with two sections on screen: once the page has been still for a moment, with nothing held down, it
+  // settles onto the nearer one, leaning the way it was going (after the scroll bar, a text selection that scrolled,
+  // the browser's find, or a resize).
+  let down = false, touchAt = -1e9, timer = 0, lastY = window.scrollY, lastDir = 0;
   const later = (ms = 260) => { clearTimeout(timer); timer = setTimeout(settle, ms); };
   const settle = () => {
     const now = performance.now();
     if (down || now - touchAt < 1500 || !document.body.classList.contains('is-portfolio') || document.getElementById('veil')?.classList.contains('on')) return;
-    if (running() || now - wheelAt < 240 || lenis?.isScrolling) { later(); return; }
-    const y = window.scrollY, all = stops(), tol = Math.max(3, innerHeight * 0.01);
-    const near = all.reduce((a, b) => (Math.abs(b - y) < Math.abs(a - y) ? b : a), all[0]);
-    if (Math.abs(near - y) <= tol || free.some(([a, b]) => y >= a - 1 && y <= b + 1)) return;
-    glideTo(near, Math.min(0.8, Math.max(0.45, 0.4 + (Math.abs(near - y) / innerHeight) * 0.4)));
+    if (running() || now - wheelAt < 240 || lenis.isScrolling) { later(); return; }
+    const y = window.scrollY, all = sections(), tol = 3;
+    const j = all.findIndex((s, k) => all[k + 1] && y > s.end + tol && y < all[k + 1].top - tol);
+    if (j < 0) return;
+    const a = all[j].end, b = all[j + 1].top, lean = innerHeight * 0.25;
+    const to = b - y - (lastDir > 0 ? lean : 0) < y - a - (lastDir < 0 ? lean : 0) ? b : a;
+    glideTo(to, Math.min(0.8, Math.max(0.45, 0.4 + (Math.abs(to - y) / innerHeight) * 0.4)));
   };
-  addEventListener('scroll', () => later(), { passive: true });
+  addEventListener('scroll', () => {
+    const y = window.scrollY;
+    if (y !== lastY) lastDir = Math.sign(y - lastY);
+    lastY = y;
+    later();
+  }, { passive: true });
   addEventListener('resize', () => later(400));
   addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') touchAt = performance.now(); else if (e.button === 0) down = true; }, { passive: true, capture: true });
   const up = () => { if (down) { down = false; later(); } };
@@ -204,8 +246,8 @@ export function mountKeynav({ work, root }) {
   addEventListener('pointermove', (e) => { if (down && !e.buttons) up(); }, { passive: true });
   addEventListener('touchstart', () => { touchAt = performance.now(); }, { passive: true });
   addEventListener('touchmove', () => { touchAt = performance.now(); }, { passive: true });
-  // Arriving at a stop is marked, for the steady scroll above.
+  // Arriving after a glide is marked, for the steady scroll above.
   const watch = () => { const r = running(); if (wasRunning && !r) restAt = performance.now(); wasRunning = r; requestAnimationFrame(watch); };
   requestAnimationFrame(watch);
-  window.__snap = { stops, go, free: () => free };
+  window.__snap = { stops, sections, go };
 }
