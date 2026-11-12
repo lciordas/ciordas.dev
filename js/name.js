@@ -302,8 +302,13 @@ export function mountName(scene, data, palU, baked) {
         float ring=exp(-pow((d-R)/(.25+uT*.5),2.))*smoothstep(0.,.4,d);
         vec3 col=mix(vec3(1.),spec(d*.32-uT*.9+atan(q.y,q.x)*.16),.8);
         vec3 c=col*(m*m*.55+ring*.35);
+        // Beams of light shooting out from the break, each its own colour, reaching out with the ring.
+        float a=atan(q.y,q.x);
+        float beams=pow(.5+.5*sin(a*11.+1.7),22.)+.8*pow(.5+.5*sin(a*17.-.6),30.)+.6*pow(.5+.5*sin(a*29.+3.1),40.)+.5*pow(.5+.5*sin(a*5.+.4),16.);
+        float reach=smoothstep(R+.6,R*.2,d)*smoothstep(.05,.5,d)*exp(-d*.28);
+        c+=mix(vec3(1.),spec(a*.32+d*.12-uT*.6),.75)*beams*reach*.9;
         c+=vec3(.95,.97,1.)*m*m*.2*exp(-uT*8.);
-        gl_FragColor=vec4(c*env*.34,1.);
+        gl_FragColor=vec4(c*env*.46,1.);
       }`,
   }));
   flash.position.z = -1.2; flash.renderOrder = -1; flash.visible = false; root.add(flash);
