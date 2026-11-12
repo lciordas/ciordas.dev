@@ -249,9 +249,12 @@ export function mountSite({ root, work, content }) {
     // The nearest card in the arrow's direction.
     const box = (n) => { const r = n.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
     const a = box(cur), [dx, dy] = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
+    // Up and down stay inside a card's own category (hardware, software), so down from a category's bottom row
+    // leaves the overview instead of stepping sideways into the other one; up from its top row may reach the rows above.
+    const col = cur.closest('.ov-col'), inReach = (n) => !vertical || !col || n.closest('.ov-col') === col || (dy < 0 && !n.closest('.ov-col'));
     let best = null, bestD = Infinity;
     all.forEach((n) => {
-      if (n === cur) return;
+      if (n === cur || !inReach(n)) return;
       const b = box(n), along = (b.x - a.x) * dx + (b.y - a.y) * dy, across = Math.abs((b.x - a.x) * dy) + Math.abs((b.y - a.y) * dx);
       if (along < 4) return;
       const d = along + across * 2.2;
