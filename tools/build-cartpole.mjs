@@ -8,6 +8,7 @@ import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PALETTES, DEFAULT_PALETTE } from '../js/palette.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp'), opentype = require('opentype.js');
@@ -37,7 +38,8 @@ function text(f, s, size, x, y, fill, anchor = 'start', opacity = 1) {
 }
 
 const W = 1600, H = 900, FPS = 50, HOLD = 1.5 * FPS;
-const BG = '#0e0c0b', INK = '#f4efe8', MUTED = 'rgba(244,239,232,.62)', FAINT = 'rgba(244,239,232,.16)', ACCENT = '#ffb98a';
+const BG = '#0e0c0b', INK = '#f4efe8', MUTED = 'rgba(244,239,232,.62)', FAINT = 'rgba(244,239,232,.16)', ACCENT = PALETTES[process.env.PALETTE || DEFAULT_PALETTE].accent; // the site palette's highlight
+const tint = (a) => `rgba(${[1, 3, 5].map((i) => parseInt(ACCENT.slice(i, i + 2), 16)).join(',')},${a})`;
 const POS = '#7aaef0', NEG = '#ee7f62'; // the network slide's blue and red, lifted for a dark ground
 
 // The track and the cart in Gymnasium's own units: the cart may go 2.4 m either side of centre, the pole is 1 m long
@@ -65,7 +67,7 @@ function network(net, top) {
   }
   for (const d of ins) { const [x, y] = pos[d.id], u = used.has(String(d.id)); s += `<circle cx="${x}" cy="${y}" r="${r}" fill="rgba(244,239,232,${u ? 0.16 : 0.05})" stroke="rgba(244,239,232,${u ? 0.5 : 0.18})" stroke-width="1.5"/>`; }
   for (const d of hid) { const [x, y] = pos[d.id]; s += `<circle cx="${x}" cy="${y}" r="${r}" fill="rgba(244,239,232,.12)" stroke="rgba(244,239,232,.5)" stroke-width="1.5"/>`; }
-  for (const d of outs) { const [x, y] = pos[d.id]; s += `<circle cx="${x}" cy="${y}" r="${r}" fill="rgba(255,185,138,.2)" stroke="rgba(255,185,138,.75)" stroke-width="1.5"/>`; }
+  for (const d of outs) { const [x, y] = pos[d.id]; s += `<circle cx="${x}" cy="${y}" r="${r}" fill="${tint(.2)}" stroke="${tint(.75)}" stroke-width="1.5"/>`; }
   const label = `${on.length} connection${on.length === 1 ? '' : 's'}${hid.length ? `, ${hid.length} hidden node${hid.length === 1 ? '' : 's'}` : ''}`;
   return s + text(REG, label, 19, (ix + ox) / 2, top + LH * 0.42 + gap * 1.5 + 34, MUTED, 'middle');
 }

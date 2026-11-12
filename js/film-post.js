@@ -3,6 +3,7 @@
 // Call setSmear() with a cursor-smear texture to bend the image behind the pointer.
 import * as THREE from 'three';
 import { DISSOLVE_GLSL } from './block-dissolve.js';
+import { PALETTE } from './palette.js';
 
 const FS = (fs, uniforms) => new THREE.ShaderMaterial({ vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.);} `, fragmentShader: fs, uniforms, depthTest: false, depthWrite: false });
 
@@ -21,8 +22,8 @@ export function mountFilmPost(renderer, options = {}) {
   const u = {
     tMain: { value: main.texture }, tBloom: { value: blurB.texture }, tStage: { value: stage.texture },
     uBloom: { value: bloom }, uGrain: { value: grain }, uVig: { value: vignette }, uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uDpr: { value: 1 },
-    tSmear: { value: null }, tKeep: { value: null }, uSmear: { value: 0 }, uSmearTint: { value: new THREE.Color('#8a5a36') },
-    uDissolve: { value: 1 }, uCell: { value: 48 }, uMark: { value: new THREE.Color('#ffd9b0') }, uBlack: { value: 0 },
+    tSmear: { value: null }, tKeep: { value: null }, uSmear: { value: 0 }, uSmearTint: { value: new THREE.Color(PALETTE.smear) },
+    uDissolve: { value: 1 }, uCell: { value: 48 }, uMark: { value: new THREE.Color(PALETTE.mark) }, uBlack: { value: 0 },
   };
   const final = FS(`precision highp float; varying vec2 vUv; uniform vec3 uSmearTint; uniform sampler2D tMain,tBloom,tStage,tSmear,tKeep; uniform float uSmear,uBloom,uGrain,uVig,uTime,uDissolve,uCell,uDpr,uBlack; uniform vec2 uRes; uniform vec3 uMark;
     ${DISSOLVE_GLSL}

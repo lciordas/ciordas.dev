@@ -9,6 +9,7 @@ import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PALETTES, DEFAULT_PALETTE } from '../js/palette.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp'), opentype = require('opentype.js');
@@ -53,7 +54,9 @@ function wrap(f, s, size, max, ls = 0) {
   for (const w of s.split(' ')) { const t = cur ? `${cur} ${w}` : w; if (cur && width(f, t, size, ls) > max) { lines.push(cur); cur = w; } else cur = t; }
   return [...lines, cur];
 }
-const INK = '#f4efe8', MUTED = 'rgba(244,239,232,.68)', ACCENT = '#ffb98a';
+// The highlight is the site palette's (PALETTE=b node tools/build-paper.mjs draws another palette's).
+const INK = '#f4efe8', MUTED = 'rgba(244,239,232,.68)', ACCENT = PALETTES[process.env.PALETTE || DEFAULT_PALETTE].accent;
+const tint = (a) => `rgba(${[1, 3, 5].map((i) => parseInt(ACCENT.slice(i, i + 2), 16)).join(',')},${a})`;
 const TITLE = 'Plan Shallow While You Learn', SUB = 'Reallocating Planning Compute During World-Model Adaptation';
 const AUTHORS = [['Nicholas Ciordas', INK], ['  ·  ', MUTED], ['Jan Safrata', INK], ['  ·  ', MUTED], ['Lucas Ciordas', ACCENT], ['  ·  ', MUTED], ['David Safrata', INK]];
 const logoPng = (h) => sharp(fs.readFileSync(logo), { density: Math.round((h / 36) * 72) }).png().toBuffer();
@@ -137,7 +140,7 @@ async function programme() {
   for (const [t, by, mine] of papers) {
     const ts = wrap(SEMI, t, 34, W - X * 2 - 60);
     const h = ts.length * 44 + 48;
-    if (mine) body.push(`<rect x="${X - 30}" y="${y - 50}" width="${W - X * 2 + 60}" height="${h + 34}" rx="18" fill="rgba(255,185,138,.1)" stroke="rgba(255,185,138,.55)" stroke-width="1.5"/>`);
+    if (mine) body.push(`<rect x="${X - 30}" y="${y - 50}" width="${W - X * 2 + 60}" height="${h + 34}" rx="18" fill="${tint(.1)}" stroke="${tint(.55)}" stroke-width="1.5"/>`);
     ts.forEach((l, i) => body.push(line(SEMI, [[l, INK]], 34, X, y + i * 44)));
     body.push(line(REG, by, 24, X, y + ts.length * 44 + 4));
     y += h + 66;

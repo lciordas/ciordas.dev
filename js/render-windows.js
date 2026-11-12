@@ -1,6 +1,7 @@
 // render-windows: floating "render pass" panels that all look into the same 3D scene,
 // each drawing it a different way, like peeking at the renderer at work.
 import * as THREE from 'three';
+import { PALETTE } from './palette.js';
 
 // The label is the only part of the frame kept as an image, so resizing never stretches anything.
 function labelTexture(label) {
@@ -15,7 +16,7 @@ function labelTexture(label) {
 
 // Window frame drawn in pixels: title bar, three dots, label, and a thin rounded border.
 const CHROME_FS = /* glsl */`
-precision highp float; varying vec2 vUv; uniform vec2 uSize; uniform sampler2D tLabel;
+precision highp float; varying vec2 vUv; uniform vec2 uSize; uniform sampler2D tLabel; uniform vec3 uLine;
 void main(){
   vec2 px=vec2(vUv.x*uSize.x,(1.-vUv.y)*uSize.y);
   const float R=6.;
@@ -33,7 +34,7 @@ void main(){
     c=mix(c,l.rgb/max(l.a,.001),l.a*bar);
   }
   float line=smoothstep(1.2,.3,abs(d+.5));
-  c=mix(c,vec3(1.,.878,.769),line*.42);
+  c=mix(c,uLine,line*.42);
   a=max(a,line*.42);
   gl_FragColor=vec4(c,a);
 }`;
@@ -68,7 +69,7 @@ export function mountRenderWindows(renderer, options = {}) {
   const orthoS = new THREE.Scene(), ortho = new THREE.OrthographicCamera(0, 1, 1, 0, 0, 1);
   const quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).translate(0.5, 0.5, 0), new THREE.MeshBasicMaterial({ transparent: true, depthTest: false, toneMapped: false }));
   quad.frustumCulled = false; orthoS.add(quad);
-  const chromeU = { uSize: { value: new THREE.Vector2(1, 1) }, tLabel: { value: null } };
+  const chromeU = { uSize: { value: new THREE.Vector2(1, 1) }, tLabel: { value: null }, uLine: { value: new THREE.Color().setStyle(PALETTE.line, THREE.LinearSRGBColorSpace) } };
   const chrome = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).translate(0.5, 0.5, 0), new THREE.ShaderMaterial({
     uniforms: chromeU, transparent: true, depthTest: false, depthWrite: false,
     vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',

@@ -3,6 +3,10 @@
 import * as THREE from 'three';
 import { GLSL_NOISE, rng, smooth } from './_util.js';
 import { SPAN, VOL_DEPTH } from './bake.js';
+import { PALETTE } from './palette.js';
+
+// Turns the stone's warm pigments and glows to the palette's colour (see palette.js).
+const hue = () => ({ value: new THREE.Matrix3().set(...PALETTE.hue) });
 
 export const DEPTH = 0.13;
 const LAYERS = matchMedia('(pointer: coarse)').matches ? 6 : 12;
@@ -28,17 +32,19 @@ uniform vec2 uHot, uRes;
 uniform sampler2D tField, tMask;
 uniform highp sampler3D tVol;
 uniform vec3 p_pale, p_stone, p_deep, p_shard, p_low;
+uniform mat3 uHue;
 ${GLSL_NOISE}
 const float SPAN=${SPAN.toFixed(1)};
 const float FLOWRATE=.32;
 const float VD=${VOL_DEPTH.toFixed(2)};
 
 // How strongly the rock and each pigment absorb red, green, and blue per unit of depth.
-// Red gets through almost everything, so more rock means a deeper, more saturated colour.
-const vec3 ROCK=vec3(.06,.22,.28);
-const vec3 MAROON=vec3(1.,2.8,3.85);
-const vec3 SAND=vec3(.7,1.,2.1);
-const vec3 ORANGE=vec3(1.,3.5,4.4);
+// Red gets through almost everything, so more rock means a deeper, more saturated colour. uHue then turns
+// red into the palette's colour.
+#define ROCK (uHue*vec3(.06,.22,.28))
+#define MAROON (uHue*vec3(1.,2.8,3.85))
+#define SAND (uHue*vec3(.7,1.,2.1))
+#define ORANGE (uHue*vec3(1.,3.5,4.4))
 // Keeps the march from showing its layers as steps.
 float dither(vec2 p){ return fract(52.9829189*fract(dot(p,vec2(.06711056,.00583715)))); }
 // Slight rounding from the blurred letter shape. It only bends the view into the rock.
@@ -81,7 +87,7 @@ vec3 volume(vec3 p, vec3 d, float len, float clear, float dens){
     // Pigment keeps showing past the wall, only fainter, so the bands still run through thin parts.
     vec3 sig=(ROCK*inside+(v.r*MAROON*1.9+v.g*SAND*.72+v.b*ORANGE*.85)*mix(.45,1.,inside)*tear)*(1.-clear)*dens;
     vec3 here=exp(-tau);
-    glow+=here*dt*inside*(v.r*vec3(.1,.012,.004)+v.g*vec3(.1,.055,.02)+v.b*vec3(.14,.04,.016)+v.a*vec3(1.,.82,.74)*.42);
+    glow+=here*dt*inside*(uHue*(v.r*vec3(.1,.012,.004)+v.g*vec3(.1,.055,.02)+v.b*vec3(.14,.04,.016)+v.a*vec3(1.,.82,.74)*.42));
     sandSum+=v.g*dt*inside;
     // Filaments hang at a few depths: crisp near the face, hazy further in.
     if(i==1||i==3||i==6){
@@ -94,7 +100,7 @@ vec3 volume(vec3 p, vec3 d, float len, float clear, float dens){
   // Mineral flecks suspended at two depths, so they drift against each other rather than sit on top.
   vec2 fa=(p.xy+d.xy*VD*.12)/SPAN+.5, fb=(p.xy+d.xy*VD*.4)/SPAN+.5;
   float fleck=step(.97,hash21(floor(fa*1500.)))+.6*step(.975,hash21(floor(fb*1100.)+7.));
-  c+=vec3(.8,.55,.34)*fleck*smoothstep(.04,.26,sandSum)*.07;
+  c+=uHue*vec3(.8,.55,.34)*fleck*smoothstep(.04,.26,sandSum)*.07;
   return c;
 }
 vec3 beauty(vec2 uv, vec3 d, vec3 N, float edge, float thick, float clear){
@@ -104,14 +110,14 @@ vec3 beauty(vec2 uv, vec3 d, vec3 N, float edge, float thick, float clear){
   vec3 start=vec3(vP.xy,VD*.5);
   vec3 c=volume(start,dir,len,clear,mix(.55,1.,thick));
   // Most of the light has been knocked about on its way through, so a share of it comes out as a
-  // soft blur of the same clouds. That gives the dark bands a red bloom instead of a hard edge.
+  // soft blur of the same clouds. That gives the dark bands a coloured bloom instead of a hard edge.
   vec2 mid=toUv(vP.xy+dir.xy*VD*.5+current(vP.xy,.5));
   vec4 s=textureLod(tVol,vec3(mid,.5),3.);
   vec3 soft=p_pale*lamp(vP.xy+dir.xy*(len+2.2))*exp(-(ROCK*.6+s.r*MAROON*1.8+s.g*SAND*.65+s.b*ORANGE*.85)*mix(.55,1.,thick)*(1.-clear));
   c=mix(c,soft,.28);
   // The thinnest rock at the outline glows, with no hard rim.
   c=mix(c,p_pale*1.04,.4*pow(1.-edge,2.));
-  // Ease the brightest light down as a whole, so it stays peach and reads as light through stone rather than glare.
+  // Ease the brightest light down as a whole, so it keeps its colour and reads as light through stone rather than glare.
   float m=max(c.r,max(c.g,c.b));
   return m>.88?c*(.88+.12*(1.-exp((.88-m)/.12)))/m:c;
 }
@@ -183,10 +189,10 @@ void main(){
 
 const CRACK_VERT = `attribute vec2 aP; varying vec2 vP; void main(){ vP=aP; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`;
 // Dark fissures with a white-hot front racing outward. uFlare lights every crack just before the burst.
-const CRACK_FRAG = `precision highp float; varying vec2 vP; uniform vec2 uO; uniform float uR, uAmt, uFlare;
+const CRACK_FRAG = `precision highp float; varying vec2 vP; uniform vec2 uO; uniform float uR, uAmt, uFlare; uniform mat3 uHue;
   void main(){ float d=distance(vP,uO); float a=smoothstep(uR,uR-.1,d)*uAmt; if(a<.004) discard;
     float hot=smoothstep(uR-.55,uR-.04,d);
-    float f=max(hot,uFlare); vec3 c=mix(vec3(.07,.012,.006),vec3(1.5,.42,.1),smoothstep(0.,.45,f)); c=mix(c,vec3(2.4,2.,1.5),smoothstep(.45,1.,f));
+    float f=max(hot,uFlare); vec3 c=mix(vec3(.07,.012,.006),vec3(1.5,.42,.1),smoothstep(0.,.45,f)); c=uHue*mix(c,vec3(2.4,2.,1.5),smoothstep(.45,1.,f));
     gl_FragColor=vec4(c,a); }`;
 
 function shapesFrom(multi) {
@@ -222,13 +228,13 @@ export function mountName(scene, data, palU, baked) {
   const R = rng(31);
   const root = new THREE.Group(); scene.add(root);
   const uniforms = {
-    ...palU,
+    ...palU, uHue: hue(),
     uMode: { value: 0 }, uTime: { value: 0 }, uMatte: { value: 0 }, uFade: { value: 1 },
     uHot: { value: new THREE.Vector2() }, uHotAmt: { value: 0 }, uHotSize: { value: 0.42 }, uSweep: { value: -2 },
     tField: { value: baked.field }, tMask: { value: baked.mask }, tVol: { value: baked.vol }, uRes: { value: new THREE.Vector2(1, 1) },
   };
   const material = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms });
-  const crackU = { uO: { value: new THREE.Vector2() }, uR: { value: 0 }, uAmt: { value: 0 }, uFlare: { value: 0 } };
+  const crackU = { uO: { value: new THREE.Vector2() }, uR: { value: 0 }, uAmt: { value: 0 }, uFlare: { value: 0 }, uHue: hue() };
   const crackMat = new THREE.ShaderMaterial({ vertexShader: CRACK_VERT, fragmentShader: CRACK_FRAG, uniforms: crackU, transparent: true, depthWrite: false, depthTest: false, side: THREE.DoubleSide });
   const wireMat = new THREE.LineBasicMaterial({ color: 0xf6ece0, transparent: true, opacity: 0.85 });
 

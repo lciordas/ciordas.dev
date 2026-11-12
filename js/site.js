@@ -1,5 +1,6 @@
 // site: the overview page shown behind the name, and moving between it and the project pages.
 import { REDUCED } from './_util.js';
+import { PALETTE, PALETTE_KEY, DEFAULT_PALETTE } from './palette.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 // Words wrapped in **double asterisks** in the content file are set in bold.
@@ -7,9 +8,10 @@ const rich = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 const safeUrl = (u) => (/^(https?:|mailto:)/i.test(u || '') ? u : '#');
 
 // Style values from the content file become CSS variables, so the editor can change them live.
+// A ?palette= preview shows that palette's highlight colour instead of the content file's.
 function applyStyle(root, style = {}) {
   const set = (k, v) => root.style.setProperty(k, v);
-  set('--ov-accent', style.accent || '#ffb98a');
+  set('--ov-accent', (PALETTE_KEY === DEFAULT_PALETTE && style.accent) || PALETTE.accent);
   set('--ov-title', `${style.titleSize ?? 34}px`);
   set('--ov-row', `${style.rowSize ?? 20}px`);
   set('--ov-row-gap', `${style.rowGap ?? 14}px`);

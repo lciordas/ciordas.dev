@@ -1,9 +1,11 @@
 // trace: the name's outlines drawn by hand, climbing both sides of every letter at once
 // from its base, with a hot tip on each strand and a soft glow behind the line.
+import { PALETTE } from './palette.js';
 const lengths = (pts) => { const out = [0]; for (let i = 1; i < pts.length; i++) out.push(out[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return out; };
 
 export function mountTrace(parent, letters, options = {}) {
-  const { stroke = 'rgba(255,222,194,.8)', tip = 'rgba(255,246,234,1)', glow = 'rgba(255,164,104,.62)', tipGlow = 'rgba(255,190,130,1)', lineWidth = 1.1 } = options;
+  const { stroke, tip, glow, tipGlow } = PALETTE.trace;
+  const { lineWidth = 1.1 } = options;
   const make = (cls) => { const c = document.createElement('canvas'); c.className = cls; c.setAttribute('aria-hidden', 'true'); parent.appendChild(c); return c; };
   const glowC = make('trace trace--glow'), lineC = make('trace');
   const gx = glowC.getContext('2d'), lx = lineC.getContext('2d');

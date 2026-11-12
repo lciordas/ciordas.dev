@@ -5,13 +5,15 @@
 import { createRequire } from 'node:module';
 import fs from 'node:fs'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PALETTES, DEFAULT_PALETTE } from '../js/palette.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp'), opentype = require('opentype.js');
 const ROOT = path.join(here, '..'), FONTS = path.join(here, '../toolkit/node_modules/@fontsource');
 const font = (pkg, file) => { const b = fs.readFileSync(path.join(FONTS, pkg, 'files', file)); return opentype.parse(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength)); };
 const BLACK = font('barlow-condensed', 'barlow-condensed-latin-900-normal.woff');
-const INK = '#f4efe8', ACCENT = '#ffb98a', BG = '#050404';
+// The letters take the site palette's highlight colour.
+const INK = '#f4efe8', ACCENT = PALETTES[process.env.PALETTE || DEFAULT_PALETTE].accent, BG = '#050404';
 
 // The library's own path writer rounds some numbers to NaN, so the path is written out here.
 const n = (v) => (Math.round(v * 100) / 100).toString();
@@ -47,7 +49,7 @@ function icon({ ink = INK, cap = 300, crack = 'gap', shape = 'jag', tile = 'roun
   const bg = tile === 'round'
     ? `<rect width="512" height="512" rx="112" fill="url(#bg)"/><rect x="6" y="6" width="500" height="500" rx="106" fill="none" stroke="${INK}" stroke-opacity=".09" stroke-width="12"/>`
     : '<rect width="512" height="512" fill="url(#bg)"/>';
-  const defs = `<defs><radialGradient id="bg" cx=".5" cy=".28" r=".85"><stop offset="0" stop-color="#1c1714"/><stop offset=".6" stop-color="#0e0c0b"/><stop offset="1" stop-color="#080706"/></radialGradient>`
+  const defs = `<defs><radialGradient id="bg" cx=".5" cy=".28" r=".85"><stop offset="0" stop-color="#151b18"/><stop offset=".6" stop-color="#0b0e0d"/><stop offset="1" stop-color="#060807"/></radialGradient>`
     + `<clipPath id="up"><path d="${upper}"/></clipPath>`
     + `<filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter></defs>`;
   let body;

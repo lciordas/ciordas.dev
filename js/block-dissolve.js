@@ -1,6 +1,7 @@
 // block-dissolve: a grid wipe between two images. Cells open outward from the centre,
 // survivors keep bumpy rounded corners, and small registration marks flash just before a cell opens.
 import * as THREE from 'three';
+import { PALETTE } from './palette.js';
 
 export const DISSOLVE_GLSL = /* glsl */`
 float bdHash(vec2 id){ return fract(sin(dot(id,vec2(41.3,289.1)))*43758.5453); }
@@ -37,7 +38,7 @@ vec2 blockDissolve(vec2 px, vec2 res, float p, float cell){
 }`;
 
 export function mountBlockDissolve(container, options = {}) {
-  const { cell = 48, duration = 1.4, from = '#000000', to = '#b6573a', markColor = '#ffd9b0', loop = true } = options;
+  const { cell = 48, duration = 1.4, from = '#000000', to = PALETTE.stone, markColor = PALETTE.mark, loop = true } = options;
   const canvas = document.createElement('canvas');
   Object.assign(canvas.style, { width: '100%', height: '100%', display: 'block' });
   container.appendChild(canvas);
