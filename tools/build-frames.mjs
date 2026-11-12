@@ -17,10 +17,6 @@ const CLIPS = {
   // Head on: one full sway, then the tilts. The phone was turned on its side partway through, so it needs turning back.
   // Kept at the footage's own 30 fps: at 24 the joined video has to repeat every fifth frame, which judders.
   'dog-front': { src: `${HOME}/Downloads/maker portfolio b-roll/quadrupedgyratingfrontview.MOV`, ss: 23.1, t: 6.4, pre: 'transpose=2', vf: 'transpose=2,fps=30', lock: { margin: 48 } },
-  // Head on, from the start of the same recording, filmed upright: the body dropping level from high to low, then
-  // sliding across to one side. The upright picture is cut down to a band around the dog first. `ref` boxes [x, y, w, h],
-  // fractions of that band, follow still things beside the dog, as the edges of this picture are mostly bare wall.
-  'dog-sway': { src: `${HOME}/Downloads/maker portfolio b-roll/quadrupedgyratingfrontview.MOV`, ss: 4.6, t: 3, pre: 'crop=1080:860:0:500', vf: 'crop=1080:860:0:500,fps=30', lock: { box: [540, 365, 1040, 585], ref: [[0.01, 0.36, 0.13, 0.22], [0.87, 0.36, 0.12, 0.25]] } },
 };
 const WIDTH = 1280, QUALITY = 90;
 

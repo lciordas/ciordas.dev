@@ -33,7 +33,7 @@ const ANIMATED = {
     copyAt: [[0, 0.385], [0.385, 0.48], [0.48, 0.574], [0.574, 1]],
     slides: [[0.6622, 0.6932], [0.8149, 0.8459]],
   },
-  // Lined up with the first frame of the video. Its five shots run 0 to 2.7 s, 2.7 to 5 s, 5 to 7.5 s, 7.5 to 9.9 s, and 9.9 to 12.5 s.
+  // Lined up with the first frame of the video. Its four shots run 0 to 1.7 s, 1.7 to 3.5 s, 3.5 to 5.3 s (the walk), and 5.3 to 7.2 s.
   'robot-dog': {
     model: 'dog', up: [0, 0, 1.5325], fov: 34.28, length: 440, clip: 'media/video/dog.mp4',
     views: [
@@ -43,7 +43,7 @@ const ANIMATED = {
     ],
     // Little scroll after the clip starts, so the photo stream follows soon after.
     assemble: [0.038, 0.636], title: [0.089, 0.229], wipe: [0.764, 0.84], clipAt: 0.84,
-    copyAt: [[0.255, 0.535], [0.56, 0.84], { t: [0, 12.5] }],
+    copyAt: [[0.255, 0.535], [0.56, 0.84], { t: [0, 7.2] }],
   },
   // No model: a photo of the finished ship stands in the window from the start and drifts in a little, then the same
   // light line wipes it over to the build video, which opens on the finished ship framed much like the photo.

@@ -30,11 +30,10 @@ const CLIPS = {
   // cuts straight back into the first when the video loops. Each cut starts a keyframe.
   dog() {
     const shots = [
-      [`${FRAMES}/dog/%04d.webp`, 0, 81], // side on: pitching nose down, then nose up; its first frame is the one the model lines up with
-      [`${FRAMES}/dog-quarter/%04d.webp`, 1, 70], // front three-quarter: rising and rolling away, then dropping low (its first frame is a repeat, so skipped)
-      [`${FRAMES}/dog-front/%04d.webp`, 75, 150], // head on: rolling one way, a yaw, then rolling hard the other way
-      [path.join(FRAMES, 'dog-walk.mp4'), 128, 200], // walking on the mat, mid-stride
-      [`${FRAMES}/dog-sway/%04d.webp`, 4, 82], // head on: the body dropping level from high to low, then sliding across to one side
+      [`${FRAMES}/dog/%04d.webp`, 0, 51], // 0 to 1.7 s, side on: pitching nose down, then settling level; its first frame is the one the model lines up with
+      [`${FRAMES}/dog-quarter/%04d.webp`, 5, 59], // 1.7 to 3.5 s, front three-quarter: rising and rolling away, then dropping low
+      [path.join(FRAMES, 'dog-walk.mp4'), 136, 190], // 3.5 to 5.3 s, walking on the mat, mid-stride
+      [`${FRAMES}/dog-front/%04d.webp`, 96, 153], // 5.3 to 7.2 s, head on: one side of the body tilting up, then the other
     ];
     const inputs = shots.flatMap(([file]) => [...(file.endsWith('.webp') ? ['-framerate', '30'] : []), '-i', file]);
     const chains = shots.map(([, a, b], i) => `[${i}:v]trim=start_frame=${a}:end_frame=${b},setpts=N/30/TB,scale=1280:720,setsar=1[s${i}]`);
