@@ -15,22 +15,23 @@ const ANIMATED = {
       { p: 0.62, az: 0.03, el: 0.2473, dist: 2.18, tx: 0.036, ty: 0.0679, tz: -0.0155 },
     ],
     assemble: [0.03, 0.52], title: [0.08, 0.2], wipe: [0.62, 0.68], clipAt: 0.68,
-    copyAt: [[0.28, 0.6], [0.7, 1]],
+    copyAt: [[0.28, 0.6], [0.7, 0.85], [0.85, 1]],
   },
-  // Lined up with the first frame of the clip from matched screw heads on two of the motor mounts. After a short
-  // stretch of video, its two explainer slides (the project's "slides" in content.json) wipe in over it, each at
-  // its own [from, to] in "slides", and the bullets beside the window switch to that slide's.
+  // Lined up with the first frame of the clip from matched screw heads on two of the motor mounts. The first bullet
+  // stays lit while the model builds, and the other three take turns over a long stretch of the looping video. Then
+  // its two explainer slides (the project's "slides" in content.json) wipe in over it, each at its own [from, to] in
+  // "slides", and the bullets beside the window switch to that slide's.
   micromanipulator: {
-    model: 'micromanipulator', length: 580, clip: 'media/video/micromanipulator.mp4',
+    model: 'micromanipulator', length: 740, clip: 'media/video/micromanipulator.mp4',
     up: [0.0223, 0.6193, 1.2759], fov: 28.58,
     views: [
       { p: 0, az: 0.8, el: 0.38, dist: 6.6, tx: -0.11, ty: 0.31, tz: 0 },
-      { p: 0.354, az: -0.35, el: 0.12, dist: 6.2, tx: -0.11, ty: 0.31, tz: 0 },
-      { p: 0.439, az: 0, el: 0, dist: 5.9152, tx: -0.1128, ty: 0.3136, tz: 0 },
+      { p: 0.2775, az: -0.35, el: 0.12, dist: 6.2, tx: -0.11, ty: 0.31, tz: 0 },
+      { p: 0.3441, az: 0, el: 0, dist: 5.9152, tx: -0.1128, ty: 0.3136, tz: 0 },
     ],
-    assemble: [0.021, 0.368], title: [0.057, 0.142], wipe: [0.439, 0.482], clipAt: 0.482,
-    copyAt: [[0.085, 0.255], [0.269, 0.425], [0.439, 0.53], [0.54, 1]],
-    slides: [[0.62, 0.66], [0.8, 0.84]],
+    assemble: [0.0165, 0.2884], title: [0.0447, 0.1113], wipe: [0.3441, 0.3778], clipAt: 0.3778,
+    copyAt: [[0, 0.385], [0.385, 0.48], [0.48, 0.574], [0.574, 1]],
+    slides: [[0.6622, 0.6932], [0.8149, 0.8459]],
   },
   // Lined up with the first frame of the video. Its four shots run 0 to 2.7 s, 2.7 to 5 s, 5 to 7.5 s, and 7.5 to 9.9 s.
   'robot-dog': {
@@ -82,6 +83,10 @@ const fitPanel = (node) => {
   let k = 1; node.style.setProperty('--shrink', '1');
   while (node.scrollHeight > node.clientHeight + 1 && k > 0.72) { k -= 0.04; node.style.setProperty('--shrink', k.toFixed(2)); }
 };
+
+// There's always one bullet lit: each lights when its moment comes and stays lit until the next one's does, the two
+// crossfading, and the first is lit before any moment has come. "started" says how far each moment has come, 0 to 1.
+const holdLit = (started) => started.map((s, i) => (i ? s : 1) * started.slice(i + 1).reduce((k, t) => k * (1 - t), 1));
 
 // The slides that follow the video inside the window, with their own bullets: as many as the config has places for.
 const slidesOf = (cfg, p) => (cfg.slides && p.slides ? p.slides.slice(0, cfg.slides.length) : []);
@@ -320,7 +325,7 @@ export function mountWork(container, options = {}) {
       id, cfg, el, runway: q('.runway'), title: q('.title'), head: q('.head'), screen: q('.screen'), cadC: q('.cad'), video: q('.clip'), scan: q('.scan'), bar: q('.bar i'),
       copies: [...el.querySelectorAll('.points > .point')], cue: q('.pcue'), cad: null, p: 0, loading: false, fit: 1, playing: false,
       panel: q('ul.points'), poster: q('.poster'), shows: [...el.querySelectorAll('.sshow')],
-      // Each slide's bullets light one after another over the slide's stretch of scroll; the last stays lit.
+      // Each slide's bullets light one after another over the slide's stretch of scroll, from its wipe; the last stays lit.
       panels: [...el.querySelectorAll('.points--slide')].map((node, i) => {
         const [a, b] = cfg.slides[i], end = cfg.slides[i + 1]?.[0] ?? 1, pts = [...node.querySelectorAll('.point')], n = pts.length, seg = (end - b) / Math.max(1, n);
         return { node, pts, at: pts.map((_, j) => [j ? b + j * seg : a, j === n - 1 ? 1 : b + (j + 1) * seg]) };
@@ -412,15 +417,16 @@ export function mountWork(container, options = {}) {
     }
     // Footage that plays by itself once the model has given way to it.
     setPlaying(it, p >= cfg.clipAt && !covered);
-    // Bullets: all of them stay on screen, and the one for what's showing now lights up.
-    const vt = p >= cfg.clipAt ? it.video.currentTime : -1;
-    it.copies.forEach((node, i) => {
-      const at = cfg.copyAt[i] || [2, 3], edge = 0.018;
-      const a = at.t
-        ? (vt < 0 ? 0 : smooth(at.t[0], at.t[0] + 0.3, vt + (at.t[0] === 0 ? 0.3 : 0)) * (1 - smooth(at.t[1] - 0.3, at.t[1], vt)))
-        : smooth(at[0], at[0] + edge, p) * (at[1] >= 1 ? 1 : 1 - smooth(at[1] - edge, at[1], p));
-      node.style.setProperty('--on', a.toFixed(3));
-    });
+    // Bullets: all of them stay on screen, and the one for what's showing now lights up, held until the next one's
+    // moment: the start of its stretch of scroll, or of its stretch of video (from the top of the clip as it starts).
+    const vt = p >= cfg.clipAt ? it.video.currentTime : -1, edge = 0.018;
+    const lit = holdLit(it.copies.map((_, i) => {
+      const at = cfg.copyAt[i] || [2, 3];
+      if (!at.t) return smooth(at[0], at[0] + edge, p);
+      if (at.t[0] <= 0) return smooth(cfg.clipAt - edge, cfg.clipAt, p);
+      return vt < 0 ? 0 : smooth(at.t[0], at.t[0] + 0.3, vt);
+    }));
+    it.copies.forEach((node, i) => node.style.setProperty('--on', lit[i].toFixed(3)));
     // With slides, the panel beside the window hands over to each slide's own: the box stays put while the old words
     // fade out over the first half of the wipe and the new ones in over the second.
     if (it.panels.length) {
@@ -430,10 +436,8 @@ export function mountWork(container, options = {}) {
       it.panels.forEach((pn, i) => {
         const next = cfg.slides[i + 1];
         fade(pn.node, smooth(half(i), cfg.slides[i][1], p) * (next ? 1 - smooth(next[0], half(i + 1), p) : 1), p >= half(i) && (!next || p < half(i + 1)));
-        pn.pts.forEach((node, j) => {
-          const at = pn.at[j], edge = 0.012;
-          node.style.setProperty('--on', (smooth(at[0], at[0] + edge, p) * (at[1] >= 1 ? 1 : 1 - smooth(at[1] - edge, at[1], p))).toFixed(3));
-        });
+        const on = holdLit(pn.at.map((at) => smooth(at[0], at[0] + 0.012, p)));
+        pn.pts.forEach((node, j) => node.style.setProperty('--on', on[j].toFixed(3)));
       });
     }
     it.bar.style.transform = `scaleX(${p})`;

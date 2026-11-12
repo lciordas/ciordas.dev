@@ -205,7 +205,8 @@
       "summary": "",
       "captions": [
         "Ball-balancing PID seesaw. An infrared sensor tracks the ball, and a servo tilts the beam to keep it balanced at the center.",
-        "Resistant to disturbances. Knock the ball away and the PID controller pulls it right back to center."
+        "Resistant to disturbances. Knock the ball away and the PID controller pulls it right back to center.",
+        "The product of many iterations, starting years ago with a LEGO prototype."
       ],
       "thumb": "pid-seesaw",
       "stream": [
@@ -279,20 +280,19 @@
           "src": "media/projects/micromanipulator/microstepping.webp",
           "caption": "Geometric microstepping",
           "points": [
-            "Standard microstepping assumes the motor's two phases sit 90° apart.",
-            "In this motor they sit 45° apart, so the field ripples off target.",
-            "I derived a new formula that sets the currents for each quadrant.",
-            "In theory, it removes up to 1/25 of a full step of error."
+            "Standard microstepping assumes a motor's two phases sit **90°** apart. In this motor they sit **45°** apart.",
+            "So I derived a new formula that sets the coil currents quadrant by quadrant.",
+            "It erases up to **1/25** of a full step of error. That's **0.072°** on a 1.8° motor, over **140×** the system's accuracy."
           ]
         },
         {
           "src": "media/projects/micromanipulator/magnets.webp",
           "caption": "Magnetic gearing for the encoder",
           "points": [
-            "A standard encoder magnet turns the field once per revolution.",
-            "17 alternating magnets turn it 8.5 times, for 8.5 times the resolution.",
-            "The arc rides on the motor horn, past an MT6835 21‑bit encoder.",
-            "Closed loop takes error from 0.08° to 0.0045°. PID brings it to 0.0005°, or 100 nm in theory."
+            "A magnetic encoder reads the angle of a field. A normal magnet turns that field just once per revolution.",
+            "Here an arc of **17** alternating magnets rides on the motor horn, past the encoder. Each N‑S pair spins the field a full circle.",
+            "That's **8.5** field turns per revolution. The **21‑bit** MT6835 now spends all its counts on 1/8.5 of a turn, for **8.5×** the resolution.",
+            "Closed loop cuts error from **0.08°** to **0.0045°**. PID takes it to **0.0005°**, a theoretical **100 nm** at the tip."
           ]
         }
       ]
