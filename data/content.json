@@ -16,7 +16,7 @@
         "url": "mailto:lciordas27@regis.org"
       }
     ],
-    "hint": "Arrow keys to move, Enter to open, or scroll",
+    "hint": "Scroll, or use arrow keys and Enter to navigate",
     "intro": "**Hey, I'm Lucas.** A senior at **Regis High School** taking classes at **Columbia**. I build **robots**, write code, and do research with the **Summer Science Program** and **NeurIPS**. This summer I was a software engineer at an **a16z-backed, $125M** stealth AI startup.",
     "logos": [
       {
@@ -551,6 +551,7 @@
       "title": "Alzheimer's Protein Classifier",
       "tag": "SVM, 80.3% accuracy",
       "kind": "detail",
+      "scrollStop": true,
       "summary": "A support vector machine over genomic and proteomic data that classifies whether a protein sequence is associated with Alzheimer's disease, with controls to correct for sequence length bias. Accuracy: 80.3%.",
       "tech": [
         "Support vector machines",

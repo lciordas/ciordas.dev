@@ -2,7 +2,8 @@
 // step at a time instead of nudging the page: to the next or previous stop, read from the page as it is now. The
 // stops are the top of each project, the moments its model is built, its video shows and each slide is in, the end
 // of its scrolling part, the start and end of each stream, each gallery picture, and the links at the end. On the
-// overview the arrows still move between the cards (site.js); the page keys go between its two parts.
+// overview the arrows still move between the cards (site.js), and past the last row (or with no card on screen) they
+// move the page on a step here, into the projects; the page keys go between its two parts.
 import { REDUCED } from './_util.js';
 
 const DOWN = new Set(['ArrowDown', 'PageDown']), UP = new Set(['ArrowUp', 'PageUp']);
@@ -46,6 +47,8 @@ export function mountKeynav({ work, root }) {
       });
       // The end links, at the bottom of the screen.
       s.querySelectorAll('.after').forEach((a) => out.push(top(a) + a.offsetHeight - H));
+      // A project that holds a scroll at its end (below) is a stop there too.
+      if (s.hasAttribute('data-scroll-stop')) out.push(top(s) + s.offsetHeight - H);
     });
     const max = document.documentElement.scrollHeight - H;
     // Stops closer together than half a screen count as one.
@@ -81,6 +84,8 @@ export function mountKeynav({ work, root }) {
     clearTimeout(guard); guard = setTimeout(done, t * 1000 + 250);
   };
 
+  mountScrollStops(work);
+
   addEventListener('keydown', (e) => {
     // The intro and the overview's cards take their keys first.
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -95,4 +100,44 @@ export function mountKeynav({ work, root }) {
     if (busy) { queued = dir; return; }
     go(dir);
   });
+}
+
+// A project marked data-scroll-stop (work.js, from "scrollStop" in the content file) can't be flung past in one go:
+// the first time a scroll down would carry the page beyond its end (its bottom at the bottom of the screen), the page
+// glides to rest there and the rest of that scroll is let go. The next scroll carries on as usual. It's set again only
+// once the page has gone back up above the project, and it never touches scrolling up, the keys or touch.
+const HOLD_GAP = 180, HOLD_FRESH = 320, HOLD_EVEN = 900, HOLD_MAX = 3000;
+function mountScrollStops(work) {
+  const lenis = work.lenis;
+  if (!lenis) return;
+  const spent = new WeakSet();
+  let held = 0, lastAt = 0, lastD = 0;
+  const end = (s) => s.getBoundingClientRect().top + window.scrollY + s.offsetHeight - innerHeight;
+  const lines = (e) => (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
+  addEventListener('wheel', (e) => {
+    if (e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    const now = performance.now(), d = e.deltaY * lines(e), gap = now - lastAt, prev = lastD;
+    lastAt = now; lastD = Math.abs(d);
+    if (held) {
+      // Let go when the scroll pauses, turns back up or comes again as a fresh push. A trackpad's glide dies away
+      // and is held to its end (3 s at most); a steady stream, like a spun wheel, only for 0.9 s.
+      const t = now - held, fresh = t > HOLD_FRESH && Math.abs(d) > prev * 1.6 + 4, steady = t > HOLD_EVEN && Math.abs(d) >= prev;
+      if (d < 0 || gap > HOLD_GAP || fresh || steady || t > HOLD_MAX) held = 0;
+      else { e.preventDefault(); e.stopImmediatePropagation(); return; }
+    }
+    const y = lenis.targetScroll, H = innerHeight;
+    for (const s of document.querySelectorAll('#work .project[data-scroll-stop]')) {
+      if (s.hidden || s.offsetParent === null) continue;
+      const at = end(s), from = s.getBoundingClientRect().top + window.scrollY;
+      // Back up above the project, it holds the next scroll again.
+      if (window.scrollY < from - H) spent.delete(s);
+      else if (spent.has(s)) continue;
+      if (y >= at - 1) { spent.add(s); continue; }
+      if (d <= 0 || y + d * 0.9 < at) continue;
+      spent.add(s); held = now;
+      e.preventDefault(); e.stopImmediatePropagation();
+      lenis.scrollTo(at);
+      return;
+    }
+  }, { passive: false, capture: true });
 }

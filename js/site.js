@@ -67,7 +67,7 @@ export function renderOverview(root, c) {
     <div class="ov-inner">
       <header class="ov-bar">
         <div class="ov-brand"><p class="ov-name" data-edit="site.name">${esc(c.site.name)}</p>${icons('ov-links--bar')}</div>
-        <div class="ov-foot"><span data-edit="site.hint">${esc(c.site.hint)}</span><button id="replay" type="button">Replay intro</button></div>
+        <div class="ov-foot"><span data-edit="site.hint">${esc(c.site.hint)}</span></div>
       </header>
       <section class="ov-hero ov-reveal" aria-label="About">
         <div class="ov-hero-top"><p class="ov-hero-name" aria-hidden="true">${esc(c.site.name)}</p>${icons('ov-links--hero')}</div>
@@ -90,9 +90,8 @@ export function renderOverview(root, c) {
     </div>`;
 }
 
-export function mountSite({ root, work, content, onReplay }) {
+export function mountSite({ root, work, content }) {
   renderOverview(root, content);
-  root.querySelector('#replay')?.addEventListener('click', onReplay);
   const veil = document.createElement('div'); veil.id = 'veil'; document.body.appendChild(veil);
   const back = document.createElement('a'); back.id = 'to-overview'; back.href = '#'; back.textContent = 'Overview'; back.setAttribute('aria-label', 'Back to overview'); document.body.appendChild(back);
 
@@ -154,10 +153,21 @@ export function mountSite({ root, work, content, onReplay }) {
   addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === 'Escape') { if (!atOverview()) back.click(); return; }
-    if (!atOverview() || !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
-    const all = rows(), cur = document.activeElement;
-    e.preventDefault();
-    if (!all.includes(cur)) { all[0]?.focus({ preventScroll: true }); return; }
+    // Where the page is headed (a glide's end, read from Lenis), so a key pressed mid-glide into the projects carries on with it.
+    const L = work.lenis, y = L ? (L.animate?.isRunning ? L.animate.to : L.targetScroll) : window.scrollY;
+    if (y >= root.offsetHeight - innerHeight * 0.5 || !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    const all = rows(), vertical = e.key === 'ArrowUp' || e.key === 'ArrowDown';
+    // Only cards on screen count: the one under the bar's edge or scrolled away is left alone.
+    const top = bar?.offsetHeight || 0, onScreen = (n) => { const r = n.getBoundingClientRect(), m = (r.top + r.bottom) / 2; return m > top && m < innerHeight; };
+    let cur = document.activeElement;
+    if (!all.includes(cur) || !onScreen(cur)) cur = null;
+    // With no card picked yet, the arrows start from the first card on screen (the last one going up). With none on
+    // screen, up and down move the page a step instead (keynav.js).
+    if (!cur) {
+      const seen = all.filter(onScreen), first = e.key === 'ArrowUp' ? seen[seen.length - 1] : seen[0];
+      if (!first) return;
+      e.preventDefault(); first.focus({ preventScroll: true }); return;
+    }
     // The nearest card in the arrow's direction.
     const box = (n) => { const r = n.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
     const a = box(cur), [dx, dy] = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
@@ -169,7 +179,9 @@ export function mountSite({ root, work, content, onReplay }) {
       const d = along + across * 2.2;
       if (d < bestD) { bestD = d; best = n; }
     });
-    if (!best) return;
+    // Past the last row going down, or the first going up, the page moves on a step instead (keynav.js).
+    if (!best) { if (vertical) cur.blur(); else e.preventDefault(); return; }
+    e.preventDefault();
     best.focus({ preventScroll: true });
     const r = best.getBoundingClientRect();
     if (r.top < 0 || r.bottom > innerHeight) { if (work.lenis) work.lenis.scrollTo(best, { offset: -innerHeight * 0.3 }); else best.scrollIntoView({ block: 'center' }); }
