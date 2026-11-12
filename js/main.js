@@ -316,8 +316,8 @@ function start(data) {
     name.update(dt, t);
 
     camera.position.set(
-      S.mx * (name.st.phase === 'burst' ? 0.14 : 0.05) + (S.shake ? (Math.sin(t * 91) + Math.sin(t * 57)) * S.shake : 0),
-      S.my * (name.st.phase === 'burst' ? 0.09 : 0.03) + (S.shake ? (Math.cos(t * 83) + Math.sin(t * 43)) * S.shake : 0),
+      S.mx * (name.st.phase === 'burst' ? 0.14 : 0.012) + (S.shake ? (Math.sin(t * 91) + Math.sin(t * 57)) * S.shake : 0),
+      S.my * (name.st.phase === 'burst' ? 0.09 : 0.008) + (S.shake ? (Math.cos(t * 83) + Math.sin(t * 43)) * S.shake : 0),
       S.camZ * (1 - S.punch * 0.12),
     );
     camera.lookAt(0, 0, 0);

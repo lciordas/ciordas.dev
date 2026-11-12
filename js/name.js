@@ -201,11 +201,11 @@ void main(){
     float gl=pow(.5+.5*sin(uTime*1.1+dot(vP,vec3(9.,6.,4.))),24.);
     c+=hue*rim*(1.+3.*gl)+spec*.25;
   }
-  // Under the pointer a faint warm light glows inside the glass.
+  // Under the pointer the glass catches a soft, cool white light, brightest on its edges and rims.
   if(uHotAmt>.002){
     float d=distance(vP.xy,uHot);
     float h=smoothstep(uHotSize,0.,d);
-    c+=uAccent*h*h*uHotAmt*.16+vec3(h*h*uHotAmt*.05);
+    c+=vec3(.92,.95,1.)*h*h*uHotAmt*(.035+.12*pow(1.-NdV,2.));
   }
   gl_FragColor=vec4(c,uFade);
 }`;
@@ -443,8 +443,8 @@ export function mountName(scene, data, palU, baked) {
       st.hover += (st.hoverT - st.hover) * (1 - Math.exp(-7 * dt));
       if (st.phase === 'float' || st.phase === 'crack') {
         const calm = st.phase === 'crack' ? 0 : st.active;
-        // The whole name tilts toward the pointer on a loose spring.
-        const tiltX = -st.my * 0.13 * calm, tiltY = st.mx * 0.2 * calm;
+        // The whole name tilts a little toward the pointer on a loose spring.
+        const tiltX = -st.my * 0.05 * calm, tiltY = st.mx * 0.07 * calm; // small, so the name stays centred wherever the pointer is
         root.rotation.x += (tiltX + Math.sin(t * 0.43) * 0.016 * calm - root.rotation.x) * (1 - Math.exp(-3.4 * dt));
         root.rotation.y += (tiltY + Math.sin(t * 0.31 + 1) * 0.024 * calm - root.rotation.y) * (1 - Math.exp(-3.4 * dt));
         root.position.y = Math.sin(t * 0.72) * 0.065 * calm;
