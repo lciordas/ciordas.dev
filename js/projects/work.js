@@ -43,7 +43,7 @@ const ANIMATED = {
     ],
     // Little scroll after the clip starts, so the photo stream follows soon after.
     assemble: [0.038, 0.636], title: [0.089, 0.229], wipe: [0.764, 0.84], clipAt: 0.84,
-    copyAt: [[0.255, 0.535], [0.56, 0.84], { t: [0, 12.3] }],
+    copyAt: [[0.255, 0.535], [0.56, 0.84], { t: [0, 12.5] }],
   },
   // No model: a photo of the finished ship stands in the window from the start and drifts in a little, then the same
   // light line wipes it over to the build video, which opens on the finished ship framed much like the photo.

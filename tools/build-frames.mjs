@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { trackCamera } from './track.mjs';
+import { trackCamera, trackSubject } from './track.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(path.join(here, '../toolkit/x.js'));
 const sharp = require('sharp');
@@ -17,9 +17,10 @@ const CLIPS = {
   // Head on: one full sway, then the tilts. The phone was turned on its side partway through, so it needs turning back.
   // Kept at the footage's own 30 fps: at 24 the joined video has to repeat every fifth frame, which judders.
   'dog-front': { src: `${HOME}/Downloads/maker portfolio b-roll/quadrupedgyratingfrontview.MOV`, ss: 23.1, t: 6.4, pre: 'transpose=2', vf: 'transpose=2,fps=30', lock: { margin: 48 } },
-  // Head on and closer, a few seconds after that: the body rocking side to side over planted feet. `box` [centre x,
-  // centre y, w, h] in source pixels picks the part kept, here a 1280x720 window so the picture isn't scaled at all.
-  'dog-rock': { src: `${HOME}/Downloads/maker portfolio b-roll/quadrupedgyratingfrontview.MOV`, ss: 29.8, t: 3, pre: 'transpose=2', vf: 'transpose=2,fps=30', lock: { box: [960, 630, 1280, 720] } },
+  // Head on, from the start of the same recording, filmed upright: the body dropping level from high to low, then
+  // sliding across to one side. The upright picture is cut down to a band around the dog first. `ref` boxes [x, y, w, h],
+  // fractions of that band, follow still things beside the dog, as the edges of this picture are mostly bare wall.
+  'dog-sway': { src: `${HOME}/Downloads/maker portfolio b-roll/quadrupedgyratingfrontview.MOV`, ss: 4.6, t: 3, pre: 'crop=1080:860:0:500', vf: 'crop=1080:860:0:500,fps=30', lock: { box: [540, 365, 1040, 585], ref: [[0.01, 0.36, 0.13, 0.22], [0.87, 0.36, 0.12, 0.25]] } },
 };
 const WIDTH = 1280, QUALITY = 90;
 
@@ -35,7 +36,8 @@ for (const [name, c] of Object.entries(CLIPS)) {
   const { width: srcW, height: srcH } = await sharp(path.join(tmp, files[0])).metadata();
   let crop = null;
   if (c.lock) {
-    const track = trackCamera(c.src, c.ss, c.t, c.pre);
+    const refs = c.lock.ref?.map(([x, y, w, h]) => trackSubject(c.src, c.ss, c.t, { x, y, w, h }, c.pre).map(([px, py]) => [px - x, py - y]));
+    const track = refs ? refs[0].map((_, i) => [0, 1].map((k) => refs.reduce((sum, r) => sum + r[i][k], 0) / refs.length)) : trackCamera(c.src, c.ss, c.t, c.pre);
     const px = track.map(([x, y]) => [x * srcW, y * srcH]);
     const xs = px.map((p) => p[0]), ys = px.map((p) => p[1]);
     const midX = (Math.min(...xs) + Math.max(...xs)) / 2, midY = (Math.min(...ys) + Math.max(...ys)) / 2;

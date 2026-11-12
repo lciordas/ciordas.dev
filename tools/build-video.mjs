@@ -34,7 +34,7 @@ const CLIPS = {
       [`${FRAMES}/dog-quarter/%04d.webp`, 1, 70], // front three-quarter: rising and rolling away, then dropping low (its first frame is a repeat, so skipped)
       [`${FRAMES}/dog-front/%04d.webp`, 75, 150], // head on: rolling one way, a yaw, then rolling hard the other way
       [path.join(FRAMES, 'dog-walk.mp4'), 128, 200], // walking on the mat, mid-stride
-      [`${FRAMES}/dog-rock/%04d.webp`, 3, 75], // head on and closer: rocking side to side (its first frames are repeats, so skipped)
+      [`${FRAMES}/dog-sway/%04d.webp`, 4, 82], // head on: the body dropping level from high to low, then sliding across to one side
     ];
     const inputs = shots.flatMap(([file]) => [...(file.endsWith('.webp') ? ['-framerate', '30'] : []), '-i', file]);
     const chains = shots.map(([, a, b], i) => `[${i}:v]trim=start_frame=${a}:end_frame=${b},setpts=N/30/TB,scale=1280:720,setsar=1[s${i}]`);
