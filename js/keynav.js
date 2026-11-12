@@ -106,55 +106,61 @@ export function mountKeynav({ work, root }) {
   });
 }
 
-// A project marked data-scroll-stop (work.js, from "scrollStop" in the content file) holds a scroll down at its end:
-// the page glides to rest with the project's bottom at the bottom of the screen, and the rest of that scroll is held
-// back however long it runs on, a trackpad's long glide included. Only once the wheel has been still for a moment
-// does a new scroll down carry on past it, after a small push. The stop is set again once the page has gone back up
-// above it. Scrolling up, the keys and touch are never held.
-const QUIET = 450, PAUSE = 300, PUSH = 40;
+// A project marked data-scroll-stop (work.js, from "scrollStop" in the content file) catches a scroll down at its end.
+// When a scroll would carry the page past it, the page glides to rest with the project's bottom at the bottom of the
+// screen, and what is left of that scroll (a trackpad's glide dying away) is held back. Anything that looks like the
+// visitor scrolling on lets go at once: a pause of a fifth of a second, a scroll that picks up again after slowing,
+// one that keeps its pace instead of dying away, a scroll back up, or the keys moving the page. It never holds for
+// more than a second. Each stop catches once on the way down, and again only after the page has gone back up above
+// it. Touch is never held.
+const GAP = 180, SETTLE = 250, MAX = 1000;
 function mountScrollStops(work) {
   const lenis = work.lenis;
   if (!lenis) return;
   const passed = new WeakSet();
-  let hold = null, push = 0, last = -1e9;
+  // The scroll going on, as [time, distance, how long it took] steps over the last half second, and the hold while a
+  // stop has it.
+  let steps = [], hold = null, last = -1e9;
   const end = (s) => s.getBoundingClientRect().top + window.scrollY + s.offsetHeight - innerHeight;
   const lines = (e) => (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
   const swallow = (e) => { e.preventDefault(); e.stopImmediatePropagation(); };
+  // Where the page is headed: the end of a glide under way, or where it is.
+  const headed = () => (lenis.animate.isRunning ? lenis.animate.to : lenis.targetScroll);
+  // How fast the scroll went over the w milliseconds up to t, in pixels per millisecond. Each step is spread over the
+  // time since the one before, so steps a busy page has run together don't read as a burst of speed.
+  const rate = (t, w) => { let n = 0; for (const [at, d, dt] of steps) n += (d * Math.max(0, Math.min(at, t) - Math.max(at - dt, t - w))) / dt; return n / w; };
   addEventListener('wheel', (e) => {
-    if (e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-    const now = performance.now(), gap = now - last, d = e.deltaY * lines(e);
+    if (e.ctrlKey || !e.deltaY || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    const now = e.timeStamp || performance.now(), gap = now - last, d = e.deltaY * lines(e);
     last = now;
-    const stops = [...document.querySelectorAll('#work .project[data-scroll-stop]')].filter((s) => s.offsetParent !== null).map((s) => ({ s, at: end(s) }));
-    stops.forEach(({ s, at }) => { if (window.scrollY < at - innerHeight * 0.6) passed.delete(s); });
-    // Where the page is headed: the end of a glide under way, or where it is.
-    const y = lenis.animate.isRunning ? lenis.animate.to : lenis.targetScroll;
+    if (d < 0 || gap > GAP) steps = [];
+    if (d > 0) { steps.push([now, d, gap > GAP ? 16 : Math.max(1, gap)]); while (steps[0][0] < now - 500) steps.shift(); }
+    const marked = [...document.querySelectorAll('#work .project[data-scroll-stop]')].filter((s) => s.offsetParent !== null);
+    marked.forEach((s) => { if (window.scrollY < end(s) - innerHeight * 0.6) passed.delete(s); });
     if (hold) {
-      if (d < 0) hold = null;
-      // The scroll that came up to the stop, still running on.
-      else if (hold.drain && gap < QUIET) { swallow(e); return; }
-      // Moved on some other way, by the keys.
-      else if (Math.abs(y - end(hold.s)) > 4) hold = null;
-      else {
-        // A new scroll: once it has pushed a little, it carries on.
-        if (hold.drain || gap > PAUSE) push = 0;
-        hold.drain = false; push += d;
-        if (push < PUSH) { swallow(e); return; }
-        passed.add(hold.s); hold = null;
+      const h = hold, r = rate(now, 100), at = end(h.s);
+      // Signs of the visitor scrolling on: a pause, picking up again after slowing down, or still going at nearly its
+      // top speed a quarter of a second on, where a glide would be dying away. Once the page has come to rest at the
+      // stop, it carries on.
+      if (gap > GAP || (h.low < h.peak * 0.75 && r > h.low * 1.5 + 0.1) || (now - h.peakAt > SETTLE && r >= h.peak * 0.8)) h.on = true;
+      if (d < 0 || (h.on && Math.abs(window.scrollY - at) <= 12) || now - h.t0 > MAX || Math.abs(headed() - at) > 4) {
+        passed.add(h.s); hold = null;
         return;
       }
+      if (r > h.peak) { if (r > h.peak * 1.05) h.peakAt = now; h.peak = h.low = r; } else h.low = Math.min(h.low, r);
+      swallow(e);
+      return;
     }
-    if (d <= 0) return;
-    for (const { s, at } of stops) {
+    if (d < 0) return;
+    const y = headed();
+    for (const s of marked) {
+      const at = end(s);
       if (passed.has(s) || y > at + 2) continue;
-      if (Math.abs(y - at) <= 2) {
-        // Already resting at the stop: a scroll still running on is held, and a new one needs its push.
-        hold = { s, drain: gap < QUIET }; push = hold.drain ? 0 : d;
-        if (hold.drain || push < PUSH) { swallow(e); return; }
-        passed.add(s); hold = null;
-        return;
-      }
-      if (y + d * 0.9 >= at - 1) {
-        hold = { s, drain: true };
+      // Already resting at its end (the keys took it there): the scroll goes on.
+      if (!lenis.animate.isRunning && Math.abs(window.scrollY - at) <= 2) { passed.add(s); return; }
+      if (y + d * lenis.options.wheelMultiplier >= at - 1) {
+        const r = rate(now, 100);
+        hold = { s, t0: now, peak: r, low: r, peakAt: now };
         swallow(e);
         lenis.scrollTo(at);
       }

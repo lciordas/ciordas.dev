@@ -129,7 +129,9 @@ export function mountSite({ root, work, content }) {
   const url = (id) => (id ? `${base}#${id}` : base);
   const target = () => { const id = location.hash.slice(1); return content.projects[id] ? id : null; };
   const cardsTop = () => { const g = root.querySelector('.ov-projects'); return g ? g.getBoundingClientRect().top + window.scrollY : 0; };
-  let where = null, from = null, busy = false, pending = false, selfBack = false, pin = null;
+  // own: the step into a project in the history was added by this page (a card or a link to a project), so going
+  // back one step stays on it rather than loading the page again.
+  let where = null, from = null, busy = false, pending = false, selfBack = false, pin = null, own = false;
   const name = (id) => { where = id; document.title = id ? `${content.projects[id].title} | Lucas Ciordas` : 'Lucas Ciordas'; };
   const cross = (fn, instant) => {
     busy = true;
@@ -158,7 +160,7 @@ export function mountSite({ root, work, content }) {
   const home = () => cross(() => {
     const was = where;
     name(null); pin = null;
-    work.jump(from ?? cardsTop());
+    work.jump(from ?? cardsTop()); from = null;
     rows().find((x) => x.dataset.project === was)?.focus({ preventScroll: true });
   });
   const route = () => {
@@ -179,7 +181,7 @@ export function mountSite({ root, work, content }) {
     if (busy || selfBack) return;
     const id = current();
     if (id === where) return;
-    if (!id && history.state?.lc) { selfBack = true; name(null); history.back(); return; }
+    if (!id && history.state?.lc && own) { selfBack = true; name(null); history.back(); return; }
     history.replaceState(history.state, '', url(id));
     name(id);
   };
@@ -187,15 +189,17 @@ export function mountSite({ root, work, content }) {
   addEventListener('scroll', () => { if (!syncing) { syncing = true; requestAnimationFrame(() => { syncing = false; sync(); }); } }, { passive: true });
   addEventListener('popstate', () => { if (selfBack) { selfBack = false; sync(); } else route(); });
   addEventListener('hashchange', route);
+  // Back to the overview straight away, and the step into the project taken off the history quietly, so the back
+  // button doesn't lead into it again.
   const leave = () => {
-    if (history.state?.lc) { history.back(); return; }
-    if (location.hash) history.replaceState(null, '', base);
+    if (own && history.state?.lc) { selfBack = true; history.back(); }
+    else if (location.hash || history.state?.lc) history.replaceState(null, '', base);
     home();
   };
   // A link straight to a project opens there, with the overview one step back.
   const first = target();
   if (first) {
-    if (!history.state?.lc) { history.replaceState(null, '', base); history.pushState({ lc: 1 }, '', url(first)); }
+    if (!history.state?.lc) { history.replaceState(null, '', base); history.pushState({ lc: 1 }, '', url(first)); own = true; }
     visit(first, true);
   }
 
@@ -206,7 +210,7 @@ export function mountSite({ root, work, content }) {
     e.preventDefault();
     if (busy) return;
     from = window.scrollY;
-    history.pushState({ lc: 1 }, '', url(a.dataset.project));
+    history.pushState({ lc: 1 }, '', url(a.dataset.project)); own = true;
     visit(a.dataset.project);
   });
   back.addEventListener('click', (e) => { e.preventDefault(); leave(); });
@@ -214,9 +218,19 @@ export function mountSite({ root, work, content }) {
 
   // Moving the mouse over a row and moving with the keys share one highlight.
   root.addEventListener('pointermove', (e) => { const r = e.target.closest('.row'); if (r && document.activeElement !== r) r.focus({ preventScroll: true }); });
+  // Escape goes back to the overview from anywhere in the projects, wherever the focus is, unless something else on
+  // the page has used it (closing something) or a video is full screen. It's heard first, so nothing can stop it on
+  // the way, and acted on once everything else has had its turn.
   addEventListener('keydown', (e) => {
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.key === 'Escape') { if (!atOverview()) leave(); return; }
+    if ((e.key !== 'Escape' && e.key !== 'Esc') || e.isComposing || e.metaKey || e.ctrlKey || e.altKey) return;
+    setTimeout(() => {
+      if (e.defaultPrevented || document.fullscreenElement || document.webkitFullscreenElement || atOverview()) return;
+      if (e.target?.closest?.('input, textarea, select, [contenteditable=""], [contenteditable="true"]')) return;
+      leave();
+    });
+  }, true);
+  addEventListener('keydown', (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey || e.key === 'Escape') return;
     // Where the page is headed (a glide's end, read from Lenis), so a key pressed mid-glide into the projects carries on with it.
     const L = work.lenis, y = L ? (L.animate?.isRunning ? L.animate.to : L.targetScroll) : window.scrollY;
     if (y >= root.offsetHeight - innerHeight * 0.5 || !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
