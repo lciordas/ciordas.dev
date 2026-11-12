@@ -33,7 +33,7 @@ const ANIMATED = {
     copyAt: [[0, 0.385], [0.385, 0.48], [0.48, 0.574], [0.574, 1]],
     slides: [[0.6622, 0.6932], [0.8149, 0.8459]],
   },
-  // Lined up with the first frame of the video. Its five shots run 0 to 2.7 s, 2.7 to 5 s, 5 to 7.5 s, 7.5 to 9.9 s, and 9.9 to 12.3 s.
+  // Lined up with the first frame of the video. Its five shots run 0 to 2.7 s, 2.7 to 5 s, 5 to 7.5 s, 7.5 to 9.9 s, and 9.9 to 12.5 s.
   'robot-dog': {
     model: 'dog', up: [0, 0, 1.5325], fov: 34.28, length: 440, clip: 'media/video/dog.mp4',
     views: [
