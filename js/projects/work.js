@@ -17,17 +17,20 @@ const ANIMATED = {
     assemble: [0.03, 0.52], title: [0.08, 0.2], wipe: [0.62, 0.68], clipAt: 0.68,
     copyAt: [[0.28, 0.6], [0.7, 1]],
   },
-  // Lined up with the first frame of the clip from matched screw heads on two of the motor mounts.
+  // Lined up with the first frame of the clip from matched screw heads on two of the motor mounts. After a short
+  // stretch of video, its two explainer slides (the project's "slides" in content.json) wipe in over it, each at
+  // its own [from, to] in "slides", and the bullets beside the window switch to that slide's.
   micromanipulator: {
-    model: 'micromanipulator', length: 440, clip: 'media/video/micromanipulator.mp4',
+    model: 'micromanipulator', length: 580, clip: 'media/video/micromanipulator.mp4',
     up: [0.0223, 0.6193, 1.2759], fov: 28.58,
     views: [
       { p: 0, az: 0.8, el: 0.38, dist: 6.6, tx: -0.11, ty: 0.31, tz: 0 },
-      { p: 0.5, az: -0.35, el: 0.12, dist: 6.2, tx: -0.11, ty: 0.31, tz: 0 },
-      { p: 0.62, az: 0, el: 0, dist: 5.9152, tx: -0.1128, ty: 0.3136, tz: 0 },
+      { p: 0.354, az: -0.35, el: 0.12, dist: 6.2, tx: -0.11, ty: 0.31, tz: 0 },
+      { p: 0.439, az: 0, el: 0, dist: 5.9152, tx: -0.1128, ty: 0.3136, tz: 0 },
     ],
-    assemble: [0.03, 0.52], title: [0.08, 0.2], wipe: [0.62, 0.68], clipAt: 0.68,
-    copyAt: [[0.12, 0.36], [0.38, 0.6], [0.62, 0.8], [0.82, 1]],
+    assemble: [0.021, 0.368], title: [0.057, 0.142], wipe: [0.439, 0.482], clipAt: 0.482,
+    copyAt: [[0.085, 0.255], [0.269, 0.425], [0.439, 0.53], [0.54, 1]],
+    slides: [[0.62, 0.66], [0.8, 0.84]],
   },
   // Lined up with the first frame of the video. Its four shots run 0 to 2.7 s, 2.7 to 5 s, 5 to 7.5 s, and 7.5 to 9.9 s.
   'robot-dog': {
@@ -65,7 +68,19 @@ const endLinks = (next, content) => `
     ${next ? `<a class="after__next" href="#${next}"><span>Next</span>${esc(content.projects[next].title)}</a>` : ''}
   </div>`;
 
+// The words beside the window set smaller, a step at a time, when they'd spill out of their box. Only wide screens give
+// the box a fixed height; on upright ones it grows with the words.
+const fitPanel = (node) => {
+  if (!node) return;
+  let k = 1; node.style.setProperty('--shrink', '1');
+  while (node.scrollHeight > node.clientHeight + 1 && k > 0.72) { k -= 0.04; node.style.setProperty('--shrink', k.toFixed(2)); }
+};
+
+// The slides that follow the video inside the window, with their own bullets: as many as the config has places for.
+const slidesOf = (cfg, p) => (cfg.slides && p.slides ? p.slides.slice(0, cfg.slides.length) : []);
+
 function buildAnimated(id, cfg, p, index, next, content) {
+  const slides = slidesOf(cfg, p);
   const s = document.createElement('section');
   s.className = 'project'; s.id = id; s.dataset.project = id; s.setAttribute('aria-label', p.title);
   s.innerHTML = `
@@ -75,11 +90,13 @@ function buildAnimated(id, cfg, p, index, next, content) {
         <canvas class="cad" aria-hidden="true"></canvas>
         <div class="screen">
           ${cfg.clip ? `<video class="clip" muted playsinline loop preload="none" aria-label="${esc(p.title)} video"></video>` : ''}
+          ${slides.map((m) => `<div class="sshow"><img data-src="${esc(m.src)}" alt="${esc(capText(m.caption) || p.title)}" decoding="async"></div>`).join('')}
           <i class="scan" aria-hidden="true"></i>
           <div class="bar" aria-hidden="true"><i></i></div>
         </div>
         <h3 class="head"><span class="index">${index}</span>${esc(p.title)}</h3>
         ${p.captions?.length ? `<ul class="points">${p.captions.map((c) => `<li class="point">${esc(c)}</li>`).join('')}</ul>` : ''}
+        ${slides.map((m) => `<div class="points points--slide">${m.caption ? `<p class="points__lead">${capHtml(m.caption)}</p>` : ''}<ul class="points__list">${(m.points || []).map((t) => `<li class="point">${bold(capHtml(t))}</li>`).join('')}</ul></div>`).join('')}
         ${CUE}
       </div>
     </div>
@@ -284,7 +301,13 @@ export function mountWork(container, options = {}) {
     const q = (sel) => el.querySelector(sel);
     const item = {
       id, cfg, el, runway: q('.runway'), title: q('.title'), head: q('.head'), screen: q('.screen'), cadC: q('.cad'), video: q('.clip'), scan: q('.scan'), bar: q('.bar i'),
-      copies: [...el.querySelectorAll('.point')], cue: q('.pcue'), cad: null, p: 0, loading: false, fit: 1, playing: false,
+      copies: [...el.querySelectorAll('.points > .point')], cue: q('.pcue'), cad: null, p: 0, loading: false, fit: 1, playing: false,
+      panel: q('ul.points'), shows: [...el.querySelectorAll('.sshow')],
+      // Each slide's bullets light one after another over the slide's stretch of scroll; the last stays lit.
+      panels: [...el.querySelectorAll('.points--slide')].map((node, i) => {
+        const [a, b] = cfg.slides[i], end = cfg.slides[i + 1]?.[0] ?? 1, pts = [...node.querySelectorAll('.point')], n = pts.length, seg = (end - b) / Math.max(1, n);
+        return { node, pts, at: pts.map((_, j) => [j ? b + j * seg : a, j === n - 1 ? 1 : b + (j + 1) * seg]) };
+      }),
     };
     if (!gl) item.cadC.style.display = 'none';
     items.push(item);
@@ -308,12 +331,14 @@ export function mountWork(container, options = {}) {
         it.cad.setScatter({ ...v, dist: v.dist * it.fit }, w / h);
       }
     });
+    items.forEach((it) => [it.panel, ...it.panels.map((pn) => pn.node)].forEach(fitPanel));
     galleries.forEach((g) => g.measure());
     streams.forEach((s) => s.measure());
   };
   const ensure = (it) => {
     if (it.loading) return; it.loading = true;
     if (it.video) { it.video.src = it.cfg.clip; it.video.preload = 'auto'; it.video.load(); }
+    it.shows.forEach((sh) => { const img = sh.firstElementChild; img.src = img.dataset.src; });
     if (gl) loadModel(it.cfg.model).then((m) => {
       it.cad = mountCad(it.cadC, m, { up: it.cfg.up, fov: it.cfg.fov });
       size();
@@ -336,11 +361,20 @@ export function mountWork(container, options = {}) {
     it.title.style.visibility = tOut > 0.001 ? 'visible' : 'hidden';
     it.head.style.opacity = smooth(cfg.title[1] - 0.02, cfg.title[1] + 0.02, p);
     // Light line from CAD into the footage.
-    const wipe = smooth(cfg.wipe[0], cfg.wipe[1], p), pct = wipe * 100;
-    it.video.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+    const wipe = smooth(cfg.wipe[0], cfg.wipe[1], p);
+    it.video.style.clipPath = `inset(0 ${100 - wipe * 100}% 0 0)`;
     it.video.style.visibility = wipe > 0 ? 'visible' : 'hidden';
-    it.scan.style.left = `${pct}%`;
-    it.scan.style.opacity = wipe > 0.001 && wipe < 0.999 ? 1 : 0;
+    // Then the same line from the footage into each slide in turn.
+    let line = wipe, covered = false;
+    it.shows.forEach((sh, i) => {
+      const w = smooth(cfg.slides[i][0], cfg.slides[i][1], p);
+      sh.style.clipPath = `inset(0 ${100 - w * 100}% 0 0)`;
+      sh.style.visibility = w > 0 ? 'visible' : 'hidden';
+      if (w > 0.001 && w < 0.999) line = w;
+      if (w >= 1) covered = true;
+    });
+    it.scan.style.left = `${line * 100}%`;
+    it.scan.style.opacity = line > 0.001 && line < 0.999 ? 1 : 0;
     // Model.
     if (it.cad) {
       const show = p < cfg.wipe[1] + 0.01;
@@ -354,7 +388,7 @@ export function mountWork(container, options = {}) {
       }
     }
     // Footage that plays by itself once the model has given way to it.
-    setPlaying(it, p >= cfg.clipAt);
+    setPlaying(it, p >= cfg.clipAt && !covered);
     // Bullets: all of them stay on screen, and the one for what's showing now lights up.
     const vt = p >= cfg.clipAt ? it.video.currentTime : -1;
     it.copies.forEach((node, i) => {
@@ -364,6 +398,21 @@ export function mountWork(container, options = {}) {
         : smooth(at[0], at[0] + edge, p) * (at[1] >= 1 ? 1 : 1 - smooth(at[1] - edge, at[1], p));
       node.style.setProperty('--on', a.toFixed(3));
     });
+    // With slides, the panel beside the window hands over to each slide's own: the box stays put while the old words
+    // fade out over the first half of the wipe and the new ones in over the second.
+    if (it.panels.length) {
+      const half = (i) => (cfg.slides[i][0] + cfg.slides[i][1]) / 2;
+      const fade = (node, a, box) => { node.style.setProperty('--fade', a.toFixed(3)); node.style.visibility = box ? 'visible' : 'hidden'; };
+      if (it.panel) fade(it.panel, 1 - smooth(cfg.slides[0][0], half(0), p), p < half(0));
+      it.panels.forEach((pn, i) => {
+        const next = cfg.slides[i + 1];
+        fade(pn.node, smooth(half(i), cfg.slides[i][1], p) * (next ? 1 - smooth(next[0], half(i + 1), p) : 1), p >= half(i) && (!next || p < half(i + 1)));
+        pn.pts.forEach((node, j) => {
+          const at = pn.at[j], edge = 0.012;
+          node.style.setProperty('--on', (smooth(at[0], at[0] + edge, p) * (at[1] >= 1 ? 1 : 1 - smooth(at[1] - edge, at[1], p))).toFixed(3));
+        });
+      });
+    }
     it.bar.style.transform = `scaleX(${p})`;
     it.cue.style.opacity = 1 - smooth(0.002, 0.02, p);
   };

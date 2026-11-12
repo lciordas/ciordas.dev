@@ -90,17 +90,19 @@ const TABS = {
       tech.addEventListener('input', () => { p.tech = tech.value.split(',').map((s) => s.trim()).filter(Boolean); changed(); });
       out.push(el('label', {}, 'Tools and methods, separated by commas', tech));
     }
-    if (p.media?.length) {
-      out.push(el('h2', { textContent: 'Picture and video captions' }));
-      p.media.forEach((m, i) => {
-        out.push(field(`Item ${i + 1}`, `${base}.media.${i}.caption`));
+    // Pictures in a gallery below, or slides inside the scrolling window after the video.
+    [['media', 'Picture and video captions'], ['slides', 'Slides after the video']].forEach(([key, title]) => {
+      if (!p[key]?.length) return;
+      out.push(el('h2', { textContent: title }));
+      p[key].forEach((m, i) => {
+        out.push(field(`Item ${i + 1}`, `${base}.${key}.${i}.caption`));
         if (!Array.isArray(m.points)) return;
         // Bullets beside the picture: one per line, **double asterisks** for bold.
         const box = el('textarea', { value: m.points.join('\n') });
         box.addEventListener('input', () => { m.points = box.value.split('\n').map((s) => s.trim()).filter(Boolean); changed(); });
         out.push(el('label', {}, `Item ${i + 1} bullets, one per line (**bold**)`, box));
       });
-    }
+    });
     if (p.kind === 'detail') {
       out.push(el('h2', { textContent: 'Links' }));
       p.links = p.links || [];
