@@ -284,6 +284,30 @@ export function mountName(scene, data, palU, baked) {
   }));
   halo.position.z = -DEPTH / 2 - 0.03; halo.renderOrder = -1; root.add(halo);
 
+  // The moment the name bursts, a soft flash of rainbow light spills out of the letters' shapes and a faint
+  // spectral ring races outward from where it broke, then fades in about a second. It sits behind the shards,
+  // so they bend it as they fly.
+  const flashU = { tMask: { value: baked.mask }, uT: { value: -1 }, uO: { value: new THREE.Vector2() }, uK: { value: SPAN } };
+  const flash = new THREE.Mesh(new THREE.PlaneGeometry(SPAN * 3, SPAN * 3), new THREE.ShaderMaterial({
+    uniforms: flashU, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
+    vertexShader: 'varying vec2 vP; void main(){ vP=position.xy; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+    fragmentShader: `precision highp float; varying vec2 vP; uniform sampler2D tMask; uniform float uT, uK; uniform vec2 uO;
+      vec3 spec(float h){ return .5+.5*cos(6.2832*(h+vec3(0.,.33,.67))); }
+      void main(){
+        if(uT<0.||uT>1.6) discard;
+        float env=smoothstep(0.,.05,uT)*exp(-uT*3.6);
+        vec2 mu=vP/uK+.5; float m=0.;
+        if(mu.x>0.&&mu.y>0.&&mu.x<1.&&mu.y<1.) m=texture2D(tMask,mu).g;
+        vec2 q=vP-uO; float d=length(q), R=uT*6.;
+        float ring=exp(-pow((d-R)/(.25+uT*.5),2.))*smoothstep(0.,.4,d);
+        vec3 col=mix(vec3(1.),spec(d*.32-uT*.9+atan(q.y,q.x)*.16),.8);
+        vec3 c=col*(m*m*.55+ring*.35);
+        c+=vec3(.95,.97,1.)*m*m*.2*exp(-uT*8.);
+        gl_FragColor=vec4(c*env*.34,1.);
+      }`,
+  }));
+  flash.position.z = -1.2; flash.renderOrder = -1; flash.visible = false; root.add(flash);
+
   const shards = [], glass = [];
   const letters = data.letters.map((L, index) => {
     const all = L.contours.flatMap((c) => Array.from(c.pts));
@@ -406,6 +430,7 @@ export function mountName(scene, data, palU, baked) {
     },
     burst() {
       st.phase = 'burst'; st.burstAt = st.time;
+      flashU.uO.value.copy(st.click); flash.visible = true;
       root.updateMatrixWorld(true);
       const { w, h } = st.view;
       const sorted = [...shards].sort((a, b) => b.area - a.area);
@@ -441,6 +466,7 @@ export function mountName(scene, data, palU, baked) {
       st.time = t;
       uniforms.uTime.value = t;
       st.hover += (st.hoverT - st.hover) * (1 - Math.exp(-7 * dt));
+      if (flash.visible) { flashU.uT.value = t - st.burstAt; if (st.phase === 'float' || flashU.uT.value > 1.6) flash.visible = false; }
       if (st.phase === 'float' || st.phase === 'crack') {
         const calm = st.phase === 'crack' ? 0 : st.active;
         // The whole name tilts a little toward the pointer on a loose spring.
