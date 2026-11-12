@@ -73,7 +73,7 @@ vec3 near(vec3 d, vec3 p, float D){ return normalize(d*D+p); }
 // rather than a flat panel.
 vec3 envSoft(vec3 d){
   float k=sat(dot(d,normalize(vec3(-.35,.8,.5)))), f=sat(dot(d,normalize(vec3(.7,-.25,.6))));
-  return vec3(1.,.99,.97)*pow(k,5.)*.85+vec3(.9,.95,1.)*pow(f,10.)*.4+vec3(.003);
+  return vec3(1.,.99,.97)*pow(k,4.)*1.05+vec3(.9,.95,1.)*pow(f,8.)*.55+vec3(.012);
 }
 // Keeps a colour from going fully saturated: real dispersion splits white light, so even its fringes keep
 // some white in them, and dim fringes are paler still.
@@ -151,7 +151,7 @@ void main(){
   vec3 lp=(vWP-vC)*(loose?1.:1.-vFace);
   float ld=loose?.7:3.;
   vec3 tdir=near(reflect(r0,Z),lp,ld);
-  vec3 trapped=backP?vec3(0.):(loose?envSoft(tdir)*.5:env(tdir)*.3);
+  vec3 trapped=backP?vec3(0.):(loose?envSoft(tdir)*.7:env(tdir)*.3);
   for(int i=0;i<MAXS;i++){
     if(i>=uSamples) break;
     float prog=(float(i)+jit)/float(uSamples);
@@ -170,7 +170,7 @@ void main(){
   }
   tr/=wsum; lit/=wsum;
   lit=capSat(lit,.3+.4*sat(dot(lit,vec3(.33))));
-  if(loose) lit*=.55;
+  if(loose) lit*=.8;
 
   vec3 R=reflect(-V,N);
   // A loose shard turns its faces through every angle; it reflects the soft room, offset across the face so each

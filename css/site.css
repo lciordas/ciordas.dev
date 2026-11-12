@@ -95,7 +95,14 @@ body.is-editing [data-edit]:focus { outline: 1px solid var(--ov-accent, var(--ac
 .ov-icon svg { width: 20px; height: 20px; display: block; }
 .ov-icon:hover, .ov-icon:focus-visible { color: var(--ov-accent, var(--accent)); background: rgba(var(--accent-rgb), .1); outline: none; }
 .ov-hero { min-height: calc(100vh - var(--bar) - var(--peek)); min-height: calc(100svh - var(--bar) - var(--peek)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px, 1.8vh, 22px); padding: 0 0 clamp(10px, 2vh, 28px); text-align: center; }
-.ov-hero-top { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px clamp(14px, 2vw, 28px); }
+/* The name sits dead centre; the icons hang off to its right, so they don't push it over. */
+.ov-hero-top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: clamp(14px, 2vw, 28px); }
+.ov-hero-top > .ov-hero-name { grid-column: 2; }
+.ov-hero-top > .ov-links--hero { grid-column: 3; justify-self: start; }
+@media (max-width: 700px) {
+  .ov-hero-top { grid-template-columns: 1fr; justify-items: center; row-gap: 6px; }
+  .ov-hero-top > .ov-hero-name, .ov-hero-top > .ov-links--hero { grid-column: 1; justify-self: center; }
+}
 .ov-hero-name { margin: 0; font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 900; font-size: clamp(46px, min(8.4vw, 11vh), 132px); line-height: .9; letter-spacing: .005em; text-transform: uppercase; white-space: nowrap; visibility: hidden; }
 body.is-editing .ov-hero-name { visibility: visible; }
 .ov-links--hero .ov-icon { width: 44px; height: 44px; }
