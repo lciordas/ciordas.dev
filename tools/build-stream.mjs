@@ -91,6 +91,13 @@ const PROJECTS = {
     // Head on, swaying, filmed upright before the phone was turned on its side.
     await clip('robot-dog', 'sway', sdr(`${BROLL}/quadrupedgyratingfrontview.MOV`), 0.3, 4.8, { lock: 60, box: [500, 880, 900, 750], width: 900 });
   },
+  // The three pages of leg sketches, one picture each, from the clip's first frame (all three pages in view).
+  async 'robot-dog-sketches'() {
+    const f = frame(`${OLD}/12_dog_leg_sketches.mp4`, 0);
+    await still('robot-dog', 'sketch-1', f, { crop: { left: 15, top: 25, width: 593, height: 910 }, width: 900, quality: 82 });
+    await still('robot-dog', 'sketch-2', f, { crop: { left: 608, top: 105, width: 714, height: 950 }, width: 900, quality: 82 });
+    await still('robot-dog', 'sketch-3', f, { crop: { left: 1322, top: 20, width: 598, height: 930 }, width: 900, quality: 82 });
+  },
   async 'pid-seesaw'() {
     await still('pid-seesaw', 'lego-top', frame(`${OLD}/02_seesaw_lego_topdown.mp4`, 0.4, true), { width: 1000 });
     await still('pid-seesaw', 'lego-base', frame(`${OLD}/04_seesaw_lego_baseplate_vertical.mp4`, 1.5, true), { width: 800 });

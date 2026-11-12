@@ -31,14 +31,15 @@ const ANIMATED = {
   },
   // Lined up with the first frame of the video. Its four shots run 0 to 6 s, 6 to 9.3 s, 9.3 to 15.8 s, and 15.8 to 22.8 s.
   'robot-dog': {
-    model: 'dog', up: [0, 0, 1.5325], fov: 34.28, length: 560, clip: 'media/video/dog.mp4',
+    model: 'dog', up: [0, 0, 1.5325], fov: 34.28, length: 440, clip: 'media/video/dog.mp4',
     views: [
       { p: 0, az: 1.7, el: 0.42, dist: 3.7, tx: 0, ty: 0, tz: 0 },
-      { p: 0.5, az: 0.75, el: 0.2, dist: 3.4, tx: 0, ty: 0, tz: 0 },
-      { p: 0.6, az: 0.3256, el: 0.3072, dist: 3.4439, tx: 0.1741, ty: -0.1379, tz: -0.0126 },
+      { p: 0.636, az: 0.75, el: 0.2, dist: 3.4, tx: 0, ty: 0, tz: 0 },
+      { p: 0.764, az: 0.3256, el: 0.3072, dist: 3.4439, tx: 0.1741, ty: -0.1379, tz: -0.0126 },
     ],
-    assemble: [0.03, 0.5], title: [0.07, 0.18], wipe: [0.6, 0.66], clipAt: 0.66,
-    copyAt: [[0.2, 0.42], [0.44, 0.6], { t: [0, 9.33] }, { t: [9.33, 15.75] }, { t: [15.75, 22.76] }],
+    // Little scroll after the clip starts, so the photo stream follows soon after.
+    assemble: [0.038, 0.636], title: [0.089, 0.229], wipe: [0.764, 0.84], clipAt: 0.84,
+    copyAt: [[0.255, 0.535], [0.56, 0.84], { t: [0, 22.77] }],
   },
 };
 
@@ -99,7 +100,7 @@ const slideText = (m) => m.points?.length
   : `<p class="gallery__cap">${capHtml(m.caption || '')}</p>`;
 const body = (p) => `
   <div class="detail__body">
-    <p>${esc(p.summary)}</p>
+    ${p.summary ? `<p>${esc(p.summary)}</p>` : ''}
     ${p.tech?.length ? `<ul class="tech">${p.tech.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
     ${p.links?.length ? `<p class="plinks">${p.links.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join('')}</p>` : ''}
   </div>`;

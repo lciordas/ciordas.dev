@@ -104,20 +104,28 @@
       "title": "Robot Dog",
       "tag": "Quadruped with 6-DOF body control",
       "kind": "scroll",
-      "summary": "Quadrupedal robot designed in CAD with a small team. Inverse kinematics maps three degrees of freedom per leg to six degrees of freedom at the body.",
+      "summary": "",
       "captions": [
-        "Quadrupedal robot, designed in CAD with a small team. Several leg geometries were modeled before settling on a simple linkage.",
-        "Inverse kinematics maps the three degrees of freedom in each leg to full six-degree-of-freedom control of the body.",
-        "The same solver commands the body through arbitrary poses while the feet stay planted.",
-        "Head on, the roll and side-to-side sway of the body are easier to see.",
-        "Walking gait, with the camera tracking the robot across the mat."
+        "Quadrupedal robot, designed and coded from scratch: the culmination of multiple leg-linkage prototypes, a full CAD assembly, and custom control code.",
+        "Inverse kinematics turns any target body pose into 12 joint angles, three per leg, for full six-degree-of-freedom control of the body: shift, raise, roll, pitch and yaw.",
+        "A walking gait, plus smooth rotation, wiggle and gyration that blend motion across all six axes at once."
       ],
       "thumb": "robot-dog",
       "stream": [
         {
-          "src": "media/projects/robot-dog/sketches.webp",
+          "src": "media/projects/robot-dog/sketch-1.webp",
+          "size": "m",
+          "ar": 0.65
+        },
+        {
+          "src": "media/projects/robot-dog/sketch-2.webp",
           "size": "l",
-          "ar": 1.78
+          "ar": 0.75
+        },
+        {
+          "src": "media/projects/robot-dog/sketch-3.webp",
+          "size": "s",
+          "ar": 0.64
         },
         {
           "src": "media/projects/robot-dog/cad.webp",

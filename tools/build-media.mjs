@@ -51,7 +51,7 @@ await still('robot-dog', 'side', dogPic, { width: 1600 });
 await still('robot-dog', 'front', heic(`${BROLL}/quadrupedpic1.HEIC`), { width: 1600 });
 await still('robot-dog', 'quarter', heic(`${BROLL}/quadrued pic3.HEIC`), { width: 1600 });
 await still('robot-dog', 'legs', await frame(`${OLD}/14_dog_leg_designs_graphic.mp4`, 2), { width: 1600 });
-await still('robot-dog', 'sketches', await frame(`${OLD}/12_dog_leg_sketches.mp4`, 1), { width: 1600 });
+// The dog's leg sketches are three separate pictures now, from tools/build-stream.mjs (robot-dog-sketches).
 clip('robot-dog', 'leg-test', `${OLD}/15_dog_leg_prototype_test.mp4`, 0, 0, 'scale=1280:-2');
 clip('robot-dog', 'prototype', `${OLD}/16_dog_robot_moving.mp4`, 0, 0, 'scale=1280:-2');
 clip('pid-seesaw', 'lego', `${OLD}/03_seesaw_lego_ball_balancing.mp4`, 0, 0, 'scale=1280:-2');
