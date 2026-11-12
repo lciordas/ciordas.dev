@@ -24,19 +24,23 @@ const CLIPS = {
   micromanipulator() {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '48.2', '-t', '5.3', '-i', MAKER, '-vf', 'fps=30,scale=1280:720', ...encode, path.join(OUT, 'micromanipulator.mp4')]);
   },
-  // The dog's highlight cut: the liveliest stretch of each of its four shots, back to back with hard cuts, each one
-  // already moving when it starts. The first three come steadied from build-frames.mjs, so run that and 'dog-walk'
-  // first; the trims below are seconds into those clips.
+  // The dog's highlight cut: the liveliest stretch of each of its shots, back to back with hard cuts, each one already
+  // moving when it starts. All but the walk come steadied from build-frames.mjs, so run that and 'dog-walk' first; the
+  // trims below are frames into those clips, at 30 fps throughout so no frame is ever repeated or dropped. The last shot
+  // cuts straight back into the first when the video loops. Each cut starts a keyframe.
   dog() {
     const shots = [
-      [`${FRAMES}/dog/%04d.webp`, 30, 0, 2.7], // side on: pitching nose down, then nose up; its first frame is the one the model lines up with
-      [`${FRAMES}/dog-quarter/%04d.webp`, 30, 0, 2.3], // front three-quarter: rising and rolling away, then dropping low
-      [`${FRAMES}/dog-front/%04d.webp`, 24, 2.5, 5], // head on: rolling one way, a yaw, then rolling hard the other way
-      [path.join(FRAMES, 'dog-walk.mp4'), 0, 4.25, 6.65], // walking on the mat, mid-stride
+      [`${FRAMES}/dog/%04d.webp`, 0, 81], // side on: pitching nose down, then nose up; its first frame is the one the model lines up with
+      [`${FRAMES}/dog-quarter/%04d.webp`, 1, 70], // front three-quarter: rising and rolling away, then dropping low (its first frame is a repeat, so skipped)
+      [`${FRAMES}/dog-front/%04d.webp`, 75, 150], // head on: rolling one way, a yaw, then rolling hard the other way
+      [path.join(FRAMES, 'dog-walk.mp4'), 128, 200], // walking on the mat, mid-stride
+      [`${FRAMES}/dog-rock/%04d.webp`, 3, 75], // head on and closer: rocking side to side (its first frames are repeats, so skipped)
     ];
-    const inputs = shots.flatMap(([file, rate]) => [...(rate ? ['-framerate', String(rate)] : []), '-i', file]);
-    const chains = shots.map(([, , a, b], i) => `[${i}:v]trim=${a}:${b},setpts=PTS-STARTPTS,fps=30,scale=1280:720,setsar=1[s${i}]`);
-    execFileSync('ffmpeg', ['-v', 'error', '-y', ...inputs, '-filter_complex', `${chains.join(';')};${shots.map((_, i) => `[s${i}]`).join('')}concat=n=${shots.length}:v=1[o]`, '-map', '[o]', ...encode.map((v) => (v === '24' ? '27' : v)), path.join(OUT, 'dog.mp4')]);
+    const inputs = shots.flatMap(([file]) => [...(file.endsWith('.webp') ? ['-framerate', '30'] : []), '-i', file]);
+    const chains = shots.map(([, a, b], i) => `[${i}:v]trim=start_frame=${a}:end_frame=${b},setpts=N/30/TB,scale=1280:720,setsar=1[s${i}]`);
+    let at = 0; const cuts = shots.slice(0, -1).map(([, a, b]) => ((at += b - a) / 30).toFixed(4));
+    execFileSync('ffmpeg', ['-v', 'error', '-y', ...inputs, '-filter_complex', `${chains.join(';')};${shots.map((_, i) => `[s${i}]`).join('')}concat=n=${shots.length}:v=1,fps=30[o]`, '-map', '[o]',
+      ...encode, '-force_key_frames', `0,${cuts.join(',')}`, path.join(OUT, 'dog.mp4')]);
   },
   // The chess engine's own window from the screen recording: the board and its status line ("thinking..."), from the
   // first move to the engine's last reply before the recording ends, played at 1.6x so the pauses stay short.
@@ -61,7 +65,8 @@ const CLIPS = {
       const left = Math.max(0, Math.min(srcW - cw, Math.round(fx - cw / 2))), top = Math.max(0, Math.min(srcH - ch, Math.round(fy - ch * 0.36)));
       await sharp(path.join(tmp, files[i])).extract({ left, top, width: cw, height: ch }).resize({ width: 1280 }).png({ compressionLevel: 1 }).toFile(path.join(out, files[i]));
     }
-    execFileSync('ffmpeg', ['-v', 'error', '-y', '-framerate', '30', '-i', path.join(out, '%04d.png'), ...encode, path.join(FRAMES, 'dog-walk.mp4')]);
+    // Kept near lossless, as it's encoded again when it's joined into the dog's video.
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-framerate', '30', '-i', path.join(out, '%04d.png'), ...encode.map((v) => (v === '24' ? '12' : v)), path.join(FRAMES, 'dog-walk.mp4')]);
     fs.rmSync(tmp, { recursive: true, force: true }); fs.rmSync(out, { recursive: true, force: true });
   },
 };

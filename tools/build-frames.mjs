@@ -15,9 +15,13 @@ const CLIPS = {
   // Front three-quarter, close: the body rolling and pitching over planted feet.
   'dog-quarter': { src: `${HOME}/Downloads/maker portfolio b-roll/quadruped gyrating.MOV`, ss: 1.75, t: 3.3, vf: 'fps=30', lock: { margin: 140 } },
   // Head on: one full sway, then the tilts. The phone was turned on its side partway through, so it needs turning back.
-  'dog-front': { src: `${HOME}/Downloads/maker portfolio b-roll/quadrupedgyratingfrontview.MOV`, ss: 23.1, t: 6.4, pre: 'transpose=2', vf: 'transpose=2,fps=24', trackFps: 30, lock: { margin: 48 } },
+  // Kept at the footage's own 30 fps: at 24 the joined video has to repeat every fifth frame, which judders.
+  'dog-front': { src: `${HOME}/Downloads/maker portfolio b-roll/quadrupedgyratingfrontview.MOV`, ss: 23.1, t: 6.4, pre: 'transpose=2', vf: 'transpose=2,fps=30', lock: { margin: 48 } },
+  // Head on and closer, a few seconds after that: the body rocking side to side over planted feet. `box` [centre x,
+  // centre y, w, h] in source pixels picks the part kept, here a 1280x720 window so the picture isn't scaled at all.
+  'dog-rock': { src: `${HOME}/Downloads/maker portfolio b-roll/quadrupedgyratingfrontview.MOV`, ss: 29.8, t: 3, pre: 'transpose=2', vf: 'transpose=2,fps=30', lock: { box: [960, 630, 1280, 720] } },
 };
-const WIDTH = 1280, QUALITY = 72;
+const WIDTH = 1280, QUALITY = 90;
 
 const only = process.argv[2];
 for (const [name, c] of Object.entries(CLIPS)) {
@@ -31,14 +35,15 @@ for (const [name, c] of Object.entries(CLIPS)) {
   const { width: srcW, height: srcH } = await sharp(path.join(tmp, files[0])).metadata();
   let crop = null;
   if (c.lock) {
-    const track = trackCamera(c.src, c.ss, c.t, c.pre).filter((_, i, all) => !c.trackFps || Math.round((i * 24) / c.trackFps) !== Math.round(((i - 1) * 24) / c.trackFps));
+    const track = trackCamera(c.src, c.ss, c.t, c.pre);
     const px = track.map(([x, y]) => [x * srcW, y * srcH]);
     const xs = px.map((p) => p[0]), ys = px.map((p) => p[1]);
     const midX = (Math.min(...xs) + Math.max(...xs)) / 2, midY = (Math.min(...ys) + Math.max(...ys)) / 2;
     const spreadX = Math.max(...xs) - Math.min(...xs), spreadY = Math.max(...ys) - Math.min(...ys);
-    const mx = c.lock.margin, cw = srcW - mx * 2, ch = Math.round((cw * 9) / 16);
-    if (spreadX / 2 > mx || spreadY / 2 > (srcH - ch) / 2) throw new Error(`${name}: camera moved ${spreadX.toFixed(0)}x${spreadY.toFixed(0)}px, more than the margin allows`);
-    crop = (i) => ({ left: Math.round(mx + px[Math.min(i, px.length - 1)][0] - midX), top: Math.round((srcH - ch) / 2 + px[Math.min(i, px.length - 1)][1] - midY), width: cw, height: ch });
+    const mx = c.lock.margin ?? 0, [bx, by, cw, ch] = c.lock.box || [srcW / 2, srcH / 2, srcW - mx * 2, Math.round(((srcW - mx * 2) * 9) / 16)];
+    const left0 = bx - cw / 2, top0 = by - ch / 2;
+    if (spreadX / 2 > Math.min(left0, srcW - left0 - cw) || spreadY / 2 > Math.min(top0, srcH - top0 - ch)) throw new Error(`${name}: camera moved ${spreadX.toFixed(0)}x${spreadY.toFixed(0)}px, more than the margin allows`);
+    crop = (i) => ({ left: Math.round(left0 + px[Math.min(i, px.length - 1)][0] - midX), top: Math.round(top0 + px[Math.min(i, px.length - 1)][1] - midY), width: cw, height: ch });
     console.log(name, `camera moved ${spreadX.toFixed(0)}x${spreadY.toFixed(0)}px at source size, locked`);
   }
   let bytes = 0, w = 0, h = 0;
@@ -49,7 +54,7 @@ for (const [name, c] of Object.entries(CLIPS)) {
     const info = await img.resize({ width: WIDTH }).webp({ quality: QUALITY, effort: 5 }).toFile(dest);
     bytes += info.size; w = info.width; h = info.height;
   }
-  fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify({ count: files.length, width: w, height: h, fps: c.vf.includes('fps=24') ? 24 : 30 }));
+  fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify({ count: files.length, width: w, height: h, fps: 30 }));
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log(name, 'frames', files.length, `${w}x${h}`, 'total MB', (bytes / 1e6).toFixed(1));
 }
