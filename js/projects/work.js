@@ -27,7 +27,7 @@ const ANIMATED = {
       { p: 0.62, az: 0, el: 0, dist: 5.9152, tx: -0.1128, ty: 0.3136, tz: 0 },
     ],
     assemble: [0.03, 0.52], title: [0.08, 0.2], wipe: [0.62, 0.68], clipAt: 0.68,
-    copyAt: [[0.28, 0.6], [0.7, 1]],
+    copyAt: [[0.12, 0.36], [0.38, 0.6], [0.62, 0.8], [0.82, 1]],
   },
   // Lined up with the first frame of the video. Its four shots run 0 to 6 s, 6 to 9.3 s, 9.3 to 15.8 s, and 15.8 to 22.8 s.
   'robot-dog': {

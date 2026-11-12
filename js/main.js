@@ -23,7 +23,7 @@ const canvas = $('gl'), enterBtn = $('enter'), portfolio = $('portfolio'), fallb
 // break up. Steps are a moment apart, so scrolling straight through lands on the overview in about a second.
 const cue = $('cue'), label = cue.querySelector('.cue__label');
 const TOUCH = matchMedia('(pointer: coarse)').matches;
-let advance = null, lastStep = -1e9, lastWheel = 0, holdScroll = false;
+let advance = null, lastStep = -1e9, lastWheel = 0, holdScroll = 0;
 const step = () => {
   const now = performance.now();
   if (!advance || now - lastStep < 300) return;
@@ -32,12 +32,13 @@ const step = () => {
 const showCue = (fn, text) => { advance = fn; label.textContent = text; cue.hidden = false; requestAnimationFrame(() => cue.classList.add('on')); };
 const hideCue = () => { cue.classList.remove('on'); setTimeout(() => { if (!cue.classList.contains('on')) cue.hidden = true; }, 700); };
 // Once the overview is up, the rest of a scroll that skipped there is held back so it doesn't carry on into the projects.
-const arrived = () => { advance = null; holdScroll = performance.now() - lastStep < 1200; };
+// Held for at most 0.7 s, so a long trackpad glide can't leave the page stuck.
+const arrived = () => { advance = null; const now = performance.now(); holdScroll = now - lastStep < 1200 ? now + 700 : 0; };
 addEventListener('wheel', (e) => {
   const now = performance.now(), gap = now - lastWheel;
   lastWheel = now;
   if (holdScroll) {
-    if (gap > 260) holdScroll = false;
+    if (gap > 260 || now > holdScroll) holdScroll = 0;
     else { e.preventDefault(); e.stopImmediatePropagation(); return; }
   }
   if (e.deltaY > 0) step();

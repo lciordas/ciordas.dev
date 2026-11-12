@@ -17,7 +17,7 @@
       }
     ],
     "hint": "Arrow keys to move, Enter to open, or scroll",
-    "intro": "**Hey, I'm Lucas.** I'm a senior at **Regis High School** who takes classes at **Columbia**, and does research for the **Summer Science Program** and **NeurIPS**. I **code**, and build **hardware and robots**. This summer I interned at an **a16z-backed $125M** AI-Native Services **stealth** startup.",
+    "intro": "**Hey, I'm Lucas.** A senior at Regis High School taking classes at Columbia. I build robots, write code, and do research with the Summer Science Program and NeurIPS. This summer I was a software engineer at an **a16z-backed, $125M** stealth AI startup.",
     "logos": [
       {
         "name": "Regis High School",
@@ -94,7 +94,7 @@
       "items": [
         {
           "title": "Software Engineering Intern",
-          "detail": "AI-Native Services · **a16z-backed** stealth startup · **$125M** valuation · ~10 people · Summer 2026 · 8 weeks"
+          "detail": "**a16z-backed** stealth AINS startup · **$125M** valuation · ~10 people · 8 weeks × **15 hrs/day** · Summer 2026"
         }
       ]
     }
@@ -106,9 +106,9 @@
       "kind": "scroll",
       "summary": "",
       "captions": [
-        "Quadrupedal robot, designed and coded from scratch: the culmination of multiple leg-linkage prototypes, a full CAD assembly, and custom control code.",
-        "Inverse kinematics turns any target body pose into 12 joint angles, three per leg, for full six-degree-of-freedom control of the body: shift, raise, roll, pitch and yaw.",
-        "A walking gait, plus smooth rotation, wiggle and gyration that blend motion across all six axes at once."
+        "Quadrupedal robot, designed and coded from scratch. The culmination of multiple leg-linkage prototypes, a full CAD assembly, and custom control code.",
+        "Inverse kinematics maps the three degrees of freedom per leg, 12 in all, to full six-degree-of-freedom control of the body.",
+        "Walks, and rotates, wiggles and gyrates smoothly, blending motion across all of its axes of freedom."
       ],
       "thumb": "robot-dog",
       "stream": [
@@ -202,10 +202,10 @@
       "title": "PID Seesaw",
       "tag": "Closed-loop ball balancing",
       "kind": "scroll",
-      "summary": "Ball-balancing beam. An infrared distance sensor reports the ball's position, and a servo and linkage tilt the beam under PID control.",
+      "summary": "",
       "captions": [
-        "Ball-balancing beam. An infrared distance sensor measures the ball's position, and a servo drives the beam through a linkage.",
-        "A PID controller holds the ball at center and rejects disturbances. The second revision upgraded the hardware and corrected the control law: setting the servo angle to the controller output, rather than adding the output to the angle, removed an unintended integrator and the lag it caused."
+        "Ball-balancing PID seesaw. An infrared sensor tracks the ball, and a servo tilts the beam to keep it balanced at the center.",
+        "Resistant to disturbances. Knock the ball away and the PID controller pulls it right back to center."
       ],
       "thumb": "pid-seesaw",
       "stream": [
@@ -259,8 +259,10 @@
       "kind": "scroll",
       "summary": "A low-cost, 3D-printed alternative to industrial micromanipulators, which cost $1,000 to $60,000. Geometric microstepping and a magnetic-gearing encoder bring angular error down to about 0.0005°, which allows a theoretical end-effector resolution of 100 nm. Physical testing of that resolution is the next step.",
       "captions": [
-        "A low-cost, 3D-printed micromanipulator. Three NEMA 17 stepper motors turn horns that move the end effector through parallel brass rods on ball joints, in place of industrial units that cost $1,000 to $60,000.",
-        "Geometric microstepping accounts for the true 45° phase spacing of the motor's coils, and a row of 17 axially magnetized magnets raises encoder resolution 8.5 times. Angular error fell from about 0.08° in open loop to 0.0005° with PID control, for a theoretical end-effector resolution of 100 nm."
+        "A DIY, $200 build of a $10,000–60,000 industrial instrument, made to move on the nanometer scale.",
+        "A new microstepping formula I derived eliminates up to 1/25 of a full step of error, 0.072°, over 140 times the precision the arm is built for.",
+        "A row of 17 axially magnetized magnets multiplies encoder resolution 8.5 times.",
+        "Closed-loop PID control holds angular error to 0.0005°, for a theoretical 100 nm resolution at the tip."
       ],
       "tech": [
         "NEMA 17 stepper",
@@ -470,7 +472,7 @@
       "title": "EvoGrad",
       "tag": "Hybrid neural networks: NEAT with gradient descent",
       "kind": "detail",
-      "summary": "A neural network library that re-implements NEAT from its original paper and combines it with gradient descent: evolution searches over network structure while gradient descent tunes the weights. Drawing on Kolmogorov–Arnold Networks (KANs), it also supports learnable activation functions, Legendre-polynomial expansions trained alongside the weights, so structure, weights and activations are optimized jointly. The result is compact, expressive networks suited to engineering and physics problems.",
+      "summary": "A neural-network library where evolution designs the network and gradient descent trains it, with KAN-style learnable activation functions trained alongside the weights. On the same curve-fitting task, the learnable activations reach 500× lower error than evolution alone, in a single generation.",
       "tech": [
         "NEAT",
         "KAN",
