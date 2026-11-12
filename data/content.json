@@ -549,29 +549,21 @@
     },
     "protein-classifier": {
       "title": "Alzheimer's Protein Classifier",
-      "tag": "SVM, 80.3% accuracy",
+      "tag": "SVM, 80.3% length-controlled accuracy",
       "kind": "detail",
-      "scrollStop": true,
-      "summary": "A support vector machine over genomic and proteomic data that classifies whether a protein sequence is associated with Alzheimer's disease, with controls to correct for sequence length bias. Accuracy: 80.3%.",
-      "tech": [
-        "Support vector machines",
-        "Bioinformatics",
-        "Python"
+      "captions": [
+        "A support vector machine that flags Alzheimer's-associated proteins and genes from sequence alone. Trained on **7,857** proteins and **39,708** genes from NCBI.",
+        "Caught a hidden bias. Alzheimer's and non-Alzheimer's sequences weren't aligned in length, and the features quietly encode it.",
+        "Built a synthetic dataset with matching lengths to measure how much length variation alone drives accuracy. Controlled for it, the protein model holds **80.3%**.",
+        "Rebuilt the data with lengths matched. **86%** raw and **83%** length-adjusted on **18,824** proteins, only **3** points apart."
       ],
+      "scrollStop": true,
       "links": [],
       "thumb": "protein-classifier",
       "media": [
         {
           "src": "media/projects/protein-classifier/charts.webp",
-          "caption": "Accuracy and sequence length bias",
-          "points": [
-            "**Fig. 2.1** Protein model: as the data shrinks to 10%, raw accuracy falls from **~89%** to **~78%**, adjusted from **~80%** to **~69%**.",
-            "**Fig. 2.2** Genome model: raw accuracy stays near **95–97%**, but adjusted accuracy is only **~50–53%**.",
-            "**Fig. 3.1** Alzheimer's-associated proteins skew shorter, peaking near **200–300** amino acids against **400–500** for the rest.",
-            "**Fig. 3.2** Non-Alzheimer's genes are dominated by a spike of **~17,000** sequences under **100** nucleotides.",
-            "Length differs between the classes, so the classifier controls for it: **80.3%** accuracy."
-          ],
-          "light": true
+          "caption": "The original dataset beside the length-matched one. Protein lengths by class, and raw against length-adjusted accuracy as the dataset shrinks."
         }
       ]
     },
