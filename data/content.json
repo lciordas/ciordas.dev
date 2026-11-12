@@ -554,7 +554,7 @@
       "captions": [
         "A support vector machine that flags Alzheimer's-associated proteins and genes from sequence alone. Trained on **7,857** proteins and **39,708** genes from NCBI.",
         "Caught a hidden bias. Alzheimer's and non-Alzheimer's sequences weren't aligned in length, and the features quietly encode it.",
-        "Built a synthetic dataset with matching lengths to measure how much length variation alone drives accuracy. Controlled for it, the protein model holds **80.3%**.",
+        "Built a synthetic dataset with matching lengths to measure how much length variation alone drives accuracy. With length controlled for, the protein model still scores **80.3%**.",
         "Rebuilt the data with lengths matched. **86%** raw and **83%** length-adjusted on **18,824** proteins, only **3** points apart."
       ],
       "scrollStop": true,
