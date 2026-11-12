@@ -70,11 +70,8 @@ function viewAt(views, p) {
 // A prompt at the start of each project's scrolling part, so it's clear the page plays as you scroll.
 const CUE = '<div class="pcue" aria-hidden="true"><span>Scroll</span><svg viewBox="0 0 14 22"><path d="M7 1v19M1 14l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
 
-const endLinks = (next, content) => `
-  <div class="after">
-    <a class="after__back" href="#">Back to overview</a>
-    ${next ? `<a class="after__next" href="#${next}"><span>Next</span>${esc(content.projects[next].title)}</a>` : ''}
-  </div>`;
+// All the projects run on one page, so only the last one ends with a way back to the overview.
+const END = '<div class="after"><a class="after__back" href="#">Back to overview</a></div>';
 
 // The words beside the window set smaller, a step at a time, when they'd spill out of their box. Only wide screens give
 // the box a fixed height; on upright ones it grows with the words.
@@ -91,7 +88,7 @@ const holdLit = (started) => started.map((s, i) => (i ? s : 1) * started.slice(i
 // The slides that follow the video inside the window, with their own bullets: as many as the config has places for.
 const slidesOf = (cfg, p) => (cfg.slides && p.slides ? p.slides.slice(0, cfg.slides.length) : []);
 
-function buildAnimated(id, cfg, p, index, next, content) {
+function buildAnimated(id, cfg, p, index, last) {
   const slides = slidesOf(cfg, p);
   const s = document.createElement('section');
   s.className = 'project'; s.id = id; s.dataset.project = id; s.setAttribute('aria-label', p.title);
@@ -114,7 +111,7 @@ function buildAnimated(id, cfg, p, index, next, content) {
       </div>
     </div>
     ${p.stream?.length ? stream(p, body(p)) : p.media?.length ? gallery(p, body(p)) : ''}
-    ${endLinks(next, content)}`;
+    ${last ? END : ''}`;
   return s;
 }
 
@@ -249,16 +246,18 @@ function mountStream(el) {
   return s;
 }
 
-function buildDetail(id, p, index, next, content) {
+function buildDetail(id, p, index, last) {
   const s = document.createElement('section');
   s.className = 'project project--detail'; s.id = id; s.dataset.project = id; s.setAttribute('aria-label', p.title);
   const side = p.media?.length ? sideOf(p) : '', title = `<h3 class="detail__title"><span class="index">${index}</span>${esc(p.title)}</h3>`;
-  const head = side ? title : `${title}${body(p)}`, links = endLinks(next, content);
-  const inStage = side && p.media.length === 1 && !p.stream?.length;
+  const head = side ? title : `${title}${body(p)}`;
+  // The last project, when it's one picture told in bullets, has the way back at the bottom of that same screen, so
+  // the page ends on exactly one screen of it.
+  const inStage = last && side && p.media.length === 1 && !p.stream?.length;
   s.innerHTML = `
-    ${p.media?.length ? gallery(p, head, side, inStage ? links : '') : `<div class="detail detail--head">${head}</div>`}
+    ${p.media?.length ? gallery(p, head, side, inStage ? END : '') : `<div class="detail detail--head">${head}</div>`}
     ${p.stream?.length ? stream(p) : ''}
-    ${inStage ? '' : links}`;
+    ${last && !inStage ? END : ''}`;
   return s;
 }
 
@@ -315,15 +314,16 @@ export function mountWork(container, options = {}) {
   const order = [...new Set([...content.columns.flatMap((c) => c.items), ...(content.research?.items || [])])].filter((id) => content.projects[id]);
   const items = [], sections = [];
   order.forEach((id, i) => {
-    const p = content.projects[id], next = order[i + 1], index = String(i + 1).padStart(2, '0');
+    const p = content.projects[id], last = i === order.length - 1, index = String(i + 1).padStart(2, '0');
     const cfg = ANIMATED[id];
-    if (!cfg) { const el = buildDetail(id, p, index, next, content); container.appendChild(el); sections.push(el); return; }
-    const el = buildAnimated(id, cfg, p, index, next, content);
+    if (!cfg) { const el = buildDetail(id, p, index, last); container.appendChild(el); sections.push(el); return; }
+    const el = buildAnimated(id, cfg, p, index, last);
     container.appendChild(el); sections.push(el);
     const q = (sel) => el.querySelector(sel);
     const item = {
-      id, cfg, el, runway: q('.runway'), title: q('.title'), head: q('.head'), screen: q('.screen'), cadC: q('.cad'), video: q('.clip'), scan: q('.scan'), bar: q('.bar i'),
+      id, cfg, el, stage: q('.stage'), runway: q('.runway'), title: q('.title'), head: q('.head'), screen: q('.screen'), cadC: q('.cad'), video: q('.clip'), scan: q('.scan'), bar: q('.bar i'),
       copies: [...el.querySelectorAll('.points > .point')], cue: q('.pcue'), cad: null, p: 0, loading: false, fit: 1, playing: false,
+      seen: false, shown: false, on: false, enter: null, met: false,
       panel: q('ul.points'), poster: q('.poster'), shows: [...el.querySelectorAll('.sshow')],
       // Each slide's bullets light one after another over the slide's stretch of scroll, from its wipe; the last stays lit.
       panels: [...el.querySelectorAll('.points--slide')].map((node, i) => {
@@ -334,9 +334,8 @@ export function mountWork(container, options = {}) {
     if (!gl || !cfg.model) item.cadC.style.display = 'none';
     items.push(item);
   });
-  // A project marked "scrollStop" in the content file holds a fast scroll at its end once (keynav.js).
+  // A project marked "scrollStop" in the content file holds a fast scroll at its end (keynav.js).
   sections.forEach((s) => { if (content.projects[s.dataset.project]?.scrollStop) s.dataset.scrollStop = ''; });
-  const foot = document.createElement('div'); foot.className = 'after after--end'; foot.innerHTML = '<a class="after__back" href="#">Back to overview</a>'; container.appendChild(foot);
   const galleries = [...container.querySelectorAll('.gallery')].map(mountGallery);
   const streams = [...container.querySelectorAll('.stream')].map(mountStream);
 
@@ -449,10 +448,17 @@ export function mountWork(container, options = {}) {
   // Smooth scrolling with a gentle glide, off for reduced motion and left native on touch.
   let lenis = null;
   if (!REDUCED && window.Lenis) lenis = new window.Lenis({ lerp: 0.085, wheelMultiplier: 0.9, smoothWheel: true });
-  const jump = (y) => { if (lenis) lenis.scrollTo(y, { immediate: true, force: true }); else window.scrollTo(0, y); };
+  // Going straight to a place on the page. Everything played by the scroll is set for the new place at once, rather
+  // than catching up to it on screen.
+  let snap = false;
+  const jump = (y) => {
+    lenis?.resize();
+    if (lenis) lenis.scrollTo(y, { immediate: true, force: true }); else window.scrollTo(0, y);
+    snap = true;
+  };
 
   // Moving a gallery one picture sideways scrolls the page to where that picture holds still.
-  const galleryAt = () => galleries.find((g) => { if (g.el.closest('.project').hidden) return false; const r = g.el.getBoundingClientRect(); return r.top <= 1 && r.bottom >= innerHeight - 1; });
+  const galleryAt = () => galleries.find((g) => { const r = g.el.getBoundingClientRect(); return r.top <= 1 && r.bottom >= innerHeight - 1; });
   const goTo = (g, i) => {
     const n = g.slides.length; i = Math.max(0, Math.min(n - 1, i));
     const top = g.el.getBoundingClientRect().top + window.scrollY, y = top + (n > 1 ? i / (n - 1) : 0) * (g.el.offsetHeight - innerHeight);
@@ -470,7 +476,7 @@ export function mountWork(container, options = {}) {
   addEventListener('wheel', (e) => {
     if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 2) return;
     // Swiping sideways over a stream moves it the way the fingers go, by scrolling the page.
-    const st = streams.find((x) => { if (x.el.closest('.project').hidden) return false; const r = x.el.getBoundingClientRect(); return r.top <= 1 && r.bottom >= innerHeight - 1; });
+    const st = streams.find((x) => { const r = x.el.getBoundingClientRect(); return r.top <= 1 && r.bottom >= innerHeight - 1; });
     if (st) {
       e.preventDefault();
       if (lenis) lenis.scrollTo(lenis.targetScroll - e.deltaX); else window.scrollBy(0, -e.deltaX);
@@ -497,27 +503,57 @@ export function mountWork(container, options = {}) {
     if (g) goTo(g, g.active - Math.sign(dx));
   }, { passive: true });
 
+  // Coming down into a project plays its unveiling with the scroll. Coming up into one that hasn't been unveiled yet
+  // shows it already done instead, assembled with its video playing and a bullet lit, so the build never runs
+  // backwards; the first time, its window and words come up into place. Once a project has been unveiled on the way
+  // down, going back up through it plays it back as before. Which way it's shown is settled as it comes on screen and
+  // kept until it has gone again.
+  const RISE = [{ opacity: 0, transform: 'translate3d(0,18px,0)' }, { opacity: 1, transform: 'none' }];
+  const arrive = (it, r, H, dir) => {
+    it.on = true;
+    // Which way the page was going as it came on screen, or after a jump (or with no scroll at all) where it stands:
+    // below its start counts as coming up into it.
+    it.shown = !it.seen && (dir ? dir < 0 : r.top < -H * 0.02);
+    if (!it.shown || it.met || REDUCED) return;
+    const parts = [it.stage.querySelector('.window'), it.screen, it.head, ...it.stage.querySelectorAll('.points')];
+    it.enter = parts.map((n, i) => { const a = n.animate(RISE, { duration: 600, delay: Math.min(i, 3) * 60, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'backwards' }); a.pause(); return a; });
+  };
+  const leave = (it) => {
+    it.on = false;
+    it.enter?.forEach((a) => a.cancel()); it.enter = null;
+  };
+
   const heroEls = options.fade || [];
-  let last = performance.now(), focusId = null, time = 0;
+  let last = performance.now(), time = 0, lastY = window.scrollY;
   const tick = (now) => {
     requestAnimationFrame(tick);
     const dt = Math.min(0.05, (now - last) / 1000); last = now; time += dt;
     lenis?.raf(now);
-    const H = innerHeight, y = window.scrollY, hero = clamp(1 - y / (H * 0.8));
+    const H = innerHeight, y = window.scrollY, hero = clamp(1 - y / (H * 0.8)), dir = snap ? 0 : Math.sign(y - lastY);
+    lastY = y;
     heroEls.forEach((e) => { e.style.opacity = hero; });
     options.onHero?.(hero, y);
     items.forEach((it) => {
-      if (it.el.hidden) { setPlaying(it, false); return; }
       const r = it.runway.getBoundingClientRect();
-      if (r.top < H * 2 && r.bottom > -H) ensure(it);
+      if (r.top < H * 2 && r.bottom > -H * 2) ensure(it);
       const visible = r.top < H && r.bottom > 0;
       const target = clamp(-r.top / Math.max(1, r.height - H));
+      if (snap) { it.p = target; if (it.on) leave(it); }
       it.p += (target - it.p) * (1 - Math.exp(-(REDUCED ? 60 : 11) * dt));
       if (Math.abs(target - it.p) < 0.00005) it.p = target;
-      if (visible) apply(it, it.p, time); else setPlaying(it, false);
+      if (visible && !it.on) arrive(it, r, H, dir);
+      else if (!visible && it.on) leave(it);
+      if (!visible) { setPlaying(it, false); return; }
+      // The first look comes up once a fifth of its screen is in view.
+      if (it.enter) {
+        const sr = it.stage.getBoundingClientRect();
+        if (Math.min(H, sr.bottom) - Math.max(0, sr.top) > H * 0.2) { it.enter.forEach((a) => a.play()); it.enter = null; it.met = true; }
+      }
+      if (!it.shown && it.p >= it.cfg.clipAt) it.seen = true;
+      apply(it, it.shown ? Math.max(it.p, it.cfg.clipAt) : it.p, time);
     });
+    snap = false;
     galleries.forEach((g) => {
-      if (g.el.closest('.project').hidden) return;
       const r = g.el.getBoundingClientRect();
       if (r.top < H * 2.5 && r.bottom > -H) g.load();
       const on = r.top < H && r.bottom > 0;
@@ -526,7 +562,6 @@ export function mountWork(container, options = {}) {
       g.on = on;
     });
     streams.forEach((s) => {
-      if (s.el.closest('.project').hidden) return;
       const r = s.el.getBoundingClientRect();
       if (r.top < H * 2.5 && r.bottom > -H) s.load();
       const on = r.top < H && r.bottom > 0;
@@ -541,22 +576,10 @@ export function mountWork(container, options = {}) {
   document.fonts?.ready.then(size);
   requestAnimationFrame(tick);
 
-  const showAll = () => { sections.forEach((s) => { s.hidden = false; }); container.classList.remove('is-focus'); focusId = null; size(); lenis?.resize(); };
   const api = {
-    items, lenis, jump,
-    // Show one project on its own, right below the overview, so scrolling up leads straight back.
-    focus(id) {
-      sections.forEach((s) => { s.hidden = s.dataset.project !== id; });
-      container.classList.add('is-focus'); focusId = id;
-      size(); lenis?.resize();
-      const el = sections.find((s) => s.dataset.project === id);
-      const it = items.find((x) => x.id === id);
-      if (it) it.p = 0;
-      jump(el.getBoundingClientRect().top + window.scrollY);
-    },
-    clearFocus: showAll,
-    focused: () => focusId,
-    toTop() { jump(0); },
+    items, lenis, jump, sections,
+    // Where a project starts on the page.
+    top(id) { const el = sections.find((s) => s.dataset.project === id); return el ? el.getBoundingClientRect().top + window.scrollY : null; },
   };
   window.__work = api;
   return api;

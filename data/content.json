@@ -450,6 +450,7 @@
       "title": "Chess Engine",
       "tag": "Bitboards, NNUE, 2000+ Elo",
       "kind": "detail",
+      "scrollStop": true,
       "captions": [
         "My first and longest-running project, started four years ago and improved ever since.",
         "A pure-Python engine built on bitboards and minimax search, with iterative deepening, alpha-beta pruning and a transposition table.",

@@ -274,8 +274,9 @@ html.lenis, html.lenis body { height: auto; }
 .gallery__side strong { font-weight: 600; color: #f7f2ea; }
 .gallery__text .plinks { margin: 0; }
 .gallery__text .plinks a { font-size: clamp(14px, 1vw, 16px); }
-/* With one picture, the links at the end take the bottom of the same screen instead of a strip below it. */
-.gallery__stage > .after { flex: none; width: 100%; padding-top: 6px; padding-bottom: calc(clamp(18px, 3.4vh, 36px) + env(safe-area-inset-bottom, 0px)); }
+/* With one picture, the link at the end takes the bottom of the same screen instead of a strip below it, in line
+   with the title. */
+.gallery__stage > .after { flex: none; width: 100%; max-width: none; margin: 0; justify-content: flex-start; padding: 6px var(--pad) calc(clamp(16px, 3vh, 32px) + env(safe-area-inset-bottom, 0px)); }
 .gallery__nav { display: flex; align-items: center; gap: 14px; }
 .gallery__btn { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border-radius: 50%; border: 1px solid rgba(244, 239, 232, .24); background: transparent; color: var(--ink); cursor: pointer; transition: border-color .2s ease, color .2s ease, background-color .2s ease; }
 .gallery__btn svg { width: 18px; height: 18px; }
@@ -330,13 +331,10 @@ html { overscroll-behavior-x: none; }
 .gallery .pcue { left: auto; right: var(--pad); transform: none; }
 @media (max-aspect-ratio: 9/10) { .gallery .pcue { display: none; } }
 
-/* Ways out at the end of a project */
-.after { display: none; align-items: center; justify-content: space-between; gap: 18px; max-width: 1180px; margin: 0 auto; padding: 34px clamp(20px, 5vw, 64px) 60px; }
-.is-focus .after, .after--end { display: flex; }
-.is-focus .after--end { display: none; }
+/* The way back to the overview at the end of the page */
+.after { display: flex; align-items: center; gap: 18px; max-width: 1180px; margin: 0 auto; padding: 34px clamp(20px, 5vw, 64px) 60px; }
 .after a { color: var(--ink); text-decoration: none; font-size: 15px; border-bottom: 1px solid rgba(244, 239, 232, .28); padding-bottom: 2px; }
 .after a:hover, .after a:focus-visible { color: var(--accent); border-color: currentColor; outline: none; }
-.after__next span { margin-right: 10px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 @media (max-width: 760px) { .ov-other ul { gap: 10px; } }
 /* Upright screens: the window goes back to the middle and only the current bullet shows, below it. */
 @media (max-aspect-ratio: 9/10) {

@@ -1,4 +1,4 @@
-// site: the overview page shown behind the name, and moving between it and the project pages.
+// site: the overview page shown behind the name, and moving between it and the projects.
 import { REDUCED } from './_util.js';
 import { PALETTE, PALETTE_KEY, DEFAULT_PALETTE } from './palette.js';
 
@@ -119,42 +119,104 @@ export function mountSite({ root, work, content }) {
   const rows = () => [...root.querySelectorAll('.row, .rrow')];
   // The overview runs from the top of the page to the bottom of the project cards.
   const atOverview = () => window.scrollY < root.offsetHeight - innerHeight * 0.5;
-  let last = null;
 
-  const cross = (fn) => {
-    if (REDUCED) { fn(); return; }
+  // Every project sits on the one long page, in order. Picking one goes straight to where it starts, with the projects
+  // before it still above and the ones after it still below. The address names the project on screen (#id), so a link
+  // to it opens there. The browser's back button, the Overview button, the link at the end and Escape go back to the
+  // overview, to the spot a project was picked from (or else the project cards).
+  history.scrollRestoration = 'manual';
+  const base = location.pathname + location.search;
+  const url = (id) => (id ? `${base}#${id}` : base);
+  const target = () => { const id = location.hash.slice(1); return content.projects[id] ? id : null; };
+  const cardsTop = () => { const g = root.querySelector('.ov-projects'); return g ? g.getBoundingClientRect().top + window.scrollY : 0; };
+  let where = null, from = null, busy = false, pending = false, selfBack = false, pin = null;
+  const name = (id) => { where = id; document.title = id ? `${content.projects[id].title} | Lucas Ciordas` : 'Lucas Ciordas'; };
+  const cross = (fn, instant) => {
+    busy = true;
+    const done = () => {
+      fn();
+      requestAnimationFrame(() => { busy = false; veil.classList.remove('on'); if (pending) { pending = false; route(); } });
+    };
+    if (instant || REDUCED) { done(); return; }
     veil.classList.add('on');
-    setTimeout(() => { fn(); requestAnimationFrame(() => veil.classList.remove('on')); }, 190);
+    setTimeout(done, 190);
   };
-  const open = (id, instant) => {
-    const go = () => { work.focus(id); document.title = `${content.projects[id].title} | Lucas Ciordas`; };
-    last = id;
-    instant ? go() : cross(go);
+  // Words and pictures above can still change height just after arriving (the fonts coming in), so until the page is
+  // moved it stays lined up with the project's start.
+  const keep = () => {
+    if (!pin || performance.now() > pin.until) { pin = null; return; }
+    const y = Math.min(work.top(pin.id), document.documentElement.scrollHeight - innerHeight);
+    if (Math.abs(y - window.scrollY) > 1.5) work.jump(y);
+    requestAnimationFrame(keep);
   };
-  const close = () => cross(() => {
-    work.toTop();
-    document.title = 'Lucas Ciordas';
-    const r = rows().find((x) => x.dataset.project === last);
-    r?.focus({ preventScroll: true });
+  ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach((t) => addEventListener(t, () => { pin = null; }, { passive: true, capture: true }));
+  const visit = (id, instant) => cross(() => {
+    name(id);
+    work.jump(work.top(id));
+    pin = { id, until: performance.now() + 2500 }; requestAnimationFrame(keep);
+  }, instant);
+  const home = () => cross(() => {
+    const was = where;
+    name(null); pin = null;
+    work.jump(from ?? cardsTop());
+    rows().find((x) => x.dataset.project === was)?.focus({ preventScroll: true });
   });
-  const route = (instant) => {
-    const id = location.hash.slice(1);
-    if (id && content.projects[id]) open(id, instant);
-    else if (!instant) close();
+  const route = () => {
+    if (busy) { pending = true; return; }
+    const id = target();
+    if (id ? id !== where : !atOverview()) id ? visit(id) : home();
   };
-  addEventListener('hashchange', () => route(false));
-  if (location.hash.length > 1) route(true);
+  // The address follows the page as it scrolls, without adding steps to the history. Scrolling back up into the
+  // overview after picking a project takes the step back itself, so the back button doesn't have to.
+  const current = () => {
+    if (atOverview()) return null;
+    const mid = window.scrollY + innerHeight * 0.5;
+    let id = null;
+    for (const s of work.sections) { if (s.getBoundingClientRect().top + window.scrollY <= mid) id = s.dataset.project; else break; }
+    return id;
+  };
+  const sync = () => {
+    if (busy || selfBack) return;
+    const id = current();
+    if (id === where) return;
+    if (!id && history.state?.lc) { selfBack = true; name(null); history.back(); return; }
+    history.replaceState(history.state, '', url(id));
+    name(id);
+  };
+  let syncing = false;
+  addEventListener('scroll', () => { if (!syncing) { syncing = true; requestAnimationFrame(() => { syncing = false; sync(); }); } }, { passive: true });
+  addEventListener('popstate', () => { if (selfBack) { selfBack = false; sync(); } else route(); });
+  addEventListener('hashchange', route);
+  const leave = () => {
+    if (history.state?.lc) { history.back(); return; }
+    if (location.hash) history.replaceState(null, '', base);
+    home();
+  };
+  // A link straight to a project opens there, with the overview one step back.
+  const first = target();
+  if (first) {
+    if (!history.state?.lc) { history.replaceState(null, '', base); history.pushState({ lc: 1 }, '', url(first)); }
+    visit(first, true);
+  }
 
-  // A click on a row, or Enter on a focused one, follows its link and goes through the same path.
-  back.addEventListener('click', (e) => { e.preventDefault(); if (location.hash.length > 1) history.pushState(null, '', location.pathname + location.search); close(); });
-
-  document.addEventListener('click', (e) => { if (e.target.closest('.after__back')) { e.preventDefault(); back.click(); } });
+  // A click on a card, or Enter on a focused one.
+  root.addEventListener('click', (e) => {
+    const a = e.target.closest('a[data-project]');
+    if (!a || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    if (busy) return;
+    from = window.scrollY;
+    history.pushState({ lc: 1 }, '', url(a.dataset.project));
+    visit(a.dataset.project);
+  });
+  back.addEventListener('click', (e) => { e.preventDefault(); leave(); });
+  document.addEventListener('click', (e) => { if (e.target.closest('.after__back')) { e.preventDefault(); leave(); } });
 
   // Moving the mouse over a row and moving with the keys share one highlight.
   root.addEventListener('pointermove', (e) => { const r = e.target.closest('.row'); if (r && document.activeElement !== r) r.focus({ preventScroll: true }); });
   addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.key === 'Escape') { if (!atOverview()) back.click(); return; }
+    if (e.key === 'Escape') { if (!atOverview()) leave(); return; }
     // Where the page is headed (a glide's end, read from Lenis), so a key pressed mid-glide into the projects carries on with it.
     const L = work.lenis, y = L ? (L.animate?.isRunning ? L.animate.to : L.targetScroll) : window.scrollY;
     if (y >= root.offsetHeight - innerHeight * 0.5 || !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
@@ -190,14 +252,7 @@ export function mountSite({ root, work, content }) {
   });
   addEventListener('scroll', () => {
     // Only once the overview's own bar has gone, so the two never sit on top of each other.
-    const past = window.scrollY > root.offsetHeight - (bar?.offsetHeight || 64);
-    back.classList.toggle('on', past);
-    // Back at the top after a single project: show everything in order again.
-    if (window.scrollY < innerHeight * 0.2 && work.focused()) {
-      work.clearFocus();
-      if (location.hash.length > 1) history.replaceState(null, '', location.pathname + location.search);
-      document.title = 'Lucas Ciordas';
-    }
+    back.classList.toggle('on', window.scrollY > root.offsetHeight - (bar?.offsetHeight || 64));
   }, { passive: true });
   return { rows };
 }
