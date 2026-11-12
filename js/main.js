@@ -104,20 +104,34 @@ function start(data) {
   renderer.toneMapping = THREE.NoToneMapping;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 1, 0.5, 120);
+  camera.layers.enableAll(); // the glass sits on its own layer, see name.js
   const palU = paletteUniforms(PALETTE);
 
-  // Backdrop: near black with a faint warm haze behind the name.
-  const skyU = { ...palU, uLift: { value: 0 }, uGlow: { value: 0 }, uMouse: { value: new THREE.Vector2() }, uAspect: { value: 1 } };
+  // Backdrop: near black and neutral, so the glass stays clear. Soft bars and pools of white light and a faint grid
+  // sit behind the name for the glass to bend; the palette's colour shows only as a faint haze in the middle.
+  const skyU = { ...palU, uLift: { value: 0 }, uGlow: { value: 0 }, uMouse: { value: new THREE.Vector2() }, uAspect: { value: 1 }, uTime: { value: 0 } };
   const sky = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
     uniforms: skyU, depthTest: false, depthWrite: false,
     vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,.9999,1.); }',
-    fragmentShader: `precision highp float; varying vec2 vUv; uniform vec3 p_top,p_mid,p_haze; uniform float uLift,uGlow,uAspect; uniform vec2 uMouse;
+    fragmentShader: `precision highp float; varying vec2 vUv; uniform vec3 p_haze,p_low; uniform float uLift,uGlow,uAspect,uTime; uniform vec2 uMouse;
+      float bar(vec2 p, vec2 o, float ang, float len, float w){ vec2 q=p-o; q=mat2(cos(ang),-sin(ang),sin(ang),cos(ang))*q; return exp(-q.y*q.y/(w*w))*smoothstep(len,len*.5,abs(q.x)); }
       void main(){
         vec2 p=(vUv-.5)*vec2(uAspect,1.)-uMouse*vec2(.03,.02);
         float r=length(p*vec2(.72,1.05));
-        vec3 c=mix(p_mid,p_top,smoothstep(.02,.8,r));
-        c=mix(c,p_haze,exp(-r*r*5.2)*(.2+.28*uGlow));
-        c+=p_haze*uLift*exp(-r*r*1.6)*.62;
+        vec3 c=mix(vec3(.02,.021,.024),vec3(.006,.0065,.0075),smoothstep(.02,.8,r));
+        c+=(vec3(.022,.023,.026)+p_low*.012)*exp(-r*r*5.2)*uGlow;
+        float k=uTime*.05;
+        c+=vec3(.075,.078,.088)*bar(p,vec2(-.28+.03*sin(k),.12),.5,.5,.012)*uGlow;
+        c+=vec3(.06,.063,.072)*bar(p,vec2(.3+.03*cos(k*1.3),-.1),.5,.55,.009)*uGlow;
+        c+=vec3(.06,.063,.072)*bar(p,vec2(.05,.3),-.08,.7,.006)*uGlow;
+        vec2 a=p-vec2(-.4+.04*sin(uTime*.11),-.22), b=p-vec2(.42+.03*cos(uTime*.09),.24);
+        c+=vec3(.08,.085,.095)*exp(-dot(a,a)*14.)*uGlow;
+        c+=vec3(.08,.085,.095)*exp(-dot(b,b)*14.)*uGlow;
+        vec2 g=p*6.-uMouse*vec2(.08,.05);
+        vec2 gl=abs(fract(g)-.5)/fwidth(g);
+        float line=1.-smoothstep(0.,1.2,min(gl.x,gl.y));
+        c+=vec3(.9,.93,1.)*line*.045*uGlow*smoothstep(1.1,.2,r);
+        c+=mix(vec3(.05,.052,.058),p_haze,.3)*uLift*exp(-r*r*1.6)*.5;
         gl_FragColor=vec4(c,1.);
       }`,
   }));
@@ -156,7 +170,7 @@ function start(data) {
     post.resize(S.w, S.h, S.dpr);
     windows.layout(S.w, S.h, S.dpr);
     name.setView(S.visW, S.visH);
-    name.uniforms.uRes.value.set(S.dpr, S.dpr);
+    name.resize(S.w, S.h, S.dpr, renderer);
     trace?.layout(S.w, S.h, S.dpr, toPx);
     const [l, t] = toPx(-data.width / 2, data.height / 2), [r, b] = toPx(data.width / 2, -data.height / 2);
     const pad = 10;
@@ -168,9 +182,10 @@ function start(data) {
   /* Pointer */
   const toWorld = (cx, cy) => [((cx / S.w) - 0.5) * S.visW, (0.5 - cy / S.h) * S.visH];
   addEventListener('pointermove', (e) => {
-    S.tmx = (e.clientX / S.w) * 2 - 1; S.tmy = -((e.clientY / S.h) * 2 - 1);
-    const [x, y] = toWorld(e.clientX, e.clientY);
     const touch = e.pointerType === 'touch';
+    // On touch screens the name only floats; the tilt follows a mouse.
+    if (!touch) { S.tmx = (e.clientX / S.w) * 2 - 1; S.tmy = -((e.clientY / S.h) * 2 - 1); }
+    const [x, y] = toWorld(e.clientX, e.clientY);
     name.setPointer(x, y, !touch);
     if (!touch && name.st.phase === 'float') { name.uniforms.uHot.value.lerp(new THREE.Vector2(x, y), 0.35); }
   });
@@ -214,7 +229,6 @@ function start(data) {
     tl.to(skyU.uLift, { value: 0.2, duration: 1.7, ease: 'power2.out' }, 0.76);
     tl.fromTo(post.uniforms.uBloom, { value: 0.2 }, { value: 1.5, duration: 0.1 }, 0.62);
     tl.to(post.uniforms.uBloom, { value: 0.2, duration: 1, ease: 'power2.out' }, 0.72);
-    tl.to(name.uniforms.uMatte, { value: 0.42, duration: 1.2, ease: 'power2.out' }, 0.62);
     tl.add(() => { showPortfolio(); S.phase = 'portfolio'; arrived(); }, 1.5);
     advance = () => tl.timeScale(4);
   };
@@ -226,12 +240,11 @@ function start(data) {
 
   /* Intro */
   const ready = () => {
-    S.phase = 'ready';
+    S.phase = 'ready'; S.readyAt = S.time;
     post.uniforms.uDissolve.value = 1;
     trace?.destroy();
     name.setActive(1);
     enterBtn.hidden = false;
-    name.st.nudgeAt = S.time + 2.2;
     showCue(() => shatter(0, 0), TOUCH ? 'Tap' : 'Scroll');
   };
   const runIntro = () => {
@@ -254,6 +267,7 @@ function start(data) {
       if (S.phase === 'trace') name.settleIn();
       S.backdrop?.dispose(); S.backdrop = null;
       gsap.to(skyU.uGlow, { value: 1, duration: 0.7, ease: 'power2.out' });
+      gsap.to(name.uniforms.uReveal, { value: 0, duration: 0.9, ease: 'power2.out' });
       ready();
     };
     showCue(skip, TOUCH ? 'Tap to skip' : 'Scroll to skip');
@@ -265,10 +279,11 @@ function start(data) {
       trace.hide();
       S.phase = 'dissolve'; S.windowsAt = S.time;
       post.uniforms.uDissolve.value = 0;
-      // The traced outline breaks up in blocks onto the letters, already swaying.
+      // The traced outline breaks up in blocks onto the letters, already swaying. The glass arrives with its
+      // edges still hot in the outline's colour and clears over the next two seconds.
       name.settleIn();
-      name.st.nudgeAt = Infinity;
       name.setActive(1);
+      gsap.fromTo(name.uniforms.uReveal, { value: 1 }, { value: 0, duration: 2.2, ease: 'power2.out' });
     });
     tl.fromTo(post.uniforms.uDissolve, { value: 0 }, { value: 1, duration: 1.05, ease: 'none' });
     tl.to(skyU.uGlow, { value: 1, duration: 1.4, ease: 'power2.out' }, '-=1.05');
@@ -291,8 +306,10 @@ function start(data) {
 
     S.mx = damp(S.mx, S.tmx, 3, dt); S.my = damp(S.my, S.tmy, 3, dt);
     name.st.mx = S.mx; name.st.my = S.my;
-    skyU.uMouse.value.set(S.mx, S.my);
-    if (S.phase === 'ready') skyU.uGlow.value = 1 + (name.st.pulse || 0) * 0.35;
+    skyU.uMouse.value.set(S.mx, S.my); skyU.uTime.value = t;
+    // A machine that can't keep up gets the lighter glass after a few seconds of the name.
+    if (S.phase === 'ready' && window.__fps && window.__fps < 40 && name.quality() === 'high' && t - S.readyAt > 3) name.setQuality('low', renderer);
+    if (S.phase === 'ready') skyU.uGlow.value = 1;
     if (S.phase === 'ready' || S.phase === 'portfolio') {
       if (name.st.phase === 'float') name.uniforms.uHotAmt.value = damp(name.uniforms.uHotAmt.value, S.hotT || 0, 5, dt);
     }
@@ -318,9 +335,8 @@ function start(data) {
       renderer.setRenderTarget(null); renderer.setClearColor(0x030303, 1); renderer.clear();
       return;
     }
-    renderer.setRenderTarget(post.main);
-    renderer.setClearColor(0x000000, 1); renderer.clear();
-    renderer.render(scene, camera);
+    renderer.setClearColor(0x000000, 1);
+    name.render(renderer, scene, camera, post.main);
     post.bloomPass();
     if (S.phase === 'windows' || S.phase === 'dissolve') windows.render(t - S.windowsAt, post.stage, post.main.texture, S.backdrop, { panels: false });
     post.present(t);

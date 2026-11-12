@@ -47,11 +47,12 @@ const closed = (r) => { const a = r[0], b = r[r.length - 1]; return a[0] === b[0
 const open = (r) => { const a = r[0], b = r[r.length - 1]; return a[0] === b[0] && a[1] === b[1] ? r.slice(0, -1) : r; };
 const segDist = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], k = dx * dx + dy * dy; const t = k ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / k)) : 0; return Math.hypot(p[0] - a[0] - dx * t, p[1] - a[1] - dy * t); };
 
-// Smooth two-axis noise so a shared crack bends the same way for the shards on both sides.
+// Smooth two-axis noise so a shared crack bends the same way for the shards on both sides. Glass breaks along
+// nearly straight lines, so the bend is slight: just enough to take the ruler out of the cracks.
 const nz = (x, y) => { const f = (a, b) => Math.sin(a * 127.1 + b * 311.7) * 43758.5453 % 1; const i = Math.floor(x), j = Math.floor(y), u = x - i, v = y - j, s = u * u * (3 - 2 * u), t = v * v * (3 - 2 * v); const m = (a, b, k) => a + (b - a) * k; return m(m(f(i, j), f(i + 1, j), s), m(f(i, j + 1), f(i + 1, j + 1), s), t); };
 const warp = (p) => {
-  const a = nz(p[0] * 3.3 + 4, p[1] * 3.3) * 0.075 + nz(p[0] * 11 + 9, p[1] * 11 + 1) * 0.022;
-  const b = nz(p[0] * 3.3 + 21, p[1] * 3.3 + 8) * 0.075 + nz(p[0] * 11 + 3, p[1] * 11 + 17) * 0.022;
+  const a = nz(p[0] * 3.3 + 4, p[1] * 3.3) * 0.02 + nz(p[0] * 11 + 9, p[1] * 11 + 1) * 0.006;
+  const b = nz(p[0] * 3.3 + 21, p[1] * 3.3 + 8) * 0.02 + nz(p[0] * 11 + 3, p[1] * 11 + 17) * 0.006;
   return [p[0] + a, p[1] + b];
 };
 
@@ -82,7 +83,8 @@ function build(key, cfg) {
     });
   });
 
-  // Fracture: a jittered grid of seeds across the block, denser near the middle.
+  // Fracture: a jittered grid of seeds across the block, with a scatter of extra seeds so the pieces come in
+  // mixed sizes, slivers among the big ones, the way a pane breaks.
   const R = rng(key.length * 97 + 11);
   const seeds = [];
   const nx = 11, ny = 10;
@@ -90,6 +92,7 @@ function build(key, cfg) {
     const u = (i + 0.5 + (R() - 0.5) * 0.92) / nx, v = (j + 0.5 + (R() - 0.5) * 0.92) / ny;
     seeds.push([(u - 0.5) * (WIDTH + 0.5), (v - 0.5) * (total + 0.5)]);
   }
+  for (let k = 0; k < 26; k++) seeds.push([(R() - 0.5) * (WIDTH + 0.3), (R() - 0.5) * (total + 0.3)]);
   const box = [-WIDTH, -total, WIDTH, total];
   const vor = Delaunay.from(seeds).voronoi(box);
   const cells = seeds.map((_, i) => {

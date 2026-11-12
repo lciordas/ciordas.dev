@@ -1,199 +1,177 @@
-// name: the 3D letters. They share one veined stone surface, float on small springs,
-// crack from the point they are clicked, and burst into shards that settle into a slow ring.
+// name: the 3D letters, cut from clear glass. They bend and disperse the light behind them, catch the studio
+// lights on their bevels, float on small springs, crack from the point they are clicked, and burst into shards
+// that keep refracting as they drift into a slow ring.
 import * as THREE from 'three';
 import { GLSL_NOISE, rng, smooth } from './_util.js';
-import { SPAN, VOL_DEPTH } from './bake.js';
+import { SPAN } from './bake.js';
 import { PALETTE } from './palette.js';
 
-// Turns the stone's warm pigments and glows to the palette's colour (see palette.js).
-const hue = () => ({ value: new THREE.Matrix3().set(...PALETTE.hue) });
-
-export const DEPTH = 0.13;
-const LAYERS = matchMedia('(pointer: coarse)').matches ? 6 : 12;
+export const DEPTH = 0.2;
+const COARSE = matchMedia('(pointer: coarse)').matches;
+// Refraction is sampled several times per pixel for the rainbow fringes; phones take fewer and skip the
+// back-face pass, and a slow frame rate drops a desktop to the same setting (see setQuality).
+const QUALITY = {
+  high: { samples: 8, bgScale: 1, back: true, backScale: 1, msaa: 4 },
+  low: { samples: 4, bgScale: 0.5, back: false, backScale: 0.5, msaa: 0 },
+};
+const MAX_SAMPLES = 8;
 
 const VERT = /* glsl */`
 attribute vec3 aQ; attribute float aFace;
-varying vec3 vP, vN, vRay; varying float vFace;
+varying vec3 vWP, vWN, vP, vZ; varying float vFace;
 void main(){
-  vP=aQ; vFace=aFace; vN=normal;
-  // The view ray in the letter's own space, so the inside shifts as the letter or shard turns.
-  vec3 cam=(inverse(modelMatrix)*vec4(cameraPosition,1.)).xyz;
-  vRay=position-cam;
-  gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);
+  vP=aQ; vFace=aFace;
+  vZ=normalize(mat3(modelMatrix)*vec3(0.,0.,1.));
+  vec4 wp=modelMatrix*vec4(position,1.);
+  vWP=wp.xyz;
+  vWN=normalize(mat3(modelMatrix)*normal);
+  gl_Position=projectionMatrix*viewMatrix*wp;
 }`;
 
+// The glass. What is behind the letter was drawn first into uBuffer; each pixel bends a view ray into the glass
+// (Snell's law, with a slightly different index per colour so the edges split into rainbows), finds where it
+// leaves the slab and reads the buffer there. A ray that leaves through the back at a steep angle (from a bevel)
+// sees the studio lights off to the side instead, split into a spectrum. Over that goes the Fresnel share of a
+// small procedural studio (a softbox above, white strips left and right, two strips behind the camera that lay
+// long streaks across the faces) and sharp highlights from three lamps, which glint as a facet turns through them.
 const FRAG = /* glsl */`
 precision highp float;
-#define LAYERS ${LAYERS}
-varying vec3 vP, vN, vRay; varying float vFace;
-uniform int uMode;
-uniform float uTime, uMatte, uHotAmt, uHotSize, uSweep, uFade;
-uniform vec2 uHot, uRes;
-uniform sampler2D tField, tMask;
-uniform highp sampler3D tVol;
-uniform vec3 p_pale, p_stone, p_deep, p_shard, p_low;
-uniform mat3 uHue;
+#define MAXS ${MAX_SAMPLES}
+varying vec3 vWP, vWN, vP, vZ; varying float vFace;
+uniform sampler2D uBuffer;
+uniform mat4 uProj;
+uniform int uSamples;
+uniform float uIor, uDisp, uThick, uTime, uFade, uReveal, uHotAmt, uHotSize, uBackPass, uShard, uEnvK;
+uniform vec2 uHot;
+uniform vec3 uAccent;
 ${GLSL_NOISE}
-const float SPAN=${SPAN.toFixed(1)};
-const float FLOWRATE=.32;
-const float VD=${VOL_DEPTH.toFixed(2)};
-
-// How strongly the rock and each pigment absorb red, green, and blue per unit of depth.
-// Red gets through almost everything, so more rock means a deeper, more saturated colour. uHue then turns
-// red into the palette's colour.
-#define ROCK (uHue*vec3(.06,.22,.28))
-#define MAROON (uHue*vec3(1.,2.8,3.85))
-#define SAND (uHue*vec3(.7,1.,2.1))
-#define ORANGE (uHue*vec3(1.,3.5,4.4))
-// Keeps the march from showing its layers as steps.
-float dither(vec2 p){ return fract(52.9829189*fract(dot(p,vec2(.06711056,.00583715)))); }
-// Slight rounding from the blurred letter shape. It only bends the view into the rock.
-vec3 pillow(vec2 uv){
-  const float E=.01;
-  vec2 g=vec2(texture2D(tMask,uv+vec2(E,0.)).g-texture2D(tMask,uv-vec2(E,0.)).g,
-              texture2D(tMask,uv+vec2(0.,E)).g-texture2D(tMask,uv-vec2(0.,E)).g);
-  return normalize(vec3(-g*1.6,1.));
+float sat(float v){ return clamp(v,0.,1.); }
+// A soft-edged panel of light seen from inside a sphere, like a studio lightformer. P is its direction,
+// T runs along it, size is in tangents of the angle it covers.
+float panel(vec3 d, vec3 P, vec3 T, vec2 size, float soft){
+  float k=dot(d,P); if(k<=0.) return 0.;
+  vec3 B=normalize(cross(P,T));
+  vec2 q=vec2(dot(d,T),dot(d,B))/k;
+  return smoothstep(size.x,size.x-soft,abs(q.x))*smoothstep(size.y,size.y-soft,abs(q.y));
 }
-vec2 toUv(vec2 p){ return p/SPAN+.5; }
-// Slow currents inside the stone. Each depth moves on its own, so the clouds churn as well as slide.
-const float FLOW=.11;
-vec2 current(vec2 p, float z){
-  float t=uTime*FLOWRATE;
-  vec2 a=vec2(sin(p.y*1.5+t*.92+z*2.4)+.55*sin(p.y*3.4-t*1.26+p.x*1.2+z*1.1),cos(p.x*1.3-t*.78+z*3.)+.55*cos(p.x*3.1+t*1.08+p.y*1.4-z*1.7));
-  return a*FLOW+vec2(t*.05,t*.012)*(.5+z);
-}
-// A lamp hung far behind the name. Being so deep, it slides against the letters as they turn.
-float lamp(vec2 p){
-  vec2 a=vec2(sin(uTime*.13)*1.5,cos(uTime*.17)*.55-.1), b=vec2(cos(uTime*.09+1.)*2.1,sin(uTime*.11+2.)*.8);
-  return .9+.22*exp(-dot(p-a,p-a)*.55)+.16*exp(-dot(p-b,p-b)*.9);
-}
-// The letter is treated as a tall prism running back through the block. A ray that slips out of a
-// stroke's side crosses no more rock until it enters the next stroke, so thin strokes let more light
-// through and the walls and neighbouring strokes show through as the letter turns.
-vec3 volume(vec3 p, vec3 d, float len, float clear, float dens){
-  float dt=len/float(LAYERS);
-  vec3 tau=vec3(0.), glow=vec3(0.);
-  float jit=dither(gl_FragCoord.xy);
-  float sandSum=0.;
-  // Fine tearing roughens the pigment clouds, which on their own are too soft at this size.
-  float tear=mix(.62,1.38,smoothstep(.3,.7,texture2D(tField,toUv(p.xy+d.xy*VD*.2+current(p.xy,.2))).a));
-  for(int i=0;i<LAYERS;i++){
-    float t=(float(i)+jit)*dt, depth=t/VD;
-    vec3 q=p+d*t;
-    vec2 w=toUv(q.xy+current(q.xy,depth));
-    float inside=smoothstep(.3,.7,texture2D(tMask,toUv(p.xy+d.xy*t*.55)).r);
-    // Light scatters on its way out, so the deeper a cloud hangs the softer it looks.
-    vec4 v=textureLod(tVol,vec3(w,q.z/VD+.5),depth*1.7);
-    // Pigment keeps showing past the wall, only fainter, so the bands still run through thin parts.
-    vec3 sig=(ROCK*inside+(v.r*MAROON*1.9+v.g*SAND*.72+v.b*ORANGE*.85)*mix(.45,1.,inside)*tear)*(1.-clear)*dens;
-    vec3 here=exp(-tau);
-    glow+=here*dt*inside*(uHue*(v.r*vec3(.1,.012,.004)+v.g*vec3(.1,.055,.02)+v.b*vec3(.14,.04,.016)+v.a*vec3(1.,.82,.74)*.42));
-    sandSum+=v.g*dt*inside;
-    // Filaments hang at a few depths: crisp near the face, hazy further in.
-    if(i==1||i==3||i==6){
-      vec2 fw=toUv(p.xy+d.xy*(float(i)+.5)*dt+current(p.xy,depth)*1.15);
-      glow+=here*inside*p_pale*textureLod(tField,fw,float(i)*.12).g*.27;
-    }
-    tau+=sig*dt;
-  }
-  vec3 c=p_pale*lamp(p.xy+d.xy*(len+2.2))*exp(-tau)+glow;
-  // Mineral flecks suspended at two depths, so they drift against each other rather than sit on top.
-  vec2 fa=(p.xy+d.xy*VD*.12)/SPAN+.5, fb=(p.xy+d.xy*VD*.4)/SPAN+.5;
-  float fleck=step(.97,hash21(floor(fa*1500.)))+.6*step(.975,hash21(floor(fb*1100.)+7.));
-  c+=uHue*vec3(.8,.55,.34)*fleck*smoothstep(.04,.26,sandSum)*.07;
+// The studio, as seen in reflections. Neutral white light; the accent shows only as one faint low strip.
+vec3 env(vec3 d){
+  vec3 c=vec3(.004,.0045,.005);
+  c+=vec3(1.)*3.2*panel(d,normalize(vec3(0.,1.,.35)),vec3(1.,0.,0.),vec2(1.6,.42),.25);
+  c+=vec3(.96,.98,1.)*3.6*panel(d,normalize(vec3(-1.,.1,.4)),vec3(0.,1.,0.),vec2(1.7,.16),.07);
+  c+=vec3(.96,.98,1.)*3.6*panel(d,normalize(vec3(1.,.1,.4)),vec3(0.,1.,0.),vec2(1.7,.16),.07);
+  c+=vec3(.9,.93,1.)*1.6*panel(d,normalize(vec3(0.,-1.,.3)),vec3(1.,0.,0.),vec2(1.6,.2),.12);
+  // Behind the camera: two slanted strips the front faces mirror as long bright bands. uEnvK shrinks them when
+  // the name covers a smaller angle (a tall phone screen), so they still cross it as bands.
+  vec3 T1=normalize(vec3(.42,1.,0.)), T2=normalize(vec3(.5,1.,0.));
+  float k=uEnvK;
+  c+=vec3(1.)*9.*panel(d,normalize(vec3(-.13*k,.02*k,1.)),T1,vec2(.9,.05*k),.03*k);
+  c+=vec3(1.)*5.*panel(d,normalize(vec3(.2*k,-.03*k,1.)),T2,vec2(.9,.028*k),.018*k);
+  c+=uAccent*.5*panel(d,normalize(vec3(.6,-.5,.5)),vec3(1.,0.,0.),vec2(.9,.12),.1);
   return c;
 }
-vec3 beauty(vec2 uv, vec3 d, vec3 N, float edge, float thick, float clear){
-  // Bend the view as it enters the stone, then cross the whole depth of the block.
-  vec3 dir=normalize(vec3((d.xy+N.xy*.12)*1.15,d.z));
-  float len=VD/max(.5,-dir.z);
-  vec3 start=vec3(vP.xy,VD*.5);
-  vec3 c=volume(start,dir,len,clear,mix(.55,1.,thick));
-  // Most of the light has been knocked about on its way through, so a share of it comes out as a
-  // soft blur of the same clouds. That gives the dark bands a coloured bloom instead of a hard edge.
-  vec2 mid=toUv(vP.xy+dir.xy*VD*.5+current(vP.xy,.5));
-  vec4 s=textureLod(tVol,vec3(mid,.5),3.);
-  vec3 soft=p_pale*lamp(vP.xy+dir.xy*(len+2.2))*exp(-(ROCK*.6+s.r*MAROON*1.8+s.g*SAND*.65+s.b*ORANGE*.85)*mix(.55,1.,thick)*(1.-clear));
-  c=mix(c,soft,.28);
-  // The thinnest rock at the outline glows, with no hard rim.
-  c=mix(c,p_pale*1.04,.4*pow(1.-edge,2.));
-  // Ease the brightest light down as a whole, so it keeps its colour and reads as light through stone rather than glare.
-  float m=max(c.r,max(c.g,c.b));
-  return m>.88?c*(.88+.12*(1.-exp((.88-m)/.12)))/m:c;
+// The lights seen through the glass, behind and to the sides of it: what a steep ray leaving a bevel meets.
+vec3 envBack(vec3 d){
+  vec3 c=vec3(0.);
+  // Wide enough that a straight bevel (which sends its rays out about 25 degrees) sees a whole strip and shines
+  // white; the curved ones sweep across the strips' edges and break into spectra.
+  c+=vec3(2.2)*panel(d,normalize(vec3(-.5,.05,-1.)),vec3(0.,1.,0.),vec2(2.,.17),.07);
+  c+=vec3(2.2)*panel(d,normalize(vec3(.5,.05,-1.)),vec3(0.,1.,0.),vec2(2.,.17),.07);
+  c+=vec3(2.)*panel(d,normalize(vec3(0.,.5,-1.)),vec3(1.,0.,0.),vec2(2.,.15),.06);
+  c+=vec3(1.3)*panel(d,normalize(vec3(0.,-.5,-1.)),vec3(1.,0.,0.),vec2(2.,.15),.06);
+  c+=vec3(1.)*panel(d,normalize(vec3(-.95,-.1,-1.)),vec3(0.,1.,0.),vec2(2.,.1),.05);
+  c+=vec3(1.)*panel(d,normalize(vec3(.95,-.1,-1.)),vec3(0.,1.,0.),vec2(2.,.1),.05);
+  return c;
 }
-// Screen-space helpers for the printed looks.
-float cell(float size){ vec2 p=mod(gl_FragCoord.xy,size)-size*.5; return length(p)/(size*.5); }
+vec3 glint(vec3 N, vec3 V, vec3 L, vec3 col, float tight){
+  vec3 H=normalize(L+V);
+  float f=.04+.96*pow(1.-sat(dot(V,H)),5.);
+  return col*f*pow(sat(dot(N,H)),tight);
+}
 void main(){
-  vec3 V=normalize(-vRay);
-  vec2 uv=vP.xy/SPAN+.5;
-  vec2 ray=vRay.xy/max(.25,-vRay.z);
-  vec4 mk=texture2D(tMask,uv);
-  float edge=clamp((mk.r-.5)*2.,0.,1.), thick=smoothstep(.5,.84,mk.g);
-  vec3 NF=pillow(uv);
-  vec3 N=vFace>.5?NF:normalize(vN);
-  vec4 f=texture2D(tField,uv);
-  vec3 c;
-  if(uMode==1){ // warped checker
-    vec2 u=(vP.xy+NF.xy*.26)*3.3;
-    float ch=mod(floor(u.x)+floor(u.y),2.);
-    c=mix(vec3(.1,.095,.09),vec3(.97,.93,.86),ch)*(.66+.34*clamp(dot(N,V),0.,1.));
-  } else if(uMode==4){ // transmission: plasma clouds
-    vec4 g=texture2D(tField,uv+ray*.34/SPAN+vec2(uTime*.006,0.));
-    c=mix(vec3(.16,.92,.72),vec3(.34,.5,1.),smoothstep(.3,.62,g.b));
-    c=mix(c,vec3(.74,.1,.82),smoothstep(.42,.74,g.r));
-    c+=vec3(.5,.8,.8)*g.g*.55;
-  } else if(uMode==6){ // depth: a height map in greys
-    float h=pow(mk.g,1.5)*.62+edge*.38;
-    c=vec3(h)*(vFace>.5?1.:.3);
-    c*=.92+.08*step(.5,fract(gl_FragCoord.y*.25));
-  } else if(uMode==7){ // false-colour thermal camera
-    float t=clamp(1.08-f.r*1.02-(1.-edge)*.12+f.g*.28,0.,1.);
-    c=mix(vec3(.03,.01,.26),vec3(.68,.02,.62),smoothstep(.06,.4,t));
-    c=mix(c,vec3(1.,.36,.03),smoothstep(.36,.66,t));
-    c=mix(c,vec3(1.,.95,.42),smoothstep(.64,.95,t));
-  } else if(uMode==9){ // halftone print
-    float lum=dot(beauty(uv,normalize(vRay),NF,edge,thick,0.),vec3(.3,.6,.1));
-    float r=clamp(1.02-lum*.92,0.,1.);
-    c=mix(vec3(1.,.8,.2),vec3(.05,.04,.04),smoothstep(r-.07,r+.07,1.-cell(7.*uRes.x)));
-    if(vFace<.5) c=vec3(.05,.04,.04);
-  } else if(uMode==10){ // distance rings
-    float v=mk.r*7.+mk.g*11.;
-    float ln=smoothstep(.34,.5,abs(fract(v)-.5));
-    c=mix(vec3(.03,.01,.05),vec3(1.,.12,.48),ln);
-    if(vFace<.5) c=vec3(.24,.02,.12);
-  } else if(vFace>.5){
-    // Heat under the pointer thins the pigment, letting more light through.
-    float clear=0.;
-    if(uHotAmt>.002){
-      float d=distance(vP.xy,uHot);
-      float h=smoothstep(uHotSize,uHotSize*.18,d+(f.b-.5)*uHotSize*.55);
-      clear=h*h*uHotAmt;
+  // In the back pass the far faces are drawn (the renderer turns the winding round, so gl_FrontFacing can't tell);
+  // their normals are turned to face the camera and they are shaded like a surface seen from inside.
+  bool backP=uBackPass>.5;
+  vec3 N=normalize(vWN)*(backP?-1.:1.);
+  vec3 V=normalize(cameraPosition-vWP);
+  // Cast glass is never quite flat: a faint ripple in the face bends what is behind it as the letter moves.
+  vec2 rip=vec2(sin(vP.x*9.+vP.y*4.)+sin(vP.y*13.-vP.x*3.+1.7),sin(vP.y*8.-vP.x*5.+2.)+sin(vP.x*11.+vP.y*7.))*.5;
+  N=normalize(N+vec3(rip,0.)*.007*uEnvK*uEnvK*vFace);
+  float NdV=sat(dot(N,V));
+  float F=.04+.96*pow(1.-NdV,5.);
+  vec3 Z=normalize(vZ);
+
+  // Refraction: a few rays per pixel, spread in depth so the image through the glass softens a little
+  // towards the back, and spread in index so red, green and blue leave at slightly different places.
+  float thick=uThick*(backP?2.4:1.);
+  float jit=hash21(gl_FragCoord.xy);
+  // Each ray carries one wavelength: its index runs from red (lowest) to violet (highest) and it is weighted by
+  // that colour, so a bright edge seen through a bevel spreads into a continuous spectrum.
+  vec3 tr=vec3(0.), lit=vec3(0.), wsum=vec3(0.);
+  // A ray trapped by total internal reflection (through the side walls) comes back the same for every colour.
+  vec3 r0=refract(-V,N,1./uIor), o0=refract(r0,Z,uIor);
+  vec3 trapped=backP?vec3(0.):env(reflect(r0,Z))*.3;
+  for(int i=0;i<MAXS;i++){
+    if(i>=uSamples) break;
+    float prog=(float(i)+jit)/float(uSamples);
+    vec3 w=vec3(exp(-pow((prog-.12)/.24,2.)),exp(-pow((prog-.5)/.22,2.)),exp(-pow((prog-.88)/.24,2.)));
+    float th=thick*(1.+.4*fract(prog*2.618+.3));
+    float io=uIor+(uIor-1.)*uDisp*(prog-.5);
+    vec3 r=refract(-V,N,1./io);
+    vec4 ex=uProj*viewMatrix*vec4(vWP+r*th,1.);
+    tr+=texture2D(uBuffer,ex.xy/ex.w*.5+.5).rgb*w;
+    if(!backP){
+      // The same ray leaving through the back face, into the lights behind and beside the glass.
+      vec3 ro=refract(r,Z,io);
+      lit+=(dot(o0,o0)>.01&&dot(ro,ro)>.01?envBack(ro):trapped)*w;
     }
-    c=beauty(uv,normalize(vRay),NF,edge,thick,clear);
-    c*=1.+clear*.14;
-    if(uMatte>.001) c=mix(c,c*.82+p_shard*.1,uMatte);
-    // A band of light that crosses the name when it asks to be clicked.
-    if(uSweep>-1.5){
-      float s=exp(-pow((vP.x-uSweep*2.8+vP.y*.22)*2.1,2.));
-      c*=1.+s*.1;
-    }
-  } else {
-    // Sides and broken faces: the same lit rock at an angle. Starting all rays near one depth keeps
-    // the layers from showing as stripes on a face that cuts across them.
-    vec3 dir=normalize(normalize(vRay)-normalize(vN)*.4);
-    c=volume(vec3(vP.xy,VD*(.3+.1*vP.z/${(DEPTH / 2).toFixed(4)})),dir,VD*.5,0.,.8);
-    c=mix(c,p_stone*1.25,.25);
+    wsum+=w;
+  }
+  tr/=wsum; lit/=wsum;
+
+  vec3 R=reflect(-V,N);
+  vec3 refl=env(R);
+  float ph=uTime*.19;
+  vec3 spec=glint(N,V,normalize(vec3(-.55+.3*sin(ph),.85,.55)),vec3(1.,.99,.97)*30.,900.)
+           +glint(N,V,normalize(vec3(.55-.3*sin(ph),.85,.55)),vec3(.97,.99,1.)*30.,900.)
+           +glint(N,V,normalize(vec3(.0,-.6,.75)),vec3(.9,.95,1.)*14.,600.);
+  // Very tight flashes on top, for the occasional sparkle as a facet lines up with a lamp.
+  spec+=glint(N,V,normalize(vec3(-.3+.25*sin(ph*1.7),.6,.75)),vec3(1.)*70.,6000.);
+  spec+=glint(N,V,normalize(vec3(.35,.5+.2*cos(ph*1.3),.8)),vec3(1.)*60.,6000.);
+
+  // Seen from inside, the back faces only give a faint reflection, or they cloud the letter.
+  if(backP){ refl*=.25; spec*=.3; }
+  float edge=1.-vFace;
+  vec3 c=(1.-F)*(tr+lit)+F*refl+spec;
+  // Materialising: the traced outline turns into the edges of the glass, hot in the accent colour at first,
+  // then cooling to clear while the reflections settle in.
+  float rv=uReveal*uReveal;
+  c+=uAccent*(edge*1.1+pow(1.-NdV,4.)*.5)*rv*1.4;
+  // A loose shard is lit a little harder at its broken edges, so it stays visible as it turns in the dark.
+  // Its broken edges and rim pick up a spectrum that shifts as it turns, and now and then a glimmer runs over it.
+  if(uShard>.5&&!backP){
+    float rim=edge*.05+pow(1.-NdV,4.)*.22;
+    vec3 hue=.6+.4*cos(6.283*(fract(dot(N,vec3(1.3,.9,.6))*1.5+uTime*.05)+vec3(0.,.33,.67)));
+    float gl=pow(.5+.5*sin(uTime*1.1+dot(vP,vec3(9.,6.,4.))),12.);
+    c+=hue*rim*(1.+3.*gl)+F*refl*.3+spec*.4;
+  }
+  // Under the pointer a faint warm light glows inside the glass.
+  if(uHotAmt>.002){
+    float d=distance(vP.xy,uHot);
+    float h=smoothstep(uHotSize,0.,d);
+    c+=uAccent*h*h*uHotAmt*.16+vec3(h*h*uHotAmt*.05);
   }
   gl_FragColor=vec4(c,uFade);
 }`;
 
 const CRACK_VERT = `attribute vec2 aP; varying vec2 vP; void main(){ vP=aP; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`;
-// Dark fissures with a white-hot front racing outward. uFlare lights every crack just before the burst.
-const CRACK_FRAG = `precision highp float; varying vec2 vP; uniform vec2 uO; uniform float uR, uAmt, uFlare; uniform mat3 uHue;
+// Fine bright fissures, as light scatters off the fracture surfaces, with a hot front racing outward.
+// uFlare lights every crack just before the burst.
+const CRACK_FRAG = `precision highp float; varying vec2 vP; uniform vec2 uO; uniform float uR, uAmt, uFlare; uniform vec3 uAccent;
   void main(){ float d=distance(vP,uO); float a=smoothstep(uR,uR-.1,d)*uAmt; if(a<.004) discard;
     float hot=smoothstep(uR-.55,uR-.04,d);
-    float f=max(hot,uFlare); vec3 c=mix(vec3(.07,.012,.006),vec3(1.5,.42,.1),smoothstep(0.,.45,f)); c=uHue*mix(c,vec3(2.4,2.,1.5),smoothstep(.45,1.,f));
-    gl_FragColor=vec4(c,a); }`;
+    float f=max(hot,uFlare); vec3 c=mix(vec3(.85,.9,1.),vec3(1.)+uAccent*.25,smoothstep(0.,.45,f)); c=mix(c,vec3(2.6,2.6,2.7),smoothstep(.45,1.,f));
+    gl_FragColor=vec4(c,a*.85); }`;
 
 function shapesFrom(multi) {
   // multi: list of polygons, each a list of flat rings. The first ring is the outside.
@@ -204,17 +182,18 @@ function shapesFrom(multi) {
     return shape;
   });
 }
-function solid(multi, dx = 0, dy = 0, round = false) {
-  // Whole letters get rounded edges, so the face melts into the sides like a worn pebble.
-  const R = 0.05;
-  const opts = round
-    ? { depth: DEPTH - R * 2, bevelEnabled: true, bevelThickness: R, bevelSize: R, bevelOffset: -R, bevelSegments: 4, steps: 1, curveSegments: 1 }
-    : { depth: DEPTH, bevelEnabled: false, steps: 1, curveSegments: 1 };
+// A slab of glass cut to the outline. Whole letters get a chamfered edge all round, which is where glass
+// catches the light; shards get a finer one so their broken edges glint too.
+function solid(multi, dx = 0, dy = 0, whole = false) {
+  const R = whole ? 0.042 : 0.012;
+  const opts = whole
+    ? { depth: DEPTH - R * 2, bevelEnabled: true, bevelThickness: R, bevelSize: R, bevelOffset: -R, bevelSegments: 2, steps: 1, curveSegments: 1 }
+    : { depth: DEPTH - R * 2, bevelEnabled: true, bevelThickness: R, bevelSize: R * 0.6, bevelOffset: 0, bevelSegments: 1, steps: 1, curveSegments: 1 };
   const g = new THREE.ExtrudeGeometry(shapesFrom(multi), opts);
-  g.translate(0, 0, round ? -(DEPTH - R * 2) / 2 : -DEPTH / 2);
+  g.translate(0, 0, -(DEPTH - R * 2) / 2);
   const p = g.attributes.position, n = g.attributes.normal;
   const q = new Float32Array(p.count * 3), f = new Float32Array(p.count);
-  for (let i = 0; i < p.count; i++) { q[i * 3] = p.getX(i); q[i * 3 + 1] = p.getY(i); q[i * 3 + 2] = p.getZ(i); f[i] = n.getZ(i) > (round ? 0.08 : 0.9) ? 1 : 0; }
+  for (let i = 0; i < p.count; i++) { q[i * 3] = p.getX(i); q[i * 3 + 1] = p.getY(i); q[i * 3 + 2] = p.getZ(i); f[i] = Math.abs(n.getZ(i)) > 0.95 ? 1 : 0; } // aFace: 1 on the flat front and back, 0 on bevels and walls
   g.setAttribute('aQ', new THREE.BufferAttribute(q, 3));
   g.setAttribute('aFace', new THREE.BufferAttribute(f, 1));
   g.translate(-dx, -dy, 0);
@@ -224,42 +203,56 @@ function solid(multi, dx = 0, dy = 0, round = false) {
 const center = (flat) => { let x = 0, y = 0; const n = flat.length / 2; for (let i = 0; i < flat.length; i += 2) { x += flat[i]; y += flat[i + 1]; } return [x / n, y / n]; };
 const polyArea = (r) => { let a = 0; const n = r.length; for (let i = 0; i < n; i += 2) { const j = (i + 2) % n; a += r[i] * r[j + 1] - r[j] * r[i + 1]; } return Math.abs(a / 2); };
 
+// Layer 1 holds the glass, so the backdrop can be drawn on its own for the glass to look through.
+const GLASS = 1;
+
 export function mountName(scene, data, palU, baked) {
   const R = rng(31);
   const root = new THREE.Group(); scene.add(root);
+  const accent = new THREE.Color(PALETTE.accent);
   const uniforms = {
-    ...palU, uHue: hue(),
-    uMode: { value: 0 }, uTime: { value: 0 }, uMatte: { value: 0 }, uFade: { value: 1 },
-    uHot: { value: new THREE.Vector2() }, uHotAmt: { value: 0 }, uHotSize: { value: 0.42 }, uSweep: { value: -2 },
-    tField: { value: baked.field }, tMask: { value: baked.mask }, tVol: { value: baked.vol }, uRes: { value: new THREE.Vector2(1, 1) },
+    ...palU, uAccent: { value: accent },
+    uBuffer: { value: null }, uProj: { value: new THREE.Matrix4() }, uSamples: { value: QUALITY.high.samples }, uBackPass: { value: 0 },
+    uIor: { value: 1.5 }, uDisp: { value: 0.26 }, uThick: { value: DEPTH * 1.4 },
+    uTime: { value: 0 }, uFade: { value: 1 }, uReveal: { value: 0 }, uShard: { value: 0 }, uEnvK: { value: 1 },
+    uHot: { value: new THREE.Vector2() }, uHotAmt: { value: 0 }, uHotSize: { value: 0.42 },
   };
-  const material = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms });
-  const crackU = { uO: { value: new THREE.Vector2() }, uR: { value: 0 }, uAmt: { value: 0 }, uFlare: { value: 0 }, uHue: hue() };
+  // Front and back faces are drawn in separate passes (see render), so they are two materials on one set of uniforms.
+  const frontMat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms });
+  const backMat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms, side: THREE.BackSide });
+  // Shards share every uniform object with the letters except the one that marks them as loose.
+  const shardU = { ...uniforms, uShard: { value: 1 } };
+  const shardFront = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: shardU });
+  const shardBack = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: shardU, side: THREE.BackSide });
+  const crackU = { uO: { value: new THREE.Vector2() }, uR: { value: 0 }, uAmt: { value: 0 }, uFlare: { value: 0 }, uAccent: { value: accent } };
   const crackMat = new THREE.ShaderMaterial({ vertexShader: CRACK_VERT, fragmentShader: CRACK_FRAG, uniforms: crackU, transparent: true, depthWrite: false, depthTest: false, side: THREE.DoubleSide });
   const wireMat = new THREE.LineBasicMaterial({ color: 0xf6ece0, transparent: true, opacity: 0.85 });
 
-  // Soft light that spills out around the letters.
-  const haloU = { tMask: { value: baked.mask }, uAmt: { value: 1 }, ...palU };
+  // Soft light behind the letters, in their own shape. The glass looks through it, so the letters read as lit
+  // from behind, and a little of it spills out around them.
+  const haloU = { tMask: { value: baked.mask }, uAmt: { value: 1 }, uAccent: { value: accent }, ...palU };
   const halo = new THREE.Mesh(new THREE.PlaneGeometry(SPAN, SPAN), new THREE.ShaderMaterial({
     uniforms: haloU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
-    fragmentShader: 'precision highp float; varying vec2 vUv; uniform sampler2D tMask; uniform float uAmt; uniform vec3 p_stone,p_pale; void main(){ float g=texture2D(tMask,vUv).g; gl_FragColor=vec4(mix(p_stone,p_pale,g*.45)*g*g*.24*uAmt,1.); }',
+    fragmentShader: 'precision highp float; varying vec2 vUv; uniform sampler2D tMask; uniform float uAmt; uniform vec3 uAccent,p_pale; void main(){ vec2 m=texture2D(tMask,vUv).rg; float g=m.g, r=m.r; gl_FragColor=vec4((vec3(.9,.93,1.)*g*g*.07+vec3(.92,.95,1.)*r*r*.035+uAccent*g*g*.006)*uAmt,1.); }',
   }));
-  halo.position.z = -DEPTH / 2 - 0.02; halo.renderOrder = -1; root.add(halo);
+  halo.position.z = -DEPTH / 2 - 0.03; halo.renderOrder = -1; root.add(halo);
 
-  const shards = [];
+  const shards = [], glass = [];
   const letters = data.letters.map((L, index) => {
     const all = L.contours.flatMap((c) => Array.from(c.pts));
     const [cx, cy] = center(all);
     const group = new THREE.Group(); group.position.set(cx, cy, 0); root.add(group);
-    const whole = new THREE.Mesh(solid(L.shape, cx, cy, true), material); group.add(whole);
+    const whole = new THREE.Mesh(solid(L.shape, cx, cy, true), frontMat); whole.layers.set(GLASS); group.add(whole); glass.push(whole);
+    whole.userData = { front: frontMat, back: backMat };
 
     // Shards are prebuilt and hidden until the moment of the burst.
     const wireParts = [];
     const list = L.shards.map((s) => {
       const [sx, sy] = center(s.rings[0]);
       const g = solid([s.rings], cx + sx, cy + sy);
-      const mesh = new THREE.Mesh(g, material);
+      const mesh = new THREE.Mesh(g, shardFront); mesh.layers.set(GLASS); glass.push(mesh);
+      mesh.userData = { front: shardFront, back: shardBack };
       mesh.position.set(sx, sy, 0); mesh.visible = false; mesh.frustumCulled = false; group.add(mesh);
       const wire = new THREE.WireframeGeometry(g), wp = wire.attributes.position;
       for (let i = 0; i < wp.count; i++) wireParts.push(wp.getX(i) + sx, wp.getY(i) + sy, wp.getZ(i));
@@ -274,11 +267,11 @@ export function mountName(scene, data, palU, baked) {
       return item;
     });
     const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(wireParts, 3));
-    const wire = new THREE.LineSegments(wg, wireMat); wire.visible = false; wire.frustumCulled = false; group.add(wire);
+    const wire = new THREE.LineSegments(wg, wireMat); wire.visible = false; wire.frustumCulled = false; wire.layers.set(GLASS); group.add(wire);
 
     // Crack lines drawn as thin ribbons on the front face.
     const P = [], A = [], I = [];
-    const W = 0.0105, Z = DEPTH / 2 + 0.003;
+    const W = 0.0045, Z = DEPTH / 2 + 0.003;
     let v = 0;
     for (let i = 0; i < L.cracks.length; i += 4) {
       const [x0, y0, x1, y1] = [L.cracks[i], L.cracks[i + 1], L.cracks[i + 2], L.cracks[i + 3]];
@@ -289,36 +282,76 @@ export function mountName(scene, data, palU, baked) {
     }
     const cg = new THREE.BufferGeometry();
     cg.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); cg.setAttribute('aP', new THREE.Float32BufferAttribute(A, 2)); cg.setIndex(I);
-    const cracks = new THREE.Mesh(cg, crackMat); cracks.visible = false; cracks.frustumCulled = false; cracks.renderOrder = 5; group.add(cracks);
+    const cracks = new THREE.Mesh(cg, crackMat); cracks.visible = false; cracks.frustumCulled = false; cracks.renderOrder = 5; cracks.layers.set(GLASS); group.add(cracks);
 
     return {
       group, whole, wire, cracks, list, cx, cy, index,
       p: new THREE.Vector3(), v: new THREE.Vector3(), r: new THREE.Vector3(), w: new THREE.Vector3(), s: 1, sv: 0,
-      phase: R() * 6.28, rate: 0.75 + R() * 0.4, kick: -1,
+      phase: R() * 6.28, rate: 0.5 + R() * 0.3, kick: -1,
     };
   });
 
-  const st = { phase: 'float', mx: 0, my: 0, hover: 0, hoverT: 0, active: 0, burstAt: 0, time: 0, nudgeAt: 3.2, mouseOn: false, ptr: new THREE.Vector2(), click: new THREE.Vector2(), view: { w: 7.4, h: 4.6 } };
+  const st = { sp: new THREE.Vector2(), on: 0, phase: 'float', mx: 0, my: 0, hover: 0, hoverT: 0, active: 0, burstAt: 0, time: 0, mouseOn: false, ptr: new THREE.Vector2(), click: new THREE.Vector2(), view: { w: 7.4, h: 4.6 } };
   const v3 = new THREE.Vector3(), q5 = new THREE.Quaternion();
 
   const showShards = () => {
     letters.forEach((L) => { L.whole.visible = false; L.cracks.visible = false; L.list.forEach((s) => { s.mesh.visible = true; }); });
   };
 
+  // Off-screen buffers for the glass to look through, at the quality in use.
+  let quality = COARSE ? QUALITY.low : QUALITY.high;
+  let size = { w: 2, h: 2 };
+  const rtType = (renderer) => (renderer.extensions.has('EXT_color_buffer_float') || renderer.extensions.has('EXT_color_buffer_half_float') ? THREE.HalfFloatType : THREE.UnsignedByteType);
+  let bg = null, back = null;
+  const buffers = (renderer) => {
+    bg?.dispose(); back?.dispose();
+    const type = rtType(renderer);
+    bg = new THREE.WebGLRenderTarget(Math.max(2, Math.round(size.w * quality.bgScale)), Math.max(2, Math.round(size.h * quality.bgScale)), { type, depthBuffer: false });
+    back = quality.back ? new THREE.WebGLRenderTarget(Math.max(2, Math.round(size.w * quality.backScale)), Math.max(2, Math.round(size.h * quality.backScale)), { type, samples: quality.msaa, depthBuffer: true }) : null;
+    uniforms.uSamples.value = quality.samples;
+  };
+
   const api = {
     root, letters, shards, uniforms, crackU, st, halo, haloU,
     setMode(mode) {
-      const m = { beauty: 0, uv: 1, transmission: 4, depth: 6, thermal: 7, halftone: 9, rings: 10, wireframe: -1 }[mode] ?? 0;
-      uniforms.uMode.value = Math.max(0, m);
-      letters.forEach((L) => { L.whole.visible = m !== -1; L.wire.visible = m === -1; });
-      halo.visible = m === 0;
+      // The other render styles belonged to the stone; glass draws only its beauty pass and a wireframe.
+      const wire = mode === 'wireframe';
+      letters.forEach((L) => { L.whole.visible = !wire; L.wire.visible = wire; });
+      halo.visible = !wire;
     },
     // Rest pose for the entrance: letters sit back in depth and spring forward.
     settleIn() { letters.forEach((L, i) => { L.p.z = -0.5; L.p.y = -0.08; L.s = 0.97; L.kick = st.time + i * 0.03; }); },
     setActive(v) { st.active = v; },
     setHover(v) { st.hoverT = v ? 1 : 0; },
     setPointer(x, y, on) { st.ptr.set(x, y); st.mouseOn = on; },
-    setView(w, h) { st.view.w = w; st.view.h = h; },
+    setView(w, h) {
+      st.view.w = w; st.view.h = h;
+      // How large the name looks next to a wide screen, where it fills 62% of the height.
+      uniforms.uEnvK.value = THREE.MathUtils.clamp(data.height / (0.62 * h), 0.3, 1);
+    },
+    // Buffers follow the canvas size in device pixels.
+    resize(w, h, dpr, renderer) { size = { w: Math.floor(w * dpr), h: Math.floor(h * dpr) }; buffers(renderer); },
+    quality: () => (quality === QUALITY.low ? 'low' : 'high'),
+    setQuality(level, renderer) { quality = QUALITY[level] || QUALITY.high; buffers(renderer); },
+    // Draws the scene into target in up to three passes: the backdrop alone, then the back faces of the glass
+    // bending it, then the front faces bending that. Other objects in the scene draw every time.
+    render(renderer, scene, camera, target) {
+      uniforms.uProj.value.copy(camera.projectionMatrix);
+      camera.layers.set(0);
+      renderer.setRenderTarget(bg); renderer.setClearColor(0x000000, 1); renderer.clear();
+      renderer.render(scene, camera);
+      camera.layers.enableAll();
+      if (back) {
+        glass.forEach((m) => { m.material = m.userData.back; });
+        uniforms.uBuffer.value = bg.texture; uniforms.uBackPass.value = 1;
+        renderer.setRenderTarget(back); renderer.clear();
+        renderer.render(scene, camera);
+        glass.forEach((m) => { m.material = m.userData.front; });
+      }
+      uniforms.uBuffer.value = (back || bg).texture; uniforms.uBackPass.value = 0;
+      renderer.setRenderTarget(target); renderer.clear();
+      renderer.render(scene, camera);
+    },
     // Start the break from a point on the name.
     crack(x, y) {
       st.phase = 'crack'; st.click.set(x, y);
@@ -335,7 +368,6 @@ export function mountName(scene, data, palU, baked) {
       const crumbN = Math.round(sorted.length * 0.3);
       sorted.forEach((s, i) => { s.keep = i < keepN; s.order = i; s.crumb = i >= sorted.length - crumbN; });
       const spots = sorted.slice(0, keepN);
-      const portrait = w < h;
       spots.forEach((s, i) => {
         // A loose ring that leaves the middle of the screen open.
         const a = (i / keepN) * Math.PI * 2 * 3.0 + s.R[0] * 0.9;
@@ -370,42 +402,30 @@ export function mountName(scene, data, palU, baked) {
         root.rotation.x += (tiltX + Math.sin(t * 0.43) * 0.016 * calm - root.rotation.x) * (1 - Math.exp(-3.4 * dt));
         root.rotation.y += (tiltY + Math.sin(t * 0.31 + 1) * 0.024 * calm - root.rotation.y) * (1 - Math.exp(-3.4 * dt));
         root.position.y = Math.sin(t * 0.72) * 0.065 * calm;
-        // Each letter hangs on its own spring.
+        // The pointer is followed smoothly, so the letters lean away from it without snapping.
+        const ease = 1 - Math.exp(-4 * dt);
+        st.sp.lerp(st.ptr, ease); st.on += ((st.mouseOn ? 1 : 0) - st.on) * (1 - Math.exp(-2.5 * dt));
+        // Each letter floats on its own slow, out-of-phase drift, on a spring that never overshoots.
         letters.forEach((L) => {
           const amp = (0.034 + st.hover * 0.014) * calm;
           let tx = 0, ty = Math.sin(t * L.rate + L.phase) * amp, tz = (Math.sin(t * L.rate * 0.8 + L.phase * 2) * 0.05 + st.hover * 0.07) * calm;
           let trz = Math.sin(t * L.rate * 0.7 + L.phase * 3) * 0.012 * calm;
-          if (st.mouseOn && calm) {
-            const dx = L.cx - st.ptr.x, dy = L.cy - st.ptr.y, d = Math.hypot(dx, dy), f = 1 - smooth(0.15, 1.15, d);
+          if (st.on > 0.001 && calm) {
+            const dx = L.cx - st.sp.x, dy = L.cy - st.sp.y, d = Math.hypot(dx, dy), f = (1 - smooth(0.15, 1.3, d)) * st.on;
             tx += (dx / Math.max(d, 0.1)) * f * 0.035; ty += (dy / Math.max(d, 0.1)) * f * 0.035; tz += f * 0.11;
             trz += -dx * f * 0.02;
           }
-          const K = 72, C = 8.6; // stiffness and damping: a little overshoot
+          const K = 40, C = 12.6; // stiffness and damping: critically damped, so no bounce
           L.v.x += (K * (tx - L.p.x) - C * L.v.x) * dt; L.v.y += (K * (ty - L.p.y) - C * L.v.y) * dt; L.v.z += (K * (tz - L.p.z) - C * L.v.z) * dt;
           L.p.addScaledVector(L.v, dt);
           L.w.z += (K * (trz - L.r.z) - C * L.w.z) * dt; L.r.z += L.w.z * dt;
           L.w.x += (K * (-L.v.y * 0.05 - L.r.x) - C * L.w.x) * dt; L.r.x += L.w.x * dt;
           L.sv += (K * (1 - L.s) - C * L.sv) * dt; L.s += L.sv * dt;
           L.group.position.set(L.cx + L.p.x, L.cy + L.p.y, L.p.z);
-          // A slow turn of each letter lets the clouds inside slide past each other.
+          // A slow turn of each letter moves the reflections across its bevels.
           L.group.rotation.set(L.r.x + Math.sin(t * L.rate * 0.53 + L.phase * 1.3) * 0.045 * calm, Math.sin(t * L.rate * 0.61 + L.phase) * 0.085 * calm, L.r.z);
           L.group.scale.setScalar(L.s);
         });
-        // Every few seconds a wave runs through the letters and a band of light crosses them.
-        if (st.phase === 'float' && calm > 0.5 && t > st.nudgeAt) {
-          st.nudgeAt = t + 5.2 + R() * 1.6;
-          st.pulse = 1;
-          st.sweepAt = t;
-          letters.forEach((L) => { L.kickAt = t + (L.cx + 2) * 0.09; L.kicked = false; });
-        }
-        letters.forEach((L) => {
-          if (L.kickAt && !L.kicked && t > L.kickAt) { L.kicked = true; L.v.y += 1.25; L.v.z += 2.1; L.w.z += (L.phase > 3.14 ? 1 : -1) * 0.8; L.sv += 0.55; }
-        });
-        st.pulse = (st.pulse || 0) * Math.exp(-1.7 * dt);
-        if (st.sweepAt !== undefined) {
-          const k = (t - st.sweepAt) / 2.9;
-          uniforms.uSweep.value = k > 1.1 ? -2 : -1.1 + k * 2.2;
-        }
       } else {
         // Shards fly, then ease into their place in the ring. The rest shrink away.
         const { w, h } = st.view;
@@ -434,7 +454,9 @@ export function mountName(scene, data, palU, baked) {
           q5.setFromAxisAngle(s.axis, spin);
           s.q.premultiply(q5);
           s.mesh.position.copy(s.p); s.mesh.quaternion.copy(s.q);
-          s.mesh.scale.setScalar(Math.max(0.0001, s.scale));
+          // Shards thin out as they fly, into slivers rather than blocks.
+          const sc = Math.max(0.0001, s.scale);
+          s.mesh.scale.set(sc, sc, sc * (1 - 0.62 * smooth(0, 0.9, a)));
           s.mesh.visible = s.scale > 0.002;
         });
       }
