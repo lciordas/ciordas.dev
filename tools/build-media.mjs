@@ -33,7 +33,7 @@ const still = async (id, name, src, { width = 1280, trim = false, flat = false, 
 };
 const clip = (id, name, src, ss, t, vf = 'scale=960:-2') => {
   const dir = path.join(OUT, id); fs.mkdirSync(dir, { recursive: true });
-  run('ffmpeg', '-v', 'error', '-y', ...(ss ? ['-ss', String(ss)] : []), ...(t ? ['-t', String(t)] : []), '-i', src, '-an', '-vf', `fps=30,${vf},pad=ceil(iw/2)*2:ceil(ih/2)*2`, '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '26', '-preset', 'slow', '-movflags', '+faststart', path.join(dir, `${name}.mp4`));
+  run('ffmpeg', '-v', 'error', '-y', ...(ss ? ['-ss', String(ss)] : []), ...(t ? ['-t', String(t)] : []), '-i', src, '-an', '-vf', `fps=30,${vf},pad=ceil(iw/2)*2:ceil(ih/2)*2`, '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '22', '-preset', 'slow', '-movflags', '+faststart', path.join(dir, `${name}.mp4`));
 };
 // The overview's project cards. Photos fill a square; graphs fit inside it on white so nothing is cut off.
 // The hardware projects' cards, the protein classifier's and the tennis library's are cropped by hand in build-thumbs.mjs.
@@ -52,11 +52,11 @@ await still('robot-dog', 'front', heic(`${BROLL}/quadrupedpic1.HEIC`), { width: 
 await still('robot-dog', 'quarter', heic(`${BROLL}/quadrued pic3.HEIC`), { width: 1600 });
 await still('robot-dog', 'legs', await frame(`${OLD}/14_dog_leg_designs_graphic.mp4`, 2), { width: 1600 });
 // The dog's leg sketches are three separate pictures now, from tools/build-stream.mjs (robot-dog-sketches).
-clip('robot-dog', 'leg-test', `${OLD}/15_dog_leg_prototype_test.mp4`, 0, 0, 'scale=1280:-2');
-clip('robot-dog', 'prototype', `${OLD}/16_dog_robot_moving.mp4`, 0, 0, 'scale=1280:-2');
-clip('pid-seesaw', 'lego', `${OLD}/03_seesaw_lego_ball_balancing.mp4`, 0, 0, 'scale=1280:-2');
+clip('robot-dog', 'leg-test', `${OLD}/15_dog_leg_prototype_test.mp4`, 0, 0, 'scale=1920:-2:flags=lanczos');
+clip('robot-dog', 'prototype', `${OLD}/16_dog_robot_moving.mp4`, 0, 0, 'scale=1920:-2:flags=lanczos');
+clip('pid-seesaw', 'lego', `${OLD}/03_seesaw_lego_ball_balancing.mp4`, 0, 0, 'scale=1920:-2:flags=lanczos');
 await still('pid-seesaw', 'lego-arduino', await frame(`${OLD}/05_seesaw_lego_with_arduino.mp4`, 1.5), { width: 1600 });
-clip('pid-seesaw', 'wood', `${OLD}/06_seesaw_v2_wood_poke_test.mp4`, 0, 0, 'scale=1280:-2');
+clip('pid-seesaw', 'wood', `${OLD}/06_seesaw_v2_wood_poke_test.mp4`, 0, 0, 'scale=1920:-2:flags=lanczos');
 
 // The micromanipulator's slides come from build-micro.mjs.
 

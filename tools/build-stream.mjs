@@ -18,7 +18,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'stream-'));
 const run = (...a) => execFileSync(a[0], a.slice(1), { stdio: ['ignore', 'ignore', 'pipe'], maxBuffer: 2 ** 31 });
 let n = 0;
 const temp = (ext) => path.join(tmp, `${n++}.${ext}`);
-const encode = ['-an', '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '28', '-preset', 'slow', '-movflags', '+faststart'];
+const encode = ['-an', '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-crf', '22', '-preset', 'slow', '-movflags', '+faststart'];
 
 const sdr = (src) => {
   const o = path.join(FRAMES, `${path.basename(src).replace(/\.mov$/i, '').replace(/\s+/g, '-')}-sdr.mov`);
@@ -49,11 +49,11 @@ const still = async (id, name, src, { width = 1100, crop = null, quality = 74 } 
   const info = await img.resize({ width, withoutEnlargement: true }).webp({ quality, effort: 5 }).toFile(path.join(dir, `${name}.webp`));
   console.log(`${id}/${name}.webp`, `${info.width}x${info.height}`, (info.size / 1e3).toFixed(0), 'KB');
 };
-// Short muted loops, 720p. `crop` is a fraction of the frame [x, y, w, h], for a closer view. With `lock`, the
+// Short muted loops, up to 1080p but never larger than the part of the source they show. `crop` is a fraction of the frame [x, y, w, h], for a closer view. With `lock`, the
 // margin in pixels the steadied picture can move within, `box` [centre x, centre y, w, h] in pixels picks the part kept.
-const clip = async (id, name, src, ss, t, { crop = null, lock = 0, box = null, width = 1280 } = {}) => {
+const clip = async (id, name, src, ss, t, { crop = null, lock = 0, box = null, width = 1920 } = {}) => {
   const dir = path.join(OUT, id), dest = path.join(dir, `${name}.mp4`); fs.mkdirSync(dir, { recursive: true });
-  const fit = `scale=${width}:-2,pad=ceil(iw/2)*2:ceil(ih/2)*2`;
+  const fit = `scale='min(${width},iw)':-2:flags=lanczos,pad=ceil(iw/2)*2:ceil(ih/2)*2`;
   if (!lock) {
     const c = crop ? `crop=iw*${crop[2]}:ih*${crop[3]}:iw*${crop[0]}:ih*${crop[1]},` : '';
     run('ffmpeg', '-v', 'error', '-y', '-ss', String(ss), '-t', String(t), '-i', src, '-vf', `fps=30,${c}${fit}`, ...encode, dest);

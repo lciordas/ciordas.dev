@@ -1,4 +1,4 @@
-// Turns a stretch of video into steadied, numbered WebP frames in toolkit/frames, which build-video.mjs joins into
+// Turns a stretch of video into steadied, numbered lossless WebP frames in toolkit/frames, 1920 wide, which build-video.mjs joins into
 // the dog's video. Run from the repo root: node tools/build-frames.mjs [clip name]
 // A clip with `lock` follows the background and cancels the camera's movement, so the subject stays put in the frame.
 import { createRequire } from 'node:module';
@@ -18,7 +18,9 @@ const CLIPS = {
   // Kept at the footage's own 30 fps: at 24 the joined video has to repeat every fifth frame, which judders.
   'dog-front': { src: `${HOME}/Downloads/maker portfolio b-roll/quadrupedgyratingfrontview.MOV`, ss: 23.1, t: 6.4, pre: 'transpose=2', vf: 'transpose=2,fps=30', lock: { margin: 48 } },
 };
-const WIDTH = 1280, QUALITY = 90;
+// Lossless, as the frames are encoded again when they're joined into the dog's video. The crop is worked out in
+// the source's own pixels, so the width only changes how sharp the frames are, not what they show.
+const WIDTH = 1920;
 
 const only = process.argv[2];
 for (const [name, c] of Object.entries(CLIPS)) {
@@ -49,7 +51,7 @@ for (const [name, c] of Object.entries(CLIPS)) {
     const dest = path.join(out, files[i].replace('.png', '.webp'));
     let img = sharp(path.join(tmp, files[i]));
     if (crop) img = img.extract(crop(i));
-    const info = await img.resize({ width: WIDTH }).webp({ quality: QUALITY, effort: 5 }).toFile(dest);
+    const info = await img.resize({ width: WIDTH, kernel: 'lanczos3' }).webp({ lossless: true, effort: 2 }).toFile(dest);
     bytes += info.size; w = info.width; h = info.height;
   }
   fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify({ count: files.length, width: w, height: h, fps: 30 }));
