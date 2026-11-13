@@ -293,7 +293,7 @@
             "A magnetic encoder reads the angle of a field. A normal magnet turns that field just once per revolution.",
             "Here an arc of **17** alternating magnets rides on the motor horn, past the encoder. Each N‑S pair spins the field a full circle.",
             "That's **8.5** field turns per revolution. The **21‑bit** MT6835 now spends all its counts on 1/8.5 of a turn, for **8.5×** the resolution.",
-            "Closed loop cuts error from **0.08°** to **0.0045°**. PID takes it to **0.0005°**, a theoretical **100 nm** at the tip."
+            "Closed loop is projected to cut error from **0.08°** to **0.0045°**. PID would take it to **0.0005°**, a theoretical **100 nm** at the tip."
           ]
         }
       ]
