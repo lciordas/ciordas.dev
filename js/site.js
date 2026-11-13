@@ -39,7 +39,7 @@ export function renderOverview(root, c) {
       ${p.thumb ? `<span class="row__f"><img class="row__i" src="media/thumbs/${esc(p.thumb)}.webp" alt="" loading="eager" decoding="async"></span>` : ''}
       <span class="row__x">
         <span class="row__n" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span>
-        <span class="row__t" data-edit="projects.${id}.title">${esc(p.title)}</span>
+        <span class="row__t" data-edit="projects.${id}.title">${esc(p.title)}</span>${p.status ? `<span class="status status--card">${esc(p.status)}</span>` : ''}
         <span class="row__d" data-edit="projects.${id}.tag">${esc(p.tag)}</span>
       </span></a></li>`;
   };

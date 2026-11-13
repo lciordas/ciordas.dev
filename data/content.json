@@ -255,15 +255,16 @@
       ]
     },
     "micromanipulator": {
+      "status": "In progress",
       "title": "Micromanipulator",
       "tag": "Closed-loop stepper control, 100 nm theoretical resolution",
       "kind": "scroll",
       "summary": "A low-cost, 3D-printed alternative to industrial micromanipulators, which cost $1,000 to $60,000. Geometric microstepping and a magnetic-gearing encoder bring angular error down to about 0.0005°, which allows a theoretical end-effector resolution of 100 nm. Physical testing of that resolution is the next step.",
       "captions": [
         "A DIY, $200 version of a $10,000–60,000 industrial device that moves on the nanometer scale.",
-        "A new microstepping formula I derived eliminates up to 1/25 of a full step of error, 0.072°, more than 140 times the 0.0005° accuracy the system achieves.",
+        "A new microstepping formula I derived eliminates up to 1/25 of a full step of error, 0.072°, more than 140 times the 0.0005° accuracy the system is projected to achieve.",
         "A row of 17 axially magnetized magnets multiplies encoder resolution 8.5 times.",
-        "Closed-loop PID control holds angular error to 0.0005°, for a theoretical 100 nm resolution at the tip."
+        "Closed-loop PID control would hold angular error to 0.0005°, for a theoretical 100 nm resolution at the tip."
       ],
       "tech": [
         "NEMA 17 stepper",
@@ -475,6 +476,7 @@
       ]
     },
     "hybrid-networks": {
+      "status": "In progress",
       "title": "EvoGrad",
       "tag": "Hybrid neural networks: NEAT with gradient descent",
       "kind": "detail",

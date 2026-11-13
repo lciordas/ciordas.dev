@@ -58,6 +58,8 @@ const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// A small tag beside the title for work that isn't finished yet ("status" in the content file).
+const statusTag = (p) => (p.status ? `<span class="status">${esc(p.status)}</span>` : '');
 
 function viewAt(views, p) {
   let i = 0;
@@ -104,7 +106,7 @@ function buildAnimated(id, cfg, p, index, last) {
           <i class="scan" aria-hidden="true"></i>
           <div class="bar" aria-hidden="true"><i></i></div>
         </div>
-        <h3 class="head"><span class="index">${index}</span>${esc(p.title)}</h3>
+        <h3 class="head"><span class="index">${index}</span>${esc(p.title)}${statusTag(p)}</h3>
         ${p.captions?.length ? `<ul class="points">${p.captions.map((c) => `<li class="point">${esc(c)}</li>`).join('')}</ul>` : ''}
         ${slides.map((m) => `<div class="points points--slide">${m.caption ? `<p class="points__lead">${capHtml(m.caption)}</p>` : ''}<ul class="points__list">${(m.points || []).map((t) => `<li class="point">${bold(capHtml(t))}</li>`).join('')}</ul></div>`).join('')}
         ${CUE}
@@ -249,7 +251,7 @@ function mountStream(el) {
 function buildDetail(id, p, index, last) {
   const s = document.createElement('section');
   s.className = 'project project--detail'; s.id = id; s.dataset.project = id; s.setAttribute('aria-label', p.title);
-  const side = p.media?.length ? sideOf(p) : '', title = `<h3 class="detail__title"><span class="index">${index}</span>${esc(p.title)}</h3>`;
+  const side = p.media?.length ? sideOf(p) : '', title = `<h3 class="detail__title"><span class="index">${index}</span>${esc(p.title)}${statusTag(p)}</h3>`;
   const head = side ? title : `${title}${body(p)}`;
   // The last project, when it's one picture told in bullets, has the way back at the bottom of that same screen, so
   // the page ends on exactly one screen of it.
