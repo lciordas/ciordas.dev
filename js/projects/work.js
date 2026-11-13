@@ -107,7 +107,7 @@ function buildAnimated(id, cfg, p, index, last) {
           <div class="bar" aria-hidden="true"><i></i></div>
         </div>
         <h3 class="head"><span class="index">${index}</span>${esc(p.title)}${statusTag(p)}</h3>
-        ${p.captions?.length ? `<ul class="points">${p.captions.map((c) => `<li class="point">${esc(c)}</li>`).join('')}</ul>` : ''}
+        ${p.captions?.length ? `<ul class="points">${p.captions.map((c) => `<li class="point">${bold(capHtml(c))}</li>`).join('')}</ul>` : ''}
         ${slides.map((m) => `<div class="points points--slide">${m.caption ? `<p class="points__lead">${capHtml(m.caption)}</p>` : ''}<ul class="points__list">${(m.points || []).map((t) => `<li class="point">${bold(capHtml(t))}</li>`).join('')}</ul></div>`).join('')}
         ${CUE}
       </div>

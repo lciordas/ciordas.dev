@@ -280,8 +280,8 @@ html.lenis, html.lenis body { height: auto; }
 .gallery__count b { font-weight: 500; color: var(--ink); }
 .gallery__caps { display: grid; min-height: 6.5em; }
 .gallery__cap { grid-area: 1 / 1; margin: 0; max-width: 26em; font-size: clamp(17px, 1.55vw, 24px); line-height: 1.4; font-weight: 500; color: #f7f2ea; will-change: transform, opacity; }
-.gallery__cap a { color: inherit; text-decoration: none; white-space: nowrap; border-bottom: 1px solid rgba(244, 239, 232, .4); transition: color .2s ease, border-color .2s ease; }
-.gallery__cap a:hover, .gallery__cap a:focus-visible { color: var(--glow); border-color: currentColor; outline: none; }
+.gallery__cap a, .point a, .gallery__side a { color: inherit; text-decoration: none; white-space: nowrap; border-bottom: 1px solid rgba(244, 239, 232, .4); transition: color .2s ease, border-color .2s ease; }
+.gallery__cap a:hover, .gallery__cap a:focus-visible, .point a:hover, .point a:focus-visible, .gallery__side a:hover, .gallery__side a:focus-visible { color: var(--glow); border-color: currentColor; outline: none; }
 /* A slide explained in bullets: its caption as a short heading, then the points, numbers in bold. */
 .gallery__cap--points { max-width: 25em; font-size: clamp(14.5px, 1.08vw, 18px); font-weight: 400; }
 .gallery__lead { margin: 0 0 .8em; font-size: 1.3em; line-height: 1.25; font-weight: 600; color: #f7f2ea; }
@@ -374,3 +374,5 @@ html { overscroll-behavior-x: none; }
 @keyframes status-pulse { 0% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), .55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(var(--accent-rgb), 0); } }
 @media (prefers-reduced-motion: reduce) { .status::before { animation: none; } }
 .status--card { margin: 6px 0 2px; padding: 4px 9px 4px 8px; font-size: 10px; width: max-content; }
+
+.points a { pointer-events: auto; white-space: normal; }
