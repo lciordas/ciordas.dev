@@ -50,7 +50,7 @@ const ANIMATED = {
   'ship-in-a-bottle': {
     poster: 'media/projects/ship-in-a-bottle/finished.webp', length: 230, clip: 'media/projects/ship-in-a-bottle/build.mp4',
     title: [-0.06, -0.04], wipe: [0.48, 0.6], clipAt: 0.6,
-    copyAt: [[-0.1, 0.4], [0.4, 0.74], [0.74, 1]],
+    copyAt: [[-0.1, 0.4], [0.4, 0.74], [0.74, 0.88], [0.88, 1]],
   },
 };
 
